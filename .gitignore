@@ -1,18 +1,28 @@
-# Dependencies
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Multi-Project Repository .gitignore
 
-# Runtime files
-*.log
-*.pid
-server.log
+# Dependencies (all projects)
+**/node_modules/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/.npm/
 
-# Environment variables
-.env
-.env.local
-.env.production
+# Runtime files (all projects)
+**/*.log
+**/*.pid
+**/server.log
+
+# Environment variables (all projects)
+**/.env
+**/.env.local
+**/.env.production
+**/.env.template
+
+# Build outputs (all projects)
+**/dist/
+**/build/
+**/out/
+**/.next/
 
 # OS generated files
 .DS_Store
@@ -29,16 +39,19 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+**/.vscode/
 
 # Temporary files
 tmp/
 temp/
+**/tmp/
+**/temp/
 
-# Load test results
-loadrunner-results/*/user_*.log
-loadrunner-results/*/simulation.log
+# Vegas Casino specific
+vegas-casino/loadrunner-results/*/user_*.log
+vegas-casino/loadrunner-results/*/simulation.log
 
-# System files
+# System files (root level only)
 .bash_history
 .ssh/
 .cache/
@@ -46,3 +59,23 @@ loadrunner-results/*/simulation.log
 .config/
 .m2/
 .wget-hsts
+.dotnet/
+
+# Package managers
+.pnpm-store/
+.yarn/
+
+# Testing
+**/coverage/
+**/.nyc_output/
+
+# Database files
+**/*.db
+**/*.sqlite
+**/*.sqlite3
+
+# Large binary files
+**/*.zip
+**/*.tar.gz
+**/*.rar
+**/*.7z

@@ -1,286 +1,145 @@
-# Multi-Project Development Repository# Dynatrace Vegas Casino
+# Dynatrace Vegas Casino
 
+A sophisticated Node.js casino application featuring a Dynatrace Smartscape-inspired aesthetic with real-time telemetry, immersive gaming experiences, and comprehensive analytics.
 
+## 🎯 Features
 
-This repository contains multiple applications and projects for development and testing purposes.A sophisticated Node.js casino application featuring a Dynatrace Smartscape-inspired aesthetic with real-time telemetry, immersive gaming experiences, and comprehensive analytics.
+### 🎰 Games
+- **Quantum Slots**: Advanced probability matrices with weighted symbol generation
+- **Cosmic Roulette**: Animated spinning wheel with comprehensive betting options
+- **Neural Dice**: Probability prediction engine with strategy recommendations
+- **Quantum Blackjack**: Multi-turn gameplay with AI-powered strategy advisor
 
-
-
-## 📁 Project Structure## 🎯 Features
-
-
-
-```### 🎰 Games
-
-/- **Quantum Slots**: Advanced probability matrices with weighted symbol generation
-
-├── vegas-casino/              # Dynatrace Vegas Casino Application- **Cosmic Roulette**: Animated spinning wheel with comprehensive betting options
-
-│   ├── server.js             # Main Express server- **Neural Dice**: Probability prediction engine with strategy recommendations
-
-│   ├── package.json          # Dependencies- **Quantum Blackjack**: Multi-turn gameplay with AI-powered strategy advisor
-
-│   ├── public/               # Frontend assets
-
-│   ├── services/             # Game services### 📊 Analytics & Monitoring
-
-│   ├── scripts/              # Deployment scripts- **Real-time Metrics**: WebSocket-based live updates
-
-│   ├── docs/                 # Documentation- **Player Analytics**: Detailed behavior tracking and statistics  
-
-│   └── README.md             # Vegas Casino documentation- **System Health Monitoring**: CPU, memory, response time tracking
-
-├── .git/                     # Git repository- **Leaderboard System**: Competitive rankings with animated charts
-
-├── .gitignore               # Global gitignore- **Comprehensive Telemetry**: Correlation IDs and structured logging
-
-└── README.md                # This file- **Dynatrace Integration**: OneAgent monitoring and BizEvents
-
-```- **Service Splitting**: Microservice architecture for observability
-
+### 📊 Analytics & Monitoring
+- **Real-time Metrics**: WebSocket-based live updates
+- **Player Analytics**: Detailed behavior tracking and statistics  
+- **System Health Monitoring**: CPU, memory, response time tracking
+- **Leaderboard System**: Competitive rankings with animated charts
+- **Comprehensive Telemetry**: Correlation IDs and structured logging
+- **Dynatrace Integration**: OneAgent monitoring and BizEvents
+- **Service Splitting**: Microservice architecture for observability
 - **Business Events**: Custom business metrics and KPI tracking
 
-## 🎰 Vegas Casino Application
-
 ### 🎨 Visual Design
-
-A sophisticated Node.js casino application featuring a Dynatrace Smartscape-inspired aesthetic with real-time telemetry, immersive gaming experiences, and comprehensive analytics.- **Dynatrace Color Palette**: Purple, cyan, green, and yellow theme
-
+- **Dynatrace Color Palette**: Purple, cyan, green, and yellow theme
 - **Dark Theme**: Professional observability aesthetic
-
-**Location**: `./vegas-casino/`- **Neon Accents**: Glowing UI elements and animations
-
+- **Neon Accents**: Glowing UI elements and animations
 - **GSAP Animations**: Smooth transitions and interactive effects
+- **Responsive Design**: Mobile-first Tailwind CSS implementation
 
-**Features**:- **Responsive Design**: Mobile-first Tailwind CSS implementation
+## 🏗️ Architecture
 
-- Quantum Slots, Cosmic Roulette, Neural Dice, Quantum Blackjack
-
-- Real-time WebSocket communication## 🏗️ Architecture
-
-- Comprehensive analytics and monitoring
-
-- Dynatrace integration### Backend (server.js)
-
-- Professional observability aesthetic- **Express.js Server**: RESTful API endpoints for all games
-
+### Backend (server.js)
+- **Express.js Server**: RESTful API endpoints for all games
 - **Socket.IO Integration**: Real-time WebSocket communication
+- **Game Logic**: Comprehensive algorithms for each game type
+- **Telemetry System**: Structured logging with correlation tracking
+- **Error Handling**: Robust error management and recovery
 
-**Quick Start**:- **Game Logic**: Comprehensive algorithms for each game type
-
-```bash- **Telemetry System**: Structured logging with correlation tracking
-
-cd vegas-casino- **Error Handling**: Robust error management and recovery
-
-npm install
-
-npm start### Frontend
-
-```- **Vault Entrance** (`index.html`): Secure login with biometric simulation
-
+### Frontend
+- **Vault Entrance** (`index.html`): Secure login with biometric simulation
 - **Smartscape Lobby** (`lobby.html`): Interactive game selection hub
-
-**Live Deployment**: Available at your AWS EC2 public IP on port 3000- **Game Pages**: Immersive individual game experiences
-
+- **Game Pages**: Immersive individual game experiences
 - **Analytics Dashboard** (`analytics.html`): Real-time system insights
+- **Leaderboard** (`leaderboard.html`): Competitive player rankings
 
-For detailed documentation, see [`vegas-casino/README.md`](./vegas-casino/README.md)- **Leaderboard** (`leaderboard.html`): Competitive player rankings
+## 🚀 Getting Started
 
-
-
-## 🚀 Adding New Projects## 🚀 Getting Started
-
-
-
-When adding new applications to this repository:### Prerequisites
-
+### Prerequisites
 - Node.js 18+ 
+- npm or yarn
+- For AWS EC2 deployment: Amazon Linux 2023 or Ubuntu 20.04+
 
-1. **Create a new directory** for your project- npm or yarn
+### Quick Start (Local Development)
 
-2. **Add project documentation** to this README- For AWS EC2 deployment: Amazon Linux 2023 or Ubuntu 20.04+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/lawrobar90/Vegas-App.git
+   cd Vegas-App
+   ```
 
-3. **Update .gitignore** if needed for new file types
-
-4. **Commit changes** with descriptive messages### Quick Start (Local Development)
-
-
-
-### Example Structure for New Project1. **Clone the repository**
-
-```   ```bash
-
-new-project/   git clone https://github.com/lawrobar90/Vegas-App.git
-
-├── README.md   cd Vegas-App
-
-├── package.json   ```
-
-├── src/
-
-└── ...2. **Install dependencies**
-
-```   ```bash
-
+2. **Install dependencies**
+   ```bash
    npm install
+   ```
 
-## 🔧 Git Management   ```
-
-
-
-### Current Status3. **Start the server**
-
-- **Main Branch**: Contains all projects   ```bash
-
-- **Remote**: https://github.com/lawrobar90/Vegas-App.git   npm start
-
-- **Structure**: Multi-project monorepo   # or
-
+3. **Start the server**
+   ```bash
+   npm start
+   # or
    node server.js
+   ```
 
-### Working with Multiple Projects   ```
-
-```bash
-
-# Work on Vegas Casino4. **Access the application**
-
-cd vegas-casino   - Open http://localhost:3000 in your browser
-
-# Make changes, then commit from root   - Enter any username to access the casino lobby
-
+4. **Access the application**
+   - Open http://localhost:3000 in your browser
+   - Enter any username to access the casino lobby
    - Select your security level preference
 
-# Work on new project
-
-cd new-project## 🌐 Production Deployment
-
-# Make changes, then commit from root
+## 🌐 Production Deployment
 
 ### AWS EC2 Deployment
 
-# Commit changes (from root directory)
-
-git add .#### Step 1: Prepare EC2 Instance
-
-git commit -m "Update: specific changes made"```bash
-
-git push origin main# Update system packages
-
-```sudo yum update -y  # Amazon Linux 2023
-
+#### Step 1: Prepare EC2 Instance
+```bash
+# Update system packages
+sudo yum update -y  # Amazon Linux 2023
 # or
+sudo apt update && sudo apt upgrade -y  # Ubuntu
 
-### Branch Strategysudo apt update && sudo apt upgrade -y  # Ubuntu
-
-- **main**: Stable versions of all projects
-
-- **feature/project-name**: Feature branches for specific projects# Install Node.js 18+
-
-- **dev/project-name**: Development branches for ongoing workcurl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -  # Amazon Linux
-
+# Install Node.js 18+
+curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -  # Amazon Linux
 sudo yum install -y nodejs  # Amazon Linux
-
-## 🌐 Deployment Information# or
-
+# or
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -  # Ubuntu
+sudo apt-get install -y nodejs  # Ubuntu
 
-### Current Deploymentssudo apt-get install -y nodejs  # Ubuntu
-
-- **Vegas Casino**: Running on AWS EC2, port 3000
-
-- **Server**: Amazon Linux 2023, Node.js 18+# Verify installation
-
-- **Access**: http://YOUR_PUBLIC_IP:3000node --version
-
+# Verify installation
+node --version
 npm --version
-
-### Adding New Deployments```
-
-When deploying new applications:
-
-1. Choose different ports for each app#### Step 2: Clone and Setup Application
-
-2. Update AWS Security Group rules```bash
-
-3. Use PM2 for process management# Clone the repository
-
-4. Document deployment in project READMEgit clone https://github.com/lawrobar90/Vegas-App.git
-
-cd Vegas-App
-
-## 📝 Development Guidelines
-
-# Install production dependencies
-
-### Code Organizationnpm ci --only=production
-
-- Keep each project self-contained
-
-- Use descriptive commit messages# Install PM2 for process management (optional but recommended)
-
-- Include proper documentationsudo npm install -g pm2
-
-- Test thoroughly before committing```
-
-
-
-### Environment Management#### Step 3: Configure Server for External Access
-
-- Use `.env` files for configurationThe application is pre-configured to bind to all network interfaces (`0.0.0.0:3000`) for external access.
-
-- Keep sensitive data out of git
-
-- Document required environment variables#### Step 4: Configure AWS Security Group
-
-- Use different ports for local developmentIn your AWS Console, ensure your Security Group allows inbound traffic:
-
 ```
 
-## 🔒 Security NotesType: Custom TCP
-
-Port: 3000
-
-- **Environment Variables**: Keep sensitive data in `.env` filesSource: 0.0.0.0/0 (or restrict to specific IPs for security)
-
-- **Git Exclusions**: Large files and secrets are excluded via `.gitignore````
-
-- **Access Control**: Configure AWS Security Groups appropriately
-
-- **Process Management**: Use PM2 for production deployments#### Step 5: Start the Application
-
+#### Step 2: Clone and Setup Application
 ```bash
+# Clone the repository
+git clone https://github.com/lawrobar90/Vegas-App.git
+cd Vegas-App
 
-## 📈 Future Projects# Option 1: Direct start (for testing)
+# Install production dependencies
+npm ci --only=production
 
+# Install PM2 for process management (optional but recommended)
+sudo npm install -g pm2
+```
+
+#### Step 3: Configure Server for External Access
+The application is pre-configured to bind to all network interfaces (`0.0.0.0:3000`) for external access.
+
+#### Step 4: Configure AWS Security Group
+In your AWS Console, ensure your Security Group allows inbound traffic:
+```
+Type: Custom TCP
+Port: 3000
+Source: 0.0.0.0/0 (or restrict to specific IPs for security)
+```
+
+#### Step 5: Start the Application
+```bash
+# Option 1: Direct start (for testing)
 node server.js
 
-This repository is structured to support multiple projects:
+# Option 2: Using PM2 (recommended for production)
+pm2 start server.js --name "vegas-casino"
+pm2 startup  # Enable auto-start on system reboot
+pm2 save     # Save current process list
+```
 
-- Web applications# Option 2: Using PM2 (recommended for production)
-
-- APIs and microservicespm2 start server.js --name "vegas-casino"
-
-- Development toolspm2 startup  # Enable auto-start on system reboot
-
-- Testing frameworkspm2 save     # Save current process list
-
-- Documentation sites```
-
-
-
-Each project should maintain its own documentation and dependencies while sharing common development practices.#### Step 6: Verify Deployment
-
+#### Step 6: Verify Deployment
 ```bash
-
----# Check if server is running
-
+# Check if server is running
 sudo netstat -tlnp | grep :3000
+# or
+sudo ss -tlnp | grep :3000
 
-**Last Updated**: September 30, 2025  # or
-
-**Repository**: https://github.com/lawrobar90/Vegas-App  sudo ss -tlnp | grep :3000
-
-**Maintainer**: Development Team
 # Get your public IP
 curl -s http://169.254.169.254/latest/meta-data/public-ipv4
 
