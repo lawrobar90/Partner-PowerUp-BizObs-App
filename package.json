@@ -1,0 +1,30 @@
+{
+  "name": "dynatrace-vegas-casino",
+  "version": "2.0.0",
+  "description": "Dynatrace Vegas Casino - A Node.js casino application with Smartscape-inspired UI and real-time telemetry",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "casino",
+    "dynatrace",
+    "smartscape",
+    "websocket",
+    "telemetry",
+    "nodejs",
+    "express"
+  ],
+  "author": "Dynatrace Vegas Team",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "socket.io": "^4.8.1"
+  },
+  "optionalDependencies": {
+    "@dynatrace/oneagent-sdk": "^1.5.0"
+  }
+}

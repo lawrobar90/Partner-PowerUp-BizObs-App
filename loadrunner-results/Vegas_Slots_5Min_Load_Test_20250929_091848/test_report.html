@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vegas Slots LoadRunner Test Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .header { background: #f4f4f4; padding: 20px; border-radius: 5px; }
+        .section { margin: 20px 0; }
+        .metric { display: inline-block; margin: 10px; padding: 15px; background: #e8f4f8; border-radius: 5px; }
+        .metric h3 { margin: 0; color: #2c3e50; }
+        .metric p { margin: 5px 0; font-size: 18px; font-weight: bold; color: #27ae60; }
+        pre { background: #f8f8f8; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎰 Vegas Slots LoadRunner Test Report</h1>
+        <p><strong>Test Name:</strong> Vegas_Slots_5Min_Load_Test_20250929_091848</p>
+        <p><strong>Execution Time:</strong> Mon Sep 29 09:24:06 UTC 2025</p>
+        <p><strong>Duration:</strong> 300 seconds</p>
+        <p><strong>Virtual Users:</strong> 10</p>
+        <p><strong>Target Server:</strong> localhost:3000</p>
+    </div>
+    
+    <div class="section">
+        <h2>Test Configuration</h2>
+        <div class="metric">
+            <h3>Duration</h3>
+            <p>300 sec</p>
+        </div>
+        <div class="metric">
+            <h3>Virtual Users</h3>
+            <p>10</p>
+        </div>
+        <div class="metric">
+            <h3>Ramp Up</h3>
+            <p>60 sec</p>
+        </div>
+        <div class="metric">
+            <h3>Ramp Down</h3>
+            <p>60 sec</p>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Dynatrace Integration</h2>
+        <p>This test includes Dynatrace request tagging with the following headers:</p>
+        <ul>
+            <li><strong>TSN (Test Step Name):</strong> Navigate_To_Lobby, Navigate_To_Slots, Slot_Spin, Navigate_Back_To_Lobby</li>
+            <li><strong>LSN (Load Script Name):</strong> Vegas-Slots-Load-Test</li>
+            <li><strong>LTN (Load Test Name):</strong> Vegas_Slots_5Min_Load_Test_20250929_091848</li>
+            <li><strong>VU (Virtual User):</strong> 1-10</li>
+            <li><strong>SI (Source ID):</strong> LoadRunner</li>
+        </ul>
+    </div>
+    
+    <div class="section">
+        <h2>Test Scenarios</h2>
+        <ol>
+            <li>Navigate to lobby page</li>
+            <li>Navigate to Vegas Slots game</li>
+            <li>Perform 3-8 random slot spins per session</li>
+            <li>Return to lobby</li>
+            <li>Repeat cycle until test duration expires</li>
+        </ol>
+    </div>
+    
+    <div class="section">
+        <h2>Files Generated</h2>
+        <ul>
+            <li>Scenario File: vegas_slots_scenario.lrs</li>
+            <li>Individual User Logs: user_*.log</li>
+            <li>Simulation Log: simulation.log</li>
+            <li>Test Report: test_report.html</li>
+        </ul>
+    </div>
+    
+    <div class="section">
+        <h2>Dynatrace Analysis</h2>
+        <p>To analyze the test results in Dynatrace:</p>
+        <ol>
+            <li>Navigate to Services in Dynatrace</li>
+            <li>Look for your Vegas application service</li>
+            <li>Filter by request attribute "Load test name" = "Vegas_Slots_5Min_Load_Test_20250929_091848"</li>
+            <li>Analyze response times, throughput, and error rates</li>
+            <li>Review PurePaths for detailed transaction analysis</li>
+        </ol>
+    </div>
+</body>
+</html>

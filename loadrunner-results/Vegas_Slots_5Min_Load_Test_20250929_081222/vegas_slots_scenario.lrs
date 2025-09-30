@@ -1,0 +1,34 @@
+[General]
+Version=1.0
+Type=LoadRunner Scenario
+
+[Groups]
+Group1="Vegas Slots Users"
+    VUsers=10
+    Script=/home/ec2-user/loadrunner-scripts/Vegas-Slots-Load-Test/default.usr
+    RampUp=60
+    Duration=300
+    RampDown=60
+    
+[Runtime Settings]
+ThinkTime=Random
+ThinkTimeMin=1
+ThinkTimeMax=5
+Iterations=Infinite
+Pacing=AsEarly
+
+[Parameters]
+ServerHost=localhost
+ServerPort=3000
+TestName=Vegas_Slots_5Min_Load_Test_20250929_081222
+TestRunId=LR_20250929081222
+
+[Monitoring]
+EnableMonitoring=Yes
+MonitorWindows=Yes
+MonitorLinux=Yes
+
+[Results]
+ResultsDirectory=/home/ec2-user/loadrunner-results/Vegas_Slots_5Min_Load_Test_20250929_081222
+AutoSaveResults=Yes
+ResultsFormat=HTML

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Slots - Dynatrace Casino</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        :root {
+            --dt-blue: #00a1c9;
+            --dt-purple: #7c38f5;
+            --dt-green: #6fc947;
+            --dt-dark: #2d3748;
+        }
+        
+        body {
+            background: radial-gradient(ellipse at center, #1a202c 0%, #2d3748 45%, #4a5568 100%);
+            background-attachment: fixed;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        .smartscape-bg {
+            background: linear-gradient(135deg, 
+                rgba(0, 161, 201, 0.1) 0%, 
+                rgba(124, 56, 245, 0.1) 50%, 
+                rgba(111, 201, 71, 0.1) 100%);
+        }
+        
+        .slot-machine {
+            background: linear-gradient(145deg, #2d3748, #4a5568);
+            border: 3px solid var(--dt-blue);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.6),
+                inset 0 2px 4px rgba(255, 255, 255, 0.1);
+        }
+        
+        .slot-reel {
+            background: linear-gradient(145deg, #1a202c, #2d3748);
+            border: 2px solid var(--dt-purple);
+            transition: all 0.3s ease;
+        }
+        
+        .slot-reel:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(124, 56, 245, 0.5);
+        }
+        
+        .winning-symbol {
+            animation: celebrate 1s ease-in-out infinite alternate;
+            box-shadow: 0 0 30px var(--dt-green) !important;
+        }
+        
+        @keyframes celebrate {
+            from { transform: scale(1) rotate(0deg); }
+            to { transform: scale(1.1) rotate(2deg); }
+        }
+        
+        .dt-logo {
+            filter: drop-shadow(0 0 10px rgba(0, 161, 201, 0.5));
+        }
+        
+        .metrics-card {
+            background: rgba(45, 55, 72, 0.8);
+            border: 1px solid rgba(0, 161, 201, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .connection-line {
+            background: linear-gradient(90deg, var(--dt-blue), var(--dt-purple));
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body class="smartscape-bg min-h-screen">
+    <!-- Header with Dynatrace Branding -->
+    <header class="text-center py-6 border-b border-gray-700">
+        <div class="flex items-center justify-center space-x-4">
+            <img src="/assets/slot-icons/dynatrace.png" alt="Dynatrace Logo" class="dt-logo h-12 w-12">
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-green-400 bg-clip-text text-transparent">
+                Quantum Slots
+            </h1>
+            <img src="/assets/slot-icons/dynatrace.png" alt="Dynatrace Logo" class="dt-logo h-12 w-12">
+        </div>
+        <p class="text-gray-300 mt-2">Powered by Dynatrace Smartscape Intelligence</p>
+    </header>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Live Metrics Panel -->
+            <div class="lg:col-span-1">
+                <div class="metrics-card rounded-lg p-6">
+                    <h3 class="text-xl font-bold text-blue-400 mb-4 flex items-center">
+                        <span class="mr-2">📊</span> Live Session Metrics
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Total Spins:</span>
+                            <span id="total-spins" class="text-white font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Total Wins:</span>
+                            <span id="total-wins" class="text-green-400 font-bold">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Win Rate:</span>
+                            <span id="win-rate" class="text-purple-400 font-bold">0%</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Biggest Win:</span>
+                            <span id="biggest-win" class="text-yellow-400 font-bold">$0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">Balance:</span>
+                            <span id="balance" class="text-blue-400 font-bold text-xl">1000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slot Machine -->
+            <div class="lg:col-span-2">
+                <div class="slot-machine rounded-lg p-8 text-center">
+                    <h2 class="text-2xl font-bold text-white mb-6">🎰 Quantum Slots</h2>
+                    
+                    <!-- Slot Reels -->
+                    <div class="flex justify-center items-center space-x-4 mb-8">
+                        <div id="reel1" class="slot-reel w-20 h-20 flex items-center justify-center text-4xl rounded-lg">🍒</div>
+                        <div id="reel2" class="slot-reel w-20 h-20 flex items-center justify-center text-4xl rounded-lg">🍒</div>
+                        <div id="reel3" class="slot-reel w-20 h-20 flex items-center justify-center text-4xl rounded-lg">🍒</div>
+                    </div>
+
+                    <!-- Betting Controls -->
+                    <div class="mb-6">
+                        <label class="block text-white mb-2">Bet Amount:</label>
+                        <select id="bet-amount" class="bg-gray-700 text-white px-4 py-2 rounded border border-gray-600">
+                            <option value="10">$10</option>
+                            <option value="25">$25</option>
+                            <option value="50" selected>$50</option>
+                            <option value="100">$100</option>
+                        </select>
+                    </div>
+
+                    <!-- Spin Button -->
+                    <button id="spin-btn" class="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-3 px-8 rounded-lg text-xl transition-all duration-300 transform hover:scale-105">
+                        SPIN TO WIN
+                    </button>
+
+                    <!-- Test Payout Button -->
+                    <button id="test-payout-btn" class="ml-4 bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-bold py-2 px-6 rounded-lg transition-all duration-300">
+                        🧪 Test Payouts
+                    </button>
+
+                    <!-- Result Display -->
+                    <div id="result" class="mt-6 text-xl"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let balance = 1000;
+        let isSpinning = false;
+        let sessionStats = {
+            totalSpins: 0,
+            totalWins: 0,
+            biggestWin: 0,
+            sessionProfit: 0
+        };
+
+        const symbols = {
+            'cherry': '🍒',
+            'lemon': '🍋', 
+            'orange': '🍊',
+            'bell': '🔔',
+            'bar': '💰',
+            'seven': '7️⃣',
+            'diamond': '💎',
+            'star': '⭐',
+            'target': '🎯',
+            'database': '🗄️',
+            'shield': '🛡️',
+            'application': '📱',
+            'service': '⚙️',
+            'dynatrace': '⚡'
+        };
+
+        function updateStats() {
+            document.getElementById('total-spins').textContent = sessionStats.totalSpins;
+            document.getElementById('total-wins').textContent = sessionStats.totalWins;
+            document.getElementById('biggest-win').textContent = '$' + sessionStats.biggestWin;
+            
+            const winRate = sessionStats.totalSpins > 0 ? 
+                ((sessionStats.totalWins / sessionStats.totalSpins) * 100).toFixed(1) : 0;
+            document.getElementById('win-rate').textContent = winRate + '%';
+        }
+
+        function updateBalance() {
+            document.getElementById('balance').textContent = balance;
+        }
+
+        function showResult(message, isWin) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = isWin ? 'text-green-400 font-bold' : 'text-red-400';
+            
+            setTimeout(() => {
+                resultDiv.textContent = '';
+                document.querySelectorAll('.slot-reel').forEach(reel => {
+                    reel.classList.remove('winning-symbol');
+                });
+            }, 3000);
+        }
+
+        function animateReels() {
+            document.querySelectorAll('.slot-reel').forEach((reel, index) => {
+                const symbolKeys = Object.keys(symbols);
+                let spinCount = 0;
+                const maxSpins = 15 + (index * 5);
+                
+                const spinInterval = setInterval(() => {
+                    const randomSymbol = symbolKeys[Math.floor(Math.random() * symbolKeys.length)];
+                    reel.textContent = symbols[randomSymbol];
+                    spinCount++;
+                    
+                    if (spinCount >= maxSpins) {
+                        clearInterval(spinInterval);
+                    }
+                }, 100);
+            });
+        }
+
+        function addConnectionLines() {
+            const reels = document.querySelectorAll('.slot-reel');
+            reels.forEach((reel, index) => {
+                if (index < reels.length - 1) {
+                    const line = document.createElement('div');
+                    line.className = 'connection-line';
+                    line.style.cssText = 'position: absolute; top: 50%; right: -20px; width: 40px; height: 2px; background: linear-gradient(90deg, #00a1c9, #7c38f5); opacity: 0.6; transform: translateY(-50%); z-index: 10;';
+                    reel.style.position = 'relative';
+                    reel.appendChild(line);
+                }
+            });
+        }
+
+        function testPayout() {
+            console.log('🧪 Testing payout functionality...');
+            
+            const testCombinations = [
+                { symbols: ['cherry', 'cherry', 'cherry'], name: 'Triple Cherry (Small Win)' },
+                { symbols: ['seven', 'seven', 'seven'], name: 'Triple Seven (Big Win)' },
+                { symbols: ['diamond', 'diamond', 'diamond'], name: 'Triple Diamond (Mega Win)' },
+                { symbols: ['dynatrace', 'dynatrace', 'dynatrace'], name: 'Triple Dynatrace (Jackpot!)' },
+                { symbols: ['cherry', 'lemon', 'orange'], name: 'No Match (Loss)' }
+            ];
+            
+            let testIndex = 0;
+            
+            function runNextTest() {
+                if (testIndex >= testCombinations.length) {
+                    console.log('✅ All payout tests completed!');
+                    showResult('Payout tests completed! Check console for details.', true);
+                    return;
+                }
+                
+                const test = testCombinations[testIndex];
+                console.log(`Test ${testIndex + 1}: ${test.name}`);
+                
+                // Simulate the result by setting the reels
+                test.symbols.forEach((symbol, index) => {
+                    const reel = document.getElementById('reel' + (index + 1));
+                    reel.textContent = symbols[symbol] || symbol;
+                });
+                
+                // Test the API endpoint
+                fetch('/api/slots/test-payout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        symbols: test.symbols,
+                        betAmount: 50
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(`Result: Win=${data.win}, Amount=$${data.winAmount}, Multiplier=${data.multiplier}x`);
+                    
+                    if (data.win) {
+                        document.querySelectorAll('.slot-reel').forEach(reel => {
+                            reel.classList.add('winning-symbol');
+                        });
+                        showResult(`${test.name}: Won $${data.winAmount}! (${data.multiplier}x)`, true);
+                    } else {
+                        showResult(`${test.name}: No win`, false);
+                    }
+                    
+                    testIndex++;
+                    setTimeout(runNextTest, 2000);
+                })
+                .catch(error => {
+                    console.error('Test error:', error);
+                    testIndex++;
+                    setTimeout(runNextTest, 1000);
+                });
+            }
+            
+            runNextTest();
+        }
+
+        // Socket event handlers
+        socket.on('slots-result', (data) => {
+            console.log('Spin Result:', data);
+            
+            const resultSymbols = data.symbols;
+            const multiplier = data.multiplier;
+            const winnings = data.winnings;
+            const newBalance = data.newBalance;
+            
+            // Update session statistics
+            sessionStats.totalSpins++;
+            if (winnings > 0) {
+                sessionStats.totalWins++;
+                if (winnings > sessionStats.biggestWin) {
+                    sessionStats.biggestWin = winnings;
+                }
+            }
+            
+            // Display final symbols
+            if (resultSymbols) {
+                resultSymbols.forEach((symbol, index) => {
+                    const reel = document.getElementById('reel' + (index + 1));
+                    reel.textContent = symbols[symbol] || symbol;
+                });
+            }
+
+            balance = newBalance;
+            updateBalance();
+            updateStats();
+
+            if (winnings > 0) {
+                document.querySelectorAll('.slot-reel').forEach(reel => {
+                    reel.classList.add('winning-symbol');
+                });
+                
+                let message = 'You won $' + winnings + '! (' + multiplier + 'x)';
+                if (winnings >= 500) {
+                    message = 'MEGA WIN! $' + winnings + '! (' + multiplier + 'x)';
+                } else if (winnings >= 100) {
+                    message = 'BIG WIN! $' + winnings + '! (' + multiplier + 'x)';
+                }
+                
+                showResult(message, true);
+                
+                console.log('Payout Details:', {
+                    symbols: resultSymbols,
+                    multiplier: multiplier,
+                    winnings: winnings,
+                    newBalance: newBalance,
+                    betAmount: parseInt(document.getElementById('bet-amount').value)
+                });
+            } else {
+                showResult('Better luck next time!', false);
+            }
+
+            isSpinning = false;
+            document.getElementById('spin-btn').disabled = false;
+            document.getElementById('spin-btn').textContent = 'SPIN TO WIN';
+        });
+
+        socket.on('balance-update', (data) => {
+            balance = data.balance;
+            updateBalance();
+        });
+
+        socket.on('slots-error', (data) => {
+            showResult(data.message, false);
+            isSpinning = false;
+            document.getElementById('spin-btn').disabled = false;
+            document.getElementById('spin-btn').textContent = 'SPIN TO WIN';
+        });
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            updateBalance();
+            updateStats();
+            addConnectionLines();
+            
+            document.getElementById('spin-btn').addEventListener('click', () => {
+                if (isSpinning) return;
+                
+                const betAmount = parseInt(document.getElementById('bet-amount').value);
+                if (betAmount > balance) {
+                    showResult('Insufficient balance!', false);
+                    return;
+                }
+                
+                isSpinning = true;
+                document.getElementById('spin-btn').disabled = true;
+                document.getElementById('spin-btn').textContent = 'SPINNING...';
+                
+                animateReels();
+                socket.emit('slots-spin', { betAmount: betAmount });
+            });
+            
+            // Test payout button
+            document.getElementById('test-payout-btn').addEventListener('click', testPayout);
+        });
+    </script>
+</body>
+</html>

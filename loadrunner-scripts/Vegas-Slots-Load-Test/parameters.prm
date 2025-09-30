@@ -1,0 +1,35 @@
+[parameter:ServerHost]
+Delimiter=,
+ParamName=ServerHost
+GenerateNewVal=EachIteration
+OriginalValue=localhost
+auto_allocate_block_size=1
+value_for_each_vuser=
+SelectNextRow=Same line as the parent parameter
+StartRow=1
+Table=ServerHosts.dat
+TableLocation=Local
+Type=Table
+auto_allocate_block_size=1
+
+[parameter:TestRunId]
+Delimiter=
+ParamName=TestRunId  
+GenerateNewVal=EachOccurrence
+OriginalValue=
+Type=Unique Number
+MinVal=1
+MaxVal=999999
+Format=%06d
+Seed=
+
+[parameter:BetAmount]
+Delimiter=,
+ParamName=BetAmount
+GenerateNewVal=EachIteration
+OriginalValue=5
+SelectNextRow=Random
+StartRow=1
+Table=BetAmounts.dat
+TableLocation=Local
+Type=Table
