@@ -25,6 +25,7 @@ Thumbs.db
 
 # IDE files
 .vscode/
+.vscode-server/
 .idea/
 *.swp
 *.swo
@@ -44,3 +45,4 @@ loadrunner-results/*/simulation.log
 .local/
 .config/
 .m2/
+.wget-hsts
