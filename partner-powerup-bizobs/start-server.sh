@@ -1,0 +1,50 @@
+#!/bin/bash
+cd /home/ec2-user/partner-powerup-bizobs
+
+echo "Starting Partner PowerUp BizObs server..."
+echo "Current directory: $(pwd)"
+echo "Node version: $(node --version)"
+echo "NPM version: $(npm --version)"
+
+# Kill any existing processes
+pkill -f "node server.js" || true
+
+# Wait a moment
+sleep 2
+
+# Set environment variables for Dynatrace service detection
+export DT_SERVICE_NAME="customer-journey-simulator"
+export DT_APPLICATION_NAME="partner-powerup-bizobs"
+export NODE_ENV="development"
+export SERVICE_VERSION="1.0.0"
+export DT_CLUSTER_ID="customer-journey-cluster"
+export DT_NODE_ID="journey-node-001"
+
+# Additional Dynatrace configuration for better service splitting
+export DT_CUSTOM_PROP="service.splitting=enabled"
+export DT_TAGS="environment=development,application=customer-journey"
+
+# Start the server
+echo "Starting server with Dynatrace service identification..."
+node server.js &
+SERVER_PID=$!
+
+echo "Server started with PID: $SERVER_PID"
+
+# Wait for server to start
+sleep 3
+
+# Test if server is responding
+echo "Testing server..."
+if curl -s http://127.0.0.1:4000/health > /dev/null; then
+    echo "✅ Server is responding on port 4000"
+    echo "🌐 Access your app at: http://localhost:4000"
+    echo "🔍 Dynatrace will see services based on stepName (discovery-service, checkout-service, etc.)"
+else
+    echo "❌ Server is not responding"
+    echo "Server process status:"
+    ps aux | grep "node server.js" | grep -v grep
+fi
+
+# Keep the server running
+wait $SERVER_PID

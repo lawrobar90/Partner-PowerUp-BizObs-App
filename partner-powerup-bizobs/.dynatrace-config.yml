@@ -1,0 +1,39 @@
+# Dynatrace Service Detection Configuration
+# This file helps Dynatrace recognize different services based on step names
+
+# Service mapping for customer journey steps
+discovery-service:
+  name: "Discovery Service"
+  type: "frontend"
+  endpoints: ["/api/search", "/api/products"]
+  
+exploration-service:
+  name: "Exploration Service" 
+  type: "application"
+  endpoints: ["/api/browse", "/api/filter"]
+  
+selection-service:
+  name: "Selection Service"
+  type: "application" 
+  endpoints: ["/api/cart", "/api/add"]
+  
+checkout-service:
+  name: "Checkout Service"
+  type: "payment"
+  endpoints: ["/api/checkout", "/api/payment"]
+  
+confirmation-service:
+  name: "Confirmation Service"
+  type: "notification"
+  endpoints: ["/api/confirm", "/api/email"]
+  
+postpurchase-service:
+  name: "PostPurchase Service"
+  type: "notification"
+  endpoints: ["/api/tracking", "/api/feedback"]
+
+# Global configuration
+global:
+  service_detection: "enabled"
+  log_format: "json"
+  trace_correlation: "enabled"

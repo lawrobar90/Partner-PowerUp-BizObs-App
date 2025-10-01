@@ -1,0 +1,21 @@
+{
+  "name": "partner-powerup-bizobs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dynatrace Business Observability App with Smartscape-inspired UI and Node.js server",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "NODE_ENV=development node server.js"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "morgan": "^1.10.0",
+    "socket.io": "^4.7.5",
+    "uuid": "^9.0.1"
+  }
+}

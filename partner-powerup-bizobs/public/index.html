@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Partner PowerUp BizObs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            dtpurple: '#6C2C9C', dtblue: '#00A1C9', dtcyan: '#00D4FF', dtgreen: '#73BE28', dtorange: '#FFA86B', dtyellow: '#FFD23F', dtdark: '#151515', dtgray: '#2D2D2D'
+          },
+          boxShadow: { glow: '0 0 20px rgba(0, 212, 255, 0.5)' }
+        }
+      }
+    };
+  </script>
+  <style>
+    .node { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .node:hover { transform: scale(1.03); box-shadow: 0 0 30px rgba(0,212,255,0.6); }
+    .connector { position:absolute; width:2px; background: linear-gradient(180deg, #00D4FF, transparent); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%{opacity:.5} 50%{opacity:1} 100%{opacity:.5} }
+  </style>
+</head>
+<body class="bg-dtdark text-white min-h-screen">
+  <div class="max-w-6xl mx-auto p-6">
+    <header class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl font-bold text-dtcyan">Partner PowerUp BizObs</h1>
+      <span id="host-label" class="text-sm text-dtgray">Smartscape UI · Real-time overlays</span>
+    </header>
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="md:col-span-2 p-4 rounded-lg bg-[#1b1b1b] border border-dtgray">
+        <h2 class="text-xl mb-4 text-dtcyan">Journey Generator</h2>
+        
+        <!-- Generation Method Selection -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-dtcyan mb-2">Generation Method</label>
+          <select id="generationMethod" class="w-full p-2 rounded bg-dtgray text-white border border-dtgray focus:border-dtcyan">
+            <option value="template">Quick Template (No AI)</option>
+            <option value="copilot">🤖 Copilot Copy-Paste Workflow</option>
+          </select>
+        </div>
+
+        <!-- Basic Form -->
+        <form id="journey-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <input id="companyName" class="p-2 rounded bg-dtgray text-white" name="customer" placeholder="Company name" />
+          <input id="domain" class="p-2 rounded bg-dtgray text-white" name="website" placeholder="Website domain" />
+          <input id="industryType" class="p-2 rounded bg-dtgray text-white" name="region" placeholder="Industry type" />
+          <input class="p-2 rounded bg-dtgray text-white" name="journeyType" placeholder="Journey type (optional)" />
+          <input class="p-2 rounded bg-dtgray text-white md:col-span-2" name="details" placeholder="Additional context (optional)" />
+          <button id="generateJourney" type="button" class="md:col-span-2 bg-dtblue hover:bg-dtcyan text-black font-semibold rounded p-2">
+            Generate Journey
+          </button>
+        </form>
+
+        <!-- Copilot Copy-Paste Workflow -->
+        <div id="copilotWorkflow" class="bg-dtgray rounded-lg p-4 mb-4 hidden">
+          <h3 class="text-lg font-semibold text-dtcyan mb-4">🤖 Copilot Copy-Paste Workflow</h3>
+          
+          <!-- Step 1: Copy Prompt -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-sm font-medium text-white">Step 1: Copy this prompt to your Copilot</h4>
+              <button id="copyPrompt" type="button" class="bg-dtgreen text-black px-3 py-1 rounded text-sm hover:bg-green-700 font-semibold">
+                📋 Copy Prompt
+              </button>
+            </div>
+            <textarea id="promptText" readonly class="w-full h-32 p-3 border border-dtgray rounded-md bg-black text-white text-xs font-mono resize-none"></textarea>
+          </div>
+
+          <!-- Step 2: Paste Response -->
+          <div class="mb-4">
+            <h4 class="text-sm font-medium text-white mb-2">Step 2: Paste your Copilot's response here</h4>
+            <textarea id="copilotResponse" placeholder="Paste the JSON response from your Copilot here..." class="w-full h-32 p-3 border border-dtgray rounded-md bg-black text-white text-xs font-mono resize-none focus:border-dtcyan"></textarea>
+          </div>
+
+          <!-- Step 3: Process Response -->
+          <div class="flex gap-3">
+            <button id="processResponse" type="button" class="bg-dtpurple text-white px-4 py-2 rounded-md hover:bg-purple-700 font-semibold">
+              🚀 Process Response
+            </button>
+            <button id="resetWorkflow" type="button" class="bg-dtgray text-white px-4 py-2 rounded-md hover:bg-gray-600 border border-dtgray">
+              🔄 Reset
+            </button>
+          </div>
+        </div>
+        <!-- Journey Output -->
+        <div class="mt-4">
+          <div class="flex items-center justify-between">
+            <div id="journey-sources" class="text-xs text-dtblue space-y-1"></div>
+            <div id="journey-provider" class="text-xs text-dtyellow"></div>
+          </div>
+          <pre id="journey-output" class="mt-2 text-xs bg-black p-3 rounded overflow-auto max-h-60"></pre>
+          <button id="seed-flow" class="mt-2 bg-dtcyan text-black font-semibold rounded p-2">Use this Journey for 6-Step Flow</button>
+        </div>
+      </div>
+
+      <div class="p-4 rounded-lg bg-[#1b1b1b] border border-dtgray">
+        <h2 class="text-xl mb-4 text-dtcyan">Simulate Events</h2>
+        <form id="simulate-form" class="grid grid-cols-2 gap-3">
+          <input class="p-2 rounded bg-dtgray text-white" name="rps" type="number" min="1" value="2" placeholder="Rate/sec" />
+          <input class="p-2 rounded bg-dtgray text-white" name="duration" type="number" min="1" value="10" placeholder="Duration (s)" />
+          <button class="bg-dtgreen hover:bg-dtcyan text-black font-semibold rounded p-2 col-span-2" type="submit">Start Simulation</button>
+        </form>
+        <div id="sim-status" class="mt-2 text-sm text-dtyellow"></div>
+        <div class="flex gap-2 mt-3">
+          <button id="run-flow" class="flex-1 bg-dtblue hover:bg-dtcyan text-black font-semibold rounded p-2">Run 6-Step Flow</button>
+          <button id="run-flow-chained" class="flex-1 bg-dtgreen hover:bg-dtcyan text-black font-semibold rounded p-2" title="Trigger connected service chaining">Run Chained Flow</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 p-4 rounded-lg bg-[#1b1b1b] border border-dtgray relative">
+      <h2 class="text-xl mb-2 text-dtcyan">Smartscape</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="node p-4 rounded bg-dtgray">Frontend UI<div class="text-xs text-dtblue">Tailwind, Forms</div></div>
+        <div class="node p-4 rounded bg-dtgray">Journey Service<div class="text-xs text-dtblue">/generateJourney</div></div>
+        <div class="node p-4 rounded bg-dtgray">Event Simulator<div class="text-xs text-dtblue">/simulateEvents</div></div>
+        <div class="node p-4 rounded bg-dtgray">Metrics Service<div class="text-xs text-dtblue">/metrics</div></div>
+        <div class="node p-4 rounded bg-dtgray">Dynatrace OneAgent<div class="text-xs text-dtblue">Trace/Logs</div></div>
+        <div class="node p-4 rounded bg-dtgray">Grail<div class="text-xs text-dtblue">Biz Events</div></div>
+      </div>
+      <div class="absolute left-1/4 top-1/2 h-24 connector"></div>
+    </section>
+
+    <section class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="p-4 rounded-lg bg-[#1b1b1b] border border-dtgray">
+        <h2 class="text-xl text-dtcyan mb-2">Live Biz Events</h2>
+        <ul id="live-feed" class="text-xs space-y-1 max-h-64 overflow-auto"></ul>
+      </div>
+      <div class="p-4 rounded-lg bg-[#1b1b1b] border border-dtgray">
+        <h2 class="text-xl text-dtcyan mb-2">Metrics</h2>
+        <pre id="metrics" class="text-xs bg-black p-3 rounded max-h-64 overflow-auto"></pre>
+      </div>
+    </section>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const ioClient = io();
+    const feed = document.getElementById('live-feed');
+    const metricsEl = document.getElementById('metrics');
+    const journeyForm = document.getElementById('journey-form');
+    const journeyOutput = document.getElementById('journey-output');
+    const journeySources = document.getElementById('journey-sources');
+    const journeyProvider = document.getElementById('journey-provider');
+    const seedFlowBtn = document.getElementById('seed-flow');
+    const simulateForm = document.getElementById('simulate-form');
+    const simStatus = document.getElementById('sim-status');
+    const runFlowBtn = document.getElementById('run-flow');
+
+    let lastJourney = null;
+    let currentJourneyData = null;
+
+    // Handle generation method change
+    document.getElementById('generationMethod').addEventListener('change', (e) => {
+      const copilotWorkflow = document.getElementById('copilotWorkflow');
+      if (e.target.value === 'copilot') {
+        copilotWorkflow.classList.remove('hidden');
+        generateCopilotPrompt();
+      } else {
+        copilotWorkflow.classList.add('hidden');
+      }
+    });
+
+    // Add event listeners to form inputs to auto-update prompt
+    document.getElementById('companyName').addEventListener('input', () => {
+      if (document.getElementById('generationMethod').value === 'copilot') {
+        generateCopilotPrompt();
+      }
+    });
+    
+    document.getElementById('domain').addEventListener('input', () => {
+      if (document.getElementById('generationMethod').value === 'copilot') {
+        generateCopilotPrompt();
+      }
+    });
+    
+    document.getElementById('industryType').addEventListener('input', () => {
+      if (document.getElementById('generationMethod').value === 'copilot') {
+        generateCopilotPrompt();
+      }
+    });
+
+    // Generate Copilot Prompt
+    function generateCopilotPrompt() {
+      const companyName = document.getElementById('companyName').value || '[Company Name]';
+      const domain = document.getElementById('domain').value || '[company.com]';
+      const industryType = document.getElementById('industryType').value || 'technology';
+      
+      // Generate industry-specific step names and examples
+      const industrySteps = getIndustrySpecificSteps(industryType, companyName);
+      const industryExample = getIndustryExample(industryType, companyName, domain);
+      
+      const prompt = `Create a realistic customer journey for ${companyName} (${domain}) in ${industryType}. Generate step names that reflect the actual customer experience for this industry.
+
+Respond with this EXACT JSON structure:
+
+{
+  "journey": {
+    "companyName": "${companyName}",
+    "domain": "${domain}",
+    "industryType": "${industryType}",
+    "journeyId": "journey_\${Date.now()}",
+    "steps": [
+      {
+        "stepIndex": 1,
+        "stepName": "${industrySteps[0]}",
+        "description": "Customer ${industrySteps[0].toLowerCase()} phase",
+        "duration": "2-5 minutes",
+        "substeps": [
+          {
+            "substepIndex": 1,
+            "substepName": "Initial_Action",
+            "description": "Customer's first interaction",
+            "serviceName": "${industrySteps[0].toLowerCase()}-service",
+            "endpoint": "/api/${industrySteps[0].toLowerCase()}",
+            "duration": 800,
+            "eventType": "${industrySteps[0].toLowerCase()}_initiated",
+            "metadata": ${industryExample}
+          }
+        ]
+      }
+    ]
+  },
+  "customerProfile": {
+    "userId": "user_\${Math.random().toString(36).substr(2, 9)}",
+    "email": "customer@example.com",
+    "demographic": "${getIndustryDemographic(industryType)}",
+    "painPoints": ${JSON.stringify(getIndustryPainPoints(industryType))},
+    "goals": ${JSON.stringify(getIndustryGoals(industryType, companyName))}
+  },
+  "traceMetadata": {
+    "correlationId": "trace_\${Date.now()}",
+    "sessionId": "session_\${Math.random().toString(36).substr(2, 9)}",
+    "businessContext": {"campaignSource": "organic", "customerSegment": "consumer", "businessValue": ${getIndustryValue(industryType)}}
+  },
+  "additionalFields": {
+    "deviceType": "mobile", "browser": "Chrome", "location": "${getIndustryLocation(industryType)}", "entryChannel": "organic",
+    "customerIntent": "purchase", "loyaltyStatus": "new", "abandonmentRisk": "medium",
+    "conversionProbability": ${getIndustryConversion(industryType)}, "personalizationTags": ${JSON.stringify(getIndustryTags(industryType))}
+  }
+}
+
+REQUIREMENTS: Create exactly 6 steps using these names: ${industrySteps.join(', ')}. Each step has 2-3 realistic substeps for ${industryType}. Use industry-specific service names, endpoints, and metadata. Keep descriptions brief but specific to ${companyName}'s ${industryType} business.`;
+      
+      document.getElementById('promptText').value = prompt;
+    }
+
+    // Industry-specific step name generation
+    function getIndustrySpecificSteps(industry, company) {
+      const steps = {
+        'telecommunications': ['Discovery', 'PlanExploration', 'ServiceSelection', 'AccountSetup', 'ServiceActivation', 'PostActivation'],
+        'banking': ['Discovery', 'ProductExploration', 'ApplicationStart', 'IdentityVerification', 'AccountOpening', 'FirstTransaction'],
+        'retail': ['Discovery', 'ProductBrowsing', 'ItemSelection', 'Checkout', 'OrderConfirmation', 'PostPurchase'],
+        'travel': ['Discovery', 'DestinationExploration', 'BookingSelection', 'ReservationProcess', 'BookingConfirmation', 'TripManagement'],
+        'insurance': ['Discovery', 'QuoteExploration', 'PolicySelection', 'ApplicationProcess', 'PolicyIssuance', 'PolicyManagement'],
+        'healthcare': ['Discovery', 'ServiceExploration', 'AppointmentScheduling', 'Registration', 'ServiceDelivery', 'FollowUp'],
+        'education': ['Discovery', 'CourseExploration', 'EnrollmentProcess', 'Registration', 'LearningStart', 'ProgressTracking'],
+        'technology': ['Discovery', 'FeatureExploration', 'TrialSignup', 'Implementation', 'GoLive', 'Optimization']
+      };
+      return steps[industry.toLowerCase()] || ['Discovery', 'Exploration', 'Selection', 'ProcessStart', 'Completion', 'PostProcess'];
+    }
+
+    function getIndustryExample(industry, company, domain) {
+      const examples = {
+        'telecommunications': '{"searchTerm": "' + company + ' mobile plans", "referrer": "google", "device": "mobile"}',
+        'banking': '{"searchTerm": "' + company + ' savings account", "referrer": "google", "device": "desktop"}',
+        'retail': '{"searchTerm": "' + company + ' products", "referrer": "social", "device": "mobile"}',
+        'travel': '{"searchTerm": "' + company + ' flights", "referrer": "google", "device": "tablet"}',
+        'insurance': '{"searchTerm": "' + company + ' car insurance", "referrer": "comparison", "device": "desktop"}',
+        'healthcare': '{"searchTerm": "' + company + ' appointments", "referrer": "direct", "device": "mobile"}',
+        'education': '{"searchTerm": "' + company + ' courses", "referrer": "google", "device": "desktop"}',
+        'technology': '{"searchTerm": "' + company + ' software", "referrer": "google", "device": "desktop"}'
+      };
+      return examples[industry.toLowerCase()] || '{"searchTerm": "' + company + '", "referrer": "google", "device": "mobile"}';
+    }
+
+    function getIndustryDemographic(industry) {
+      const demographics = {
+        'telecommunications': 'mobile users aged 25-45',
+        'banking': 'working professionals aged 30-55',
+        'retail': 'consumers aged 18-65',
+        'travel': 'leisure travelers aged 25-60',
+        'insurance': 'policy holders aged 25-50',
+        'healthcare': 'patients aged 20-70',
+        'education': 'learners aged 18-40',
+        'technology': 'tech professionals aged 25-45'
+      };
+      return demographics[industry.toLowerCase()] || 'general consumers';
+    }
+
+    function getIndustryPainPoints(industry) {
+      const painPoints = {
+        'telecommunications': ['poor network coverage', 'expensive bills'],
+        'banking': ['complex fees', 'poor customer service'],
+        'retail': ['high prices', 'limited selection'],
+        'travel': ['complicated booking', 'hidden fees'],
+        'insurance': ['confusing policies', 'high premiums'],
+        'healthcare': ['long wait times', 'complex scheduling'],
+        'education': ['course complexity', 'time constraints'],
+        'technology': ['learning curve', 'integration challenges']
+      };
+      return painPoints[industry.toLowerCase()] || ['complexity', 'cost'];
+    }
+
+    function getIndustryGoals(industry, company) {
+      const goals = {
+        'telecommunications': ['reliable connectivity', 'value for money'],
+        'banking': ['financial security', 'easy banking'],
+        'retail': ['quality products', 'good prices'],
+        'travel': ['smooth booking', 'great experience'],
+        'insurance': ['comprehensive coverage', 'fair pricing'],
+        'healthcare': ['quality care', 'convenient access'],
+        'education': ['skill development', 'career advancement'],
+        'technology': ['improved efficiency', 'better outcomes']
+      };
+      return goals[industry.toLowerCase()] || ['good service', 'value'];
+    }
+
+    function getIndustryValue(industry) {
+      const values = {
+        'telecommunications': 2000,
+        'banking': 5000,
+        'retail': 500,
+        'travel': 3000,
+        'insurance': 1500,
+        'healthcare': 2500,
+        'education': 1000,
+        'technology': 10000
+      };
+      return values[industry.toLowerCase()] || 1000;
+    }
+
+    function getIndustryLocation(industry) {
+      return 'London, UK'; // Can be made more dynamic if needed
+    }
+
+    function getIndustryConversion(industry) {
+      const conversions = {
+        'telecommunications': 0.65,
+        'banking': 0.45,
+        'retail': 0.85,
+        'travel': 0.70,
+        'insurance': 0.55,
+        'healthcare': 0.75,
+        'education': 0.60,
+        'technology': 0.40
+      };
+      return conversions[industry.toLowerCase()] || 0.65;
+    }
+
+    function getIndustryTags(industry) {
+      const tags = {
+        'telecommunications': ['mobile', 'connectivity'],
+        'banking': ['finance', 'security'],
+        'retail': ['shopping', 'products'],
+        'travel': ['booking', 'leisure'],
+        'insurance': ['protection', 'coverage'],
+        'healthcare': ['wellness', 'care'],
+        'education': ['learning', 'skills'],
+        'technology': ['innovation', 'efficiency']
+      };
+      return tags[industry.toLowerCase()] || ['service', 'quality'];
+    }
+
+    // Copy prompt to clipboard
+    document.getElementById('copyPrompt').addEventListener('click', async () => {
+      const promptText = document.getElementById('promptText').value;
+      try {
+        await navigator.clipboard.writeText(promptText);
+        const btn = document.getElementById('copyPrompt');
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        btn.classList.remove('bg-dtgreen', 'hover:bg-green-700');
+        btn.classList.add('bg-green-800');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.remove('bg-green-800');
+          btn.classList.add('bg-dtgreen', 'hover:bg-green-700');
+        }, 2000);
+      } catch (err) {
+        alert('Failed to copy to clipboard');
+      }
+    });
+
+    // Process Copilot Response
+    document.getElementById('processResponse').addEventListener('click', () => {
+      const responseText = document.getElementById('copilotResponse').value.trim();
+      if (!responseText) {
+        alert('Please paste your Copilot response first');
+        return;
+      }
+
+      try {
+        const parsedResponse = JSON.parse(responseText);
+        if (parsedResponse.journey && parsedResponse.journey.steps) {
+          lastJourney = parsedResponse.journey;
+          currentJourneyData = parsedResponse;
+          
+          // Display journey with additional fields info
+          const displayData = {
+            journey: parsedResponse.journey,
+            customerProfile: parsedResponse.customerProfile,
+            traceMetadata: parsedResponse.traceMetadata,
+            additionalFields: parsedResponse.additionalFields
+          };
+          
+          journeyOutput.textContent = JSON.stringify(displayData, null, 2);
+          journeyProvider.textContent = 'Provider: Enhanced Copilot Copy-Paste (Web Search)';
+          journeySources.innerHTML = '<div>Source: AI-powered web research and real behavior data</div>';
+          
+          // Enable flow buttons
+          setupFlowButtons();
+          
+          const fieldsCount = parsedResponse.additionalFields ? Object.keys(parsedResponse.additionalFields).length : 0;
+          alert(`Journey processed successfully! Includes ${fieldsCount} additional tracking fields. You can now simulate enriched events.`);
+        } else {
+          alert('Invalid response format. Please ensure your Copilot returned the correct JSON structure with journey.steps.');
+        }
+      } catch (error) {
+        alert('Invalid JSON format. Please check your Copilot response and try again.');
+      }
+    });
+
+    // Reset Workflow
+    document.getElementById('resetWorkflow').addEventListener('click', () => {
+      document.getElementById('copilotResponse').value = '';
+      journeyOutput.textContent = '';
+      journeyProvider.textContent = '';
+      journeySources.innerHTML = '';
+      generateCopilotPrompt();
+    });
+
+    // Generate Journey (Template Mode)
+    document.getElementById('generateJourney').addEventListener('click', async () => {
+      const generationMethod = document.getElementById('generationMethod').value;
+      
+      if (generationMethod === 'copilot') {
+        alert('Please use the copy-paste workflow above for Copilot integration');
+        return;
+      }
+
+      const data = Object.fromEntries(new FormData(journeyForm).entries());
+      const res = await fetch('/api/generateJourney', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(data) 
+      });
+      const json = await res.json();
+      
+      lastJourney = json.journey;
+      currentJourneyData = { journey: json.journey };
+      
+      journeyOutput.textContent = JSON.stringify(json, null, 2);
+      journeySources.innerHTML = '';
+      
+      const sources = (lastJourney && Array.isArray(lastJourney.sources)) ? lastJourney.sources : [];
+      if (sources.length) {
+        const title = document.createElement('div');
+        title.textContent = 'Sources:';
+        journeySources.appendChild(title);
+        for (const url of sources) {
+          const a = document.createElement('a');
+          a.href = url; a.textContent = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+          const p = document.createElement('div'); p.appendChild(a);
+          journeySources.appendChild(p);
+        }
+      }
+      
+      journeyProvider.textContent = lastJourney.provider ? `Provider: ${lastJourney.provider}` : 'Provider: Template';
+      
+      setupFlowButtons();
+    });
+
+    function setupFlowButtons() {
+      // Setup seed flow button
+      seedFlowBtn.onclick = async () => {
+        const payload = lastJourney ? { 
+          id: lastJourney.id, 
+          domain: (lastJourney.journeyType||'').toLowerCase(), 
+          steps: lastJourney.steps 
+        } : {};
+        const res = await fetch('/api/flow/runFlow', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ payload }) 
+        });
+        const json = await res.json();
+        simStatus.textContent = json.ok ? `Flow complete. Correlation: ${json.correlationId}` : `Flow failed: ${json.error}`;
+      };
+    }
+
+    // Simulate Events
+  simulateForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (!currentJourneyData || !currentJourneyData.journey) {
+        alert('Please generate a journey first');
+        return;
+      }
+
+      const rps = Number(new FormData(simulateForm).get('rps'));
+      const duration = Number(new FormData(simulateForm).get('duration'));
+      
+      const payload = {
+        journey: currentJourneyData.journey,
+        customerProfile: currentJourneyData.customerProfile || {
+          userId: `user_${Date.now()}`,
+          email: 'customer@example.com'
+        },
+        traceMetadata: currentJourneyData.traceMetadata || {
+          correlationId: `trace_${Date.now()}`,
+          sessionId: `session_${Math.random().toString(36).substr(2, 9)}`
+        },
+        additionalFields: currentJourneyData.additionalFields || {},
+        ratePerSecond: rps,
+        durationSeconds: duration
+      };
+
+      const res = await fetch('/api/simulate/simulateEvents', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload) 
+      });
+      const json = await res.json();
+      
+      const additionalFieldsText = payload.additionalFields && Object.keys(payload.additionalFields).length > 0 
+        ? ` with ${Object.keys(payload.additionalFields).length} enrichment fields`
+        : '';
+      
+      simStatus.textContent = `Simulation started: ${json.stats.totalPlanned} events planned${additionalFieldsText}`;
+    });
+
+    // Add a details area for flow results
+    let flowResultsEl = document.getElementById('flow-results');
+    if (!flowResultsEl) {
+      flowResultsEl = document.createElement('pre');
+      flowResultsEl.id = 'flow-results';
+      flowResultsEl.className = 'mt-2 text-xs bg-black p-3 rounded max-h-64 overflow-auto';
+      simStatus.parentElement.appendChild(flowResultsEl);
+    }
+
+    runFlowBtn.addEventListener('click', async () => {
+      const payload = lastJourney ? { steps: lastJourney.steps } : {};
+      const res = await fetch('/api/flow/runFlow', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ payload }) 
+      });
+      const json = await res.json();
+      if (json.ok) {
+        const summary = (json.results || []).map((r, idx) => {
+          const mode = r.pipeline || (r.event ? 'legacy' : 'child-services');
+          const stepLabel = r.step || `Step${idx+1}`;
+          return `${stepLabel} (${mode})`;
+        }).join(' ➜ ');
+        simStatus.textContent = `Flow complete. Correlation: ${json.correlationId}. Steps: ${summary}`;
+        flowResultsEl.textContent = JSON.stringify(json, null, 2);
+      } else {
+        simStatus.textContent = `Flow failed: ${json.error}`;
+        flowResultsEl.textContent = '';
+      }
+    });
+
+    // Run chained flow (connected service sequence via child-service chaining)
+    const runFlowChainedBtn = document.getElementById('run-flow-chained');
+    runFlowChainedBtn.addEventListener('click', async () => {
+      const payload = lastJourney ? { id: lastJourney.id, domain: (lastJourney.journeyType||'').toLowerCase(), useChaining: true } : { useChaining: true };
+      const res = await fetch('/api/flow/runFlow', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload })
+      });
+      const json = await res.json();
+      if (json.ok) {
+        simStatus.textContent = `Chained flow complete. Correlation: ${json.correlationId}`;
+        flowResultsEl.textContent = JSON.stringify(json, null, 2);
+      } else {
+        simStatus.textContent = `Chained flow failed: ${json.error}`;
+        flowResultsEl.textContent = '';
+      }
+    });
+
+    async function refreshMetrics() {
+      const res = await fetch('/api/metrics');
+      const json = await res.json();
+      metricsEl.textContent = JSON.stringify(json, null, 2);
+    }
+    setInterval(refreshMetrics, 2000);
+    refreshMetrics();
+
+    // Fetch domain label from response header
+    (async () => {
+      try {
+        const res = await fetch('/api/health');
+        const label = res.headers.get('X-App-Domain-Label');
+        if (label) document.getElementById('host-label').textContent = `Domain: ${label}`;
+      } catch {}
+    })();
+
+    ioClient.on('bizEvent', (evt) => {
+      const li = document.createElement('li');
+      li.textContent = `${evt.timestamp} - [${evt.domain}] ${evt.journeyStep} - ${evt.email} - $${evt.cost} - NPS:${evt.npsScore ?? ''} - corr:${evt.metadata?.correlationId ?? ''}`;
+      feed.prepend(li);
+      while (feed.children.length > 200) feed.removeChild(feed.lastChild);
+    });
+  </script>
+</body>
+</html>
