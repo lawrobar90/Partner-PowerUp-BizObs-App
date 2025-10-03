@@ -413,268 +413,113 @@ logs/
 ### Neural Dice
 - **Dice**: Two standard 6-sided dice
 - **Betting Options**: Pass Line, Don't Pass, Field, Snake Eyes, Boxcars
-- **Features**: Probability charts, strategy recommendations
+# Partner PowerUp BizObs App
 
-### Quantum Blackjack
-- **Objective**: Get as close to 21 without going over
-- **Actions**: Hit, Stand, Double Down
-- **Features**: Multi-turn gameplay, strategy advisor, card counting tracker
+This repository contains only the BizObs application (ignore `vegas-casino/`). It’s a Node.js + Express app with a Smartscape-like UI and dynamic per-step services that form a true sequential service chain with a 6-span trace.
 
-## 📁 Project Structure
+## Project layout
 
 ```
-dynatrace-vegas-casino/
-├── server.js                 # Main Express server
-├── package.json              # Project dependencies
-├── public/                   # Frontend assets
-│   ├── index.html           # Vault entrance page
-│   ├── lobby.html           # Smartscape game lobby  
-│   ├── slots.html           # Quantum Slots game
-│   ├── roulette.html        # Cosmic Roulette game
-│   ├── dice.html            # Neural Dice game
-│   ├── blackjack.html       # Quantum Blackjack game
-│   ├── leaderboard.html     # Player rankings
-│   ├── analytics.html       # Analytics dashboard
-│   └── assets/              # Static assets
-├── docs/                    # Documentation
-│   ├── LOADRUNNER_INTEGRATION_GUIDE.md
-│   ├── SRG-API-IMPORT-GUIDE.md
-│   └── SRG-SETUP-GUIDE.md
-├── scripts/                 # Utility scripts
-├── loadrunner-scripts/      # Load testing configurations  
-└── loadrunner-results/      # Test result archives
+partner-powerup-bizobs/
+   package.json
+   server.js
+   public/
+   routes/
+   services/
+   README.md
+   .gitignore
 ```
 
-## 🔧 Dynatrace Integration
+## Prerequisites
+- Node.js 18+
+- Linux/macOS/Windows
 
-### OneAgent Installation
+## Install & run
+
 ```bash
-# Set required environment variables
-export DT_TENANT='your-tenant-id'
-export DT_API_TOKEN='your-api-token' 
-export DT_PAAS_TOKEN='your-paas-token'
-
-# Run installation script
-./scripts/install-oneagent.sh
+cd partner-powerup-bizobs
+npm ci --only=production
+npm start
+# App runs on http://127.0.0.1:4000
 ```
 
-### Environment Setup
+Optional local scripts (root directory):
+
 ```bash
-# Configure Dynatrace environment
-./scripts/setup-environment.sh
-
-# Edit .env file with your credentials
-nano .env
-
-# Install optional Dynatrace SDK
-npm install --optional-only
+./start-bizobs       # starts server and waits for health
+./stop-bizobs        # stops server using server.pid
+./restart-bizobs.sh  # convenience restart
 ```
 
-### Service Architecture
-The application is designed as microservices for Dynatrace observability:
+## Key endpoints
 
-- **vegas-casino-main**: Main application and user management
-- **vegas-slots-service**: Slot machine game logic  
-- **vegas-roulette-service**: Roulette game logic
-- **vegas-dice-service**: Dice game logic
-- **vegas-blackjack-service**: Blackjack game logic
-- **vegas-analytics-service**: Metrics and analytics
-- **vegas-leaderboard-service**: Player rankings
+- Health: GET `/api/health`
+- Metrics: GET `/api/metrics` (basic placeholder)
+- Journey routes: `/api/journey/*`
+- Steps routes:
+   - POST `/api/steps/step1` .. `/step6` (legacy single-step)
+   - POST `/api/steps/step1-chained` (new chained flow; returns full 6-span trace)
+- Admin:
+   - POST `/api/admin/reset-ports` (stop all dynamic services, free ports)
+   - GET `/api/admin/services` (list running dynamic services)
 
-### BizEvents
-The application sends comprehensive business events to Dynatrace:
-- Game actions (spins, bets, wins/losses)
-- User activities (login/logout, session data)
-- Business metrics (revenue, player behavior)
-- Custom metrics (bet amounts, win rates, player statistics)
+## 6-step chained flow (sequential services)
 
-See `docs/BIZEVENTS-CONFIGURATION.md` for complete BizEvents documentation.
+The chained route spins up per-step child processes and calls them sequentially. Each service appends a span with: `traceId`, `spanId`, `parentSpanId`, `stepName`.
 
-## 🔧 Troubleshooting
+Request example:
 
-### Common Deployment Issues
-
-#### 1. Server Not Accessible Externally
 ```bash
-# Check if server is binding to all interfaces
-netstat -tlnp | grep :3000
-# Should show: 0.0.0.0:3000, not 127.0.0.1:3000
-
-# Verify AWS Security Group allows port 3000
-# Check AWS Console > EC2 > Security Groups > Inbound Rules
-
-# Test internal connectivity
-curl http://localhost:3000
-curl http://$(hostname -I | awk '{print $1}'):3000
+curl -s -X POST http://127.0.0.1:4000/api/steps/step1-chained \
+   -H 'Content-Type: application/json' \
+   -d '{
+            "thinkTimeMs": 100,
+            "steps": [
+               {"stepName":"ProductDiscovery"},
+               {"stepName":"ProductSelection"},
+               {"stepName":"AddToCart"},
+               {"stepName":"CheckoutProcess"},
+               {"stepName":"PaymentProcessing"},
+               {"stepName":"OrderConfirmation"}
+            ]
+         }'
 ```
 
-#### 2. WebSocket Connection Issues
-```bash
-# Check WebSocket errors in browser console
-# Ensure server supports WebSocket connections
-# Verify no proxy/firewall blocking WebSocket protocols
+Response (trimmed):
+
+```json
+{
+   "ok": true,
+   "pipeline": "chained-child-services",
+   "result": {
+      "trace": [
+         {"traceId":"...","spanId":"...","parentSpanId":null,"stepName":"ProductDiscovery"},
+         {"traceId":"...","spanId":"...","parentSpanId":"...","stepName":"ProductSelection"},
+         {"traceId":"...","spanId":"...","parentSpanId":"...","stepName":"AddToCart"},
+         {"traceId":"...","spanId":"...","parentSpanId":"...","stepName":"CheckoutProcess"},
+         {"traceId":"...","spanId":"...","parentSpanId":"...","stepName":"PaymentProcessing"},
+         {"traceId":"...","spanId":"...","parentSpanId":"...","stepName":"OrderConfirmation"}
+      ]
+   }
+}
 ```
 
-#### 3. NPM Installation Issues
-```bash
-# Clear npm cache
-npm cache clean --force
+## UI quick tour
 
-# Delete node_modules and reinstall
-rm -rf node_modules package-lock.json
-npm install
+- Open http://127.0.0.1:4000 and use these buttons:
+   - “Run 6-Step Chained Flow”: Executes the sequential chain and prints the trace under it.
+   - “Reset Dynamic Services”: Stops all dynamic child services, freeing ports.
 
-# Use specific Node.js version if needed
-nvm install 18
-nvm use 18
-```
+## Environment
 
-#### 4. PM2 Process Management
-```bash
-# Check PM2 status
-pm2 status
+- `PORT` (default `4000`)
+- Optional AI vars (if you add journey generation backends):
+   - `PPLX_API_KEY`, `AI_PROVIDER`, `GCLOUD_PROJECT`, `VERTEX_LOCATION`, `VERTEX_MODEL`
 
-# View logs
-pm2 logs vegas-casino
+## Ignore vegas app
 
-# Restart application
-pm2 restart vegas-casino
+Only push `partner-powerup-bizobs/` to GitHub. The `vegas-casino/` folder and related scripts are unrelated and should be excluded from commits or a separate repo.
 
-# Stop and delete process
-pm2 stop vegas-casino
-pm2 delete vegas-casino
-```
+## License
 
-#### 5. Port Already in Use
-```bash
-# Find process using port 3000
-sudo lsof -i :3000
-sudo fuser -k 3000/tcp  # Kill process using port 3000
-
-# Or use a different port
-PORT=3001 node server.js
-```
-
-#### 6. Memory Issues
-```bash
-# Monitor memory usage
-free -h
-top
-
-# Increase Node.js memory limit if needed
-node --max-old-space-size=4096 server.js
-```
-
-### Performance Optimization
-
-#### 1. Enable Gzip Compression
-The server includes built-in compression middleware for better performance.
-
-#### 2. Static File Caching
-Static assets are served with appropriate cache headers for optimal performance.
-
-#### 3. WebSocket Optimization
-Real-time updates use efficient WebSocket connections with automatic reconnection.
-
-### Health Checks
-
-#### Application Health
-```bash
-# Basic health check
-curl http://your-server:3000/
-
-# API endpoint test
-curl http://your-server:3000/api/metrics
-
-# WebSocket test (using wscat if installed)
-npm install -g wscat
-wscat -c ws://your-server:3000
-```
-
-#### System Health
-```bash
-# Check system resources
-df -h          # Disk space
-free -h        # Memory usage
-top            # CPU and process usage
-systemctl status  # System services
-```
-
-## 🔧 API Endpoints
-
-### Game APIs
-- `POST /api/slots/spin` - Spin the slot reels
-- `POST /api/roulette/spin` - Spin the roulette wheel  
-- `POST /api/dice/roll` - Roll the dice
-- `POST /api/blackjack/deal` - Deal initial blackjack hand
-- `POST /api/blackjack/hit` - Player takes a card
-- `POST /api/blackjack/stand` - Player stands, dealer plays
-- `POST /api/blackjack/double` - Player doubles down
-
-### Analytics APIs  
-- `GET /api/metrics` - Real-time telemetry data
-- `GET /api/leaderboard` - Player rankings and statistics
-
-## 🎨 Styling & Theming
-
-### Color Palette
-```css
-dt-purple: #6C2C9C    /* Primary brand color */
-dt-blue: #00A1C9      /* Information elements */
-dt-cyan: #00D4FF      /* Active states, highlights */
-dt-green: #73BE28     /* Success, winning states */
-dt-orange: #FFA86B    /* Warnings, attention */
-dt-yellow: #FFD23F    /* Notifications, rewards */
-dt-dark: #151515      /* Background base */
-dt-gray: #2D2D2D      /* Secondary backgrounds */
-```
-
-### Animations
-- **GSAP**: Smooth entrance animations and transitions
-- **CSS Keyframes**: Pulsing effects and glowing elements
-- **Chart.js**: Animated data visualizations
-- **Game Animations**: Spinning reels, dice rolls, card flips
-
-## 📊 Telemetry & Monitoring
-
-### Metrics Tracked
-- Player actions and game outcomes
-- System performance (CPU, memory, response times)  
-- Real-time user counts and session duration
-- Game-specific statistics and win rates
-- Error rates and system health
-
-### Correlation IDs
-All requests are tracked with unique correlation IDs for complete request tracing and debugging.
-
-## 🔒 Security Features
-- Input validation on all API endpoints
-- Error handling to prevent information leakage
-- Session management with timeout controls
-- CORS configuration for secure cross-origin requests
-
-## 🚀 Performance Features
-- Efficient WebSocket communication for real-time updates
-- Optimized animations with hardware acceleration
-- Lazy loading of charts and heavy components
-- Responsive design for all device types
-
-## 📈 Future Enhancements
-- Redis integration for session storage
-- Advanced analytics with machine learning insights
-- Tournament system with scheduled events
-- Social features and player interactions
-- Mobile app with React Native
-
-## 🤝 Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with proper documentation
-4. Test thoroughly across all games
-5. Submit a pull request
-
-## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🎯 About
-Created as a demonstration of modern web application development with real-time features, sophisticated UI/UX design, and comprehensive monitoring capabilities inspired by Dynatrace's observability platform.
+MIT
