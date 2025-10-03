@@ -1,3 +1,31 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log
+package-lock.json
+
+# Env
+.env
+.env.*
+
+# Logs & PIDs
+*.log
+logs/
+server.log
+server.pid
+
+# Runtime artifacts
+services/.dynamic-runners/
+.DS_Store
+*.swp
+
+# Coverage/Reports
+coverage/
+*.lcov
+
+# Editor
+.vscode/
+.idea/
 node_modules/
 npm-debug.log*
 .npm

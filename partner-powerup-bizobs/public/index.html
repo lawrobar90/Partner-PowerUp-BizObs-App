@@ -314,7 +314,13 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
             <div id="journey-provider" class="text-xs text-dtyellow"></div>
           </div>
           <pre id="journey-output" class="mt-2 text-xs bg-black p-3 rounded overflow-auto max-h-60"></pre>
-          <button id="seed-flow" class="mt-2 bg-dtcyan text-black font-semibold rounded p-2">Use this Journey for 6-Step Flow</button>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <button id="seed-flow" class="bg-dtcyan text-black font-semibold rounded p-2">Use this Journey for 6-Step Flow</button>
+            <button id="run-chained-flow" class="bg-dtblue hover:bg-dtcyan text-black font-semibold rounded p-2">Run 6-Step Chained Flow</button>
+            <button id="reset-ports" class="bg-dtgray text-white font-semibold rounded p-2 border border-dtgray">Reset Dynamic Services</button>
+          </div>
+          <div id="chain-status" class="mt-2 text-sm text-dtyellow"></div>
+          <pre id="chained-trace-output" class="mt-2 text-xs bg-black p-3 rounded overflow-auto max-h-60"></pre>
         </div>
       </div>
 
@@ -367,6 +373,10 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
     const journeySources = document.getElementById('journey-sources');
     const journeyProvider = document.getElementById('journey-provider');
     const seedFlowBtn = document.getElementById('seed-flow');
+  const runChainedBtn = document.getElementById('run-chained-flow');
+  const resetPortsBtn = document.getElementById('reset-ports');
+  const chainStatus = document.getElementById('chain-status');
+  const chainedTraceOutput = document.getElementById('chained-trace-output');
     const simulateForm = document.getElementById('simulate-form');
     const simStatus = document.getElementById('sim-status');
     const runJourneySimBtn = document.getElementById('run-journey-simulation');
@@ -837,6 +847,57 @@ IMPORTANT:
         } else {
           simStatus.textContent = `❌ Flow failed: ${json.error}`;
           flowResultsEl.textContent = `Flow Error: ${json.error}`;
+        }
+      };
+
+      // Run 6-step chained flow using dynamic per-step services
+      runChainedBtn.onclick = async () => {
+        try {
+          chainStatus.textContent = 'Starting chained flow...';
+          chainedTraceOutput.textContent = '';
+
+          // Build steps from lastJourney if available, otherwise use a sensible default
+          let stepNames = [];
+          if (lastJourney && Array.isArray(lastJourney.steps) && lastJourney.steps.length) {
+            stepNames = lastJourney.steps.slice(0, 6).map(s => s.stepName || s.name || String(s));
+          } else {
+            stepNames = ['Product Discovery', 'Product Selection', 'Add To Cart', 'Checkout Process', 'Payment Processing', 'Order Confirmation'];
+          }
+          // Normalize to exactly 6
+          while (stepNames.length < 6) stepNames.push(`Step${stepNames.length + 1}`);
+          stepNames = stepNames.slice(0, 6);
+
+          const body = { steps: stepNames.map(n => ({ stepName: n })) , thinkTimeMs: 100 };
+          const res = await fetch('/api/steps/step1-chained', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const json = await res.json();
+
+          if (!json.ok) {
+            chainStatus.textContent = `❌ Chained flow failed: ${json.error || 'Unknown error'}`;
+            return;
+          }
+
+          const trace = json.result?.trace || [];
+          const stepsStr = trace.map(t => t.stepName).join(' → ');
+          chainStatus.textContent = `✅ Chained flow complete. Spans: ${trace.length} (${stepsStr})`;
+          chainedTraceOutput.textContent = JSON.stringify(trace, null, 2);
+        } catch (e) {
+          chainStatus.textContent = `❌ Error: ${e.message}`;
+        }
+      };
+
+      // Reset dynamic services to free ports
+      resetPortsBtn.onclick = async () => {
+        try {
+          chainStatus.textContent = 'Resetting dynamic services...';
+          const res = await fetch('/api/admin/reset-ports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+          const json = await res.json();
+          chainStatus.textContent = json.ok ? '✅ Dynamic services reset.' : `❌ Reset failed: ${json.error || 'Unknown error'}`;
+        } catch (e) {
+          chainStatus.textContent = `❌ Reset error: ${e.message}`;
         }
       };
     }

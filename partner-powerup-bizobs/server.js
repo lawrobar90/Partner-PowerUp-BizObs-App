@@ -1,3 +1,4 @@
+// ...existing code...
 /**
  * Dynatrace Partner Power-Up: Business Observability Server
  * Enhanced with separate child processes for proper service splitting in Dynatrace
@@ -50,24 +51,16 @@ const PORT = process.env.PORT || 4000;
 function callChildService(serviceName, payload, port, tracingHeaders = {}) {
   return new Promise((resolve, reject) => {
     const targetPort = port;
-    // Use existing trace context if available, otherwise generate new one
-    let traceparent = tracingHeaders.traceparent;
-    if (!traceparent) {
-      const traceId = (payload && payload.traceIdHex) || randomBytes(16).toString('hex');
-      const spanId = randomBytes(8).toString('hex');
-      traceparent = `00-${traceId}-${spanId}-01`;
-    }
-    
+    // Do NOT set trace headers here; let OneAgent auto-instrumentation handle span/propagation
     const options = {
       hostname: '127.0.0.1',
       port: targetPort,
       path: '/process',
       method: 'POST',
       headers: { 
-        'Content-Type': 'application/json', 
-        traceparent,
-        // Forward all tracing headers for distributed tracing
-        ...tracingHeaders
+        'Content-Type': 'application/json',
+        // Only forward correlation and non-trace custom headers; avoid traceparent/tracestate/x-dynatrace/dt-*
+        'x-correlation-id': (tracingHeaders['x-correlation-id'] || payload?.correlationId) || uuidv4()
       }
     };
     
@@ -226,6 +219,44 @@ app.use('/api/steps', stepsRouter);
 app.use('/api/flow', flowRouter);
 app.use('/api/service-proxy', serviceProxyRouter);
 app.use('/api/journey-simulation', journeySimulationRouter);
+
+// --- Admin endpoint to reset all dynamic service ports (for UI Reset button) ---
+app.post('/api/admin/reset-ports', (req, res) => {
+  try {
+    stopAllServices();
+    res.json({ ok: true, message: 'All dynamic services stopped and ports freed.' });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// --- Admin endpoint to ensure a specific service is running (used by chained child services) ---
+app.post('/api/admin/ensure-service', async (req, res) => {
+  try {
+    const { stepName, serviceName, context } = req.body || {};
+    if (!stepName && !serviceName) {
+      return res.status(400).json({ ok: false, error: 'stepName or serviceName required' });
+    }
+    ensureServiceRunning(stepName || serviceName, { serviceName, ...(context || {}) });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// --- Admin endpoint to list running dynamic services ---
+app.get('/api/admin/services', (req, res) => {
+  try {
+    const running = getChildServices();
+    const items = Object.entries(running).map(([name, proc]) => ({
+      service: name,
+      pid: proc?.pid || null
+    }));
+    res.json({ ok: true, services: items });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 // Health check with service status
 app.get('/api/health', (req, res) => {

@@ -5,41 +5,14 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import http from 'http';
+import { ensureServiceRunning, getServiceNameFromStep as mgrGetServiceNameFromStep, getServicePort as mgrGetServicePort } from './service-manager.js';
 
 const eventService = {
-  // Dynamic service mapping for journey steps
+  // Dynamic service mapping delegates to service-manager
   getServiceNameFromStep(stepName) {
-    // Normalize: preserve CamelCase and handle spaces/underscores/hyphens
-    if (/Service$/.test(String(stepName || ''))) return String(stepName);
-    const cleaned = String(stepName || '').replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
-    const spaced = cleaned
-      .replace(/[\-_]+/g, ' ')
-      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const serviceBase = spaced
-      .split(' ')
-      .filter(Boolean)
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join('');
-    const serviceName = `${serviceBase}Service`;
-    console.log(`[EventService] Converting step "${stepName}" to service "${serviceName}"`);
-    return serviceName;
-  },
-
-  // Get port for service (dynamic allocation starting from 4101)
-  getServicePort(serviceName) {
-    // Create a consistent hash-based port allocation
-    let hash = 0;
-    for (let i = 0; i < serviceName.length; i++) {
-      const char = serviceName.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    // Map to port range 4101-4199
-    const port = 4101 + (Math.abs(hash) % 99);
-    console.log(`[EventService] Service "${serviceName}" mapped to port ${port}`);
-    return port;
+    const name = mgrGetServiceNameFromStep(stepName);
+    console.log(`[EventService] Converting step "${stepName}" to service "${name}"`);
+    return name;
   },
 
   // Call a child service via HTTP
@@ -81,41 +54,37 @@ const eventService = {
       console.log(`📊 Processing ${eventType} for step: ${stepName}`);
       
       if (substeps && substeps.length > 0) {
-        // Process each substep through its dedicated service
-        const results = [];
-        
-        for (const substep of substeps) {
-          const serviceName = this.getServiceNameFromStep(substep.stepName || stepName);
-          const servicePort = this.getServicePort(serviceName);
-          
-          if (servicePort) {
-            try {
-              // Call the dedicated service
-              const payload = {
-                ...substep,
-                correlationId,
-                parentStep: stepName,
-                timestamp: new Date().toISOString()
-              };
-              
-              const result = await this.callChildService(serviceName, payload, servicePort);
-              results.push(result);
-              
-              console.log(`✅ ${serviceName} processed successfully`);
-            } catch (error) {
-              console.error(`❌ Error processing ${serviceName}:`, error.message);
-              results.push({
-                stepName: substep.stepName,
-                service: serviceName,
-                status: 'error',
-                error: error.message,
-                correlationId
-              });
-            }
+        // Start all substep services, then call only the first to initiate chaining
+        const stepsArr = substeps.map(s => ({
+          stepName: s.stepName || stepName,
+          serviceName: this.getServiceNameFromStep(s.stepName || stepName)
+        }));
+
+        try {
+          for (const s of stepsArr) {
+            ensureServiceRunning(s.stepName);
           }
+        } catch (e) {
+          console.warn('[EventService] ensureServiceRunning error (non-fatal):', e.message);
         }
-        
-        return { success: true, correlationId, results };
+
+        // Give services a brief moment to boot
+        await new Promise(r => setTimeout(r, 500));
+
+        const first = stepsArr[0];
+        const firstPort = mgrGetServicePort(first.stepName);
+        const payload = {
+          ...substeps[0],
+          stepName: first.stepName,
+          correlationId,
+          parentStep: stepName,
+          timestamp: new Date().toISOString(),
+          // Provide the full sequence for child chaining
+          steps: stepsArr
+        };
+
+        const result = await this.callChildService(first.serviceName, payload, firstPort);
+        return { success: true, correlationId, chained: true, result };
       }
       
       return { success: true, correlationId, message: 'No substeps to process' };

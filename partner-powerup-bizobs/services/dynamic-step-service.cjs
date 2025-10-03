@@ -4,6 +4,25 @@
  */
 const { createService } = require('./service-runner.cjs');
 const { callService, getServiceNameFromStep, getServicePortFromStep } = require('./child-caller.cjs');
+const http = require('http');
+
+// Wait for a service health endpoint to respond on the given port
+function waitForServiceReady(port, timeout = 5000) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    function check() {
+      const req = http.request({ hostname: '127.0.0.1', port, path: '/health', method: 'GET', timeout: 1000 }, (res) => {
+        resolve(true);
+      });
+      req.on('error', () => {
+        if (Date.now() - start < timeout) setTimeout(check, 150); else resolve(false);
+      });
+      req.on('timeout', () => { req.destroy(); if (Date.now() - start < timeout) setTimeout(check, 150); else resolve(false); });
+      req.end();
+    }
+    check();
+  });
+}
 
 // Get service name from command line arguments or environment
 const serviceNameArg = process.argv.find((arg, index) => process.argv[index - 1] === '--service-name');
@@ -45,65 +64,84 @@ function createStepService(serviceName, stepName) {
       const correlationId = req.correlationId;
       const thinkTimeMs = Number(payload.thinkTimeMs || 200);
       const currentStepName = payload.stepName || stepName;
+      // --- Trace logic ---
+      const crypto = require('crypto');
+      // Use existing traceId or generate new
+      const traceId = payload.traceId || crypto.randomBytes(8).toString('hex');
+      // Use parentSpanId from payload, or null for first
+      const parentSpanId = payload.spanId || null;
+      // Always generate a new spanId for this service
+      const spanId = crypto.randomBytes(4).toString('hex');
+      // Build/extend trace array
+      const trace = Array.isArray(payload.trace) ? [...payload.trace] : [];
+      trace.push({ traceId, spanId, parentSpanId, stepName: currentStepName });
 
       // Log service processing
       console.log(`[${properServiceName}] Processing step with payload:`, JSON.stringify(payload, null, 2));
       console.log(`[${properServiceName}] Current step name: ${currentStepName}`);
       console.log(`[${properServiceName}] Steps array:`, payload.steps);
+      console.log(`[${properServiceName}] Trace so far:`, JSON.stringify(trace));
 
       // Simulate processing with realistic timing
       const processingTime = Math.floor(Math.random() * 200) + 100; // 100-300ms
-      
+
       const finish = async () => {
         // Generate dynamic metadata based on step name
         const metadata = generateStepMetadata(currentStepName);
-        
-        const response = {
+
+        let response = {
+          // Spread payload first so our computed fields below take precedence
+          ...payload,
           stepName: currentStepName,
-          service: properServiceName, // Use properly formatted service name for Dynatrace
+          service: properServiceName,
           status: 'completed',
           correlationId,
           processingTime,
           pid: process.pid,
           timestamp: new Date().toISOString(),
           metadata,
-          ...payload
+          traceId,
+          spanId,
+          parentSpanId,
+          trace
         };
-        
-        console.log(`[${properServiceName}] Completed processing in ${processingTime}ms`);
 
-        // Dynamic chaining to next service (prefer exact serviceName from payload if provided)
-        let nextStepName = payload.nextStepName;
-        let nextServiceName;
-        if ((!nextStepName || !nextServiceName) && payload.steps && Array.isArray(payload.steps)) {
-          // Find current step and get the next one
-          const currentIndex = payload.steps.findIndex(s => 
-            (s.stepName === currentStepName) || 
+
+        // --- Chaining logic ---
+        let nextStepName = null;
+        let nextServiceName = undefined;
+        if (payload.steps && Array.isArray(payload.steps)) {
+          const currentIndex = payload.steps.findIndex(s =>
+            (s.stepName === currentStepName) ||
             (s.name === currentStepName) ||
-            (getServiceNameFromStep(s.stepName || s.name) === properServiceName)
+            (s.serviceName === properServiceName)
           );
-          console.log(`[${properServiceName}] Current step index: ${currentIndex}, looking for: ${currentStepName}`);
-          console.log(`[${properServiceName}] Available steps:`, payload.steps.map(s => s.stepName || s.name));
-          
           if (currentIndex >= 0 && currentIndex < payload.steps.length - 1) {
             const nextStep = payload.steps[currentIndex + 1];
             nextStepName = nextStep ? (nextStep.stepName || nextStep.name) : null;
-            // IMPORTANT: prefer exact serviceName from payload when provided
             nextServiceName = nextStep && nextStep.serviceName ? nextStep.serviceName : (nextStepName ? getServiceNameFromStep(nextStepName) : undefined);
-            console.log(`[${properServiceName}] Found next step: ${nextStepName} -> service: ${nextServiceName}`);
+          } else {
+            nextStepName = null;
+            nextServiceName = undefined;
           }
         }
-        
-        if (nextStepName) {
-          // nextServiceName already computed above (prefers payload's serviceName). Fallback for safety:
-          nextServiceName = nextServiceName || getServiceNameFromStep(nextStepName);
-          
+
+        if (nextStepName && nextServiceName) {
           try {
-            // Simulate user think time before next step
             await new Promise(r => setTimeout(r, thinkTimeMs));
+            // Ask main server to ensure next service is running (in case it wasn't pre-started)
+            try {
+              const adminPort = process.env.MAIN_SERVER_PORT || '4000';
+              await new Promise((resolve) => {
+                const req = http.request({ hostname: '127.0.0.1', port: adminPort, path: '/api/admin/ensure-service', method: 'POST', headers: { 'Content-Type': 'application/json' } }, (res) => { res.resume(); resolve(); });
+                req.on('error', () => resolve());
+                req.end(JSON.stringify({ stepName: nextStepName, serviceName: nextServiceName }));
+              });
+            } catch {}
             const nextPayload = {
-              ...payload, // Inherit all original payload properties
+              ...payload,
               stepName: nextStepName,
+              serviceName: nextServiceName,
               action: 'auto_chained',
               parentStep: currentStepName,
               correlationId,
@@ -111,39 +149,32 @@ function createStepService(serviceName, stepName) {
               domain: payload.domain,
               companyName: payload.companyName,
               thinkTimeMs,
-              steps: payload.steps
+              steps: payload.steps,
+              traceId,
+              spanId, // pass as parentSpanId to next
+              trace
             };
-            
-            // Extract and propagate all Dynatrace tracing headers for trace continuity
-            const traceHeaders = {
-              'x-correlation-id': correlationId
-            };
-            
-            // Extract all potential Dynatrace and tracing headers from incoming request
-            const headerKeys = Object.keys(req.headers || {});
-            for (const key of headerKeys) {
-              const lowerKey = key.toLowerCase();
-              // Capture Dynatrace, W3C Trace Context, and other distributed tracing headers
-              if (lowerKey.startsWith('x-dynatrace') || 
-                  lowerKey.startsWith('traceparent') || 
-                  lowerKey.startsWith('tracestate') || 
-                  lowerKey.startsWith('x-trace') || 
-                  lowerKey.startsWith('x-request-id') || 
-                  lowerKey.startsWith('x-span-id') || 
-                  lowerKey.startsWith('dt-') ||
-                  lowerKey.startsWith('uber-trace-id')) {
-                traceHeaders[key] = req.headers[key];
-              }
+            const traceHeaders = { 'x-correlation-id': correlationId };
+            // Always use serviceName for port mapping
+            const { getServicePortFromStep } = require('./child-caller.cjs');
+            const nextPort = getServicePortFromStep(nextServiceName);
+            // Ensure next service is listening before calling
+            await waitForServiceReady(nextPort, 5000);
+            const next = await callService(nextServiceName, nextPayload, traceHeaders, nextPort);
+            // Bubble up the full downstream trace to the current response; ensure our own span is included once
+            if (next && Array.isArray(next.trace)) {
+              const last = next.trace[next.trace.length - 1];
+              // If our span isn't the last, append ours before adopting
+              const hasCurrent = next.trace.some(s => s.spanId === spanId);
+              response.trace = hasCurrent ? next.trace : [...next.trace, { traceId, spanId, parentSpanId, stepName: currentStepName }];
             }
-            
-            const next = await callService(nextServiceName, nextPayload, traceHeaders);
             response.next = next;
           } catch (e) {
             response.nextError = e.message;
             console.error(`[${properServiceName}] Error calling next service:`, e.message);
           }
         }
-        
+
         res.json(response);
       };
 

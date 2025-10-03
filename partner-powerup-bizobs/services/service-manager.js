@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 const childServices = {};
 
 // Check if a service port is ready to accept connections
-async function isServiceReady(port, timeout = 5000) {
+export async function isServiceReady(port, timeout = 5000) {
   return new Promise((resolve) => {
     const start = Date.now();
     
@@ -141,6 +141,7 @@ export function startChildService(serviceName, scriptPath, env = {}) {
       ...process.env, 
       SERVICE_NAME: serviceName, 
       PORT: port,
+      MAIN_SERVER_PORT: process.env.PORT || '4000',
       // Core company context for Dynatrace filtering
       COMPANY_NAME: companyName,
       DOMAIN: domain, 
@@ -286,4 +287,21 @@ export function stopAllServices() {
   Object.values(childServices).forEach(child => {
     child.kill('SIGTERM');
   });
+}
+
+// Convenience helper: ensure a service is started and ready (health endpoint responding)
+export async function ensureServiceReadyForStep(stepName, companyContext = {}, timeoutMs = 8000) {
+  // Start if not running
+  ensureServiceRunning(stepName, companyContext);
+  const port = getServicePort(stepName);
+  const start = Date.now();
+  while (true) {
+    const ready = await isServiceReady(port, 1000);
+    if (ready) return port;
+    if (Date.now() - start > timeoutMs) {
+      throw new Error(`Service for step ${stepName} not ready on port ${port} within ${timeoutMs}ms`);
+    }
+    // Nudge start in case child crashed
+    ensureServiceRunning(stepName, companyContext);
+  }
 }

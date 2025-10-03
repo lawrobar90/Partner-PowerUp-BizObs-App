@@ -50,23 +50,10 @@ function createService(serviceName, mountFn) {
     const dynatraceServiceName = process.env.SERVICE_NAME || serviceName;
     const stepName = payload.stepName || process.env.STEP_NAME || serviceName.replace('Service', '').replace('-service', '');
 
-    // Critical headers for Dynatrace service separation
-    res.setHeader('X-Dynatrace-Service', dynatraceServiceName);
-    res.setHeader('X-Dynatrace-Version', '1.0.0');
-    res.setHeader('X-Dynatrace-Environment', 'business-observability');
-    res.setHeader('X-Service-Instance', `${dynatraceServiceName}-${process.pid}`);
-
-    // Process identification for Dynatrace PurePath
-    res.setHeader('X-dynaTrace-PC', dynatraceServiceName); // Process Name Component
-    res.setHeader('X-dynaTrace-PG', `${dynatraceServiceName}-group`); // Process Group
-    res.setHeader('dt-logicalServiceName', dynatraceServiceName); // Logical Service Name
-    res.setHeader('service.name', dynatraceServiceName); // OpenTelemetry compatible
-    res.setHeader('dt.service.name', dynatraceServiceName); // Additional Dynatrace header
-    res.setHeader('X-Service-Name', dynatraceServiceName); // Standard service name header
-
-    // Set custom attributes for better service identification
-    res.setHeader('dt.custom.service_type', 'business_journey_step');
-    res.setHeader('dt.custom.journey_step', stepName);
+  // Avoid setting tracing-related headers that could conflict with OneAgent's propagation
+  // Keep only non-tracing custom context headers
+  res.setHeader('X-Service-Name', dynatraceServiceName);
+  res.setHeader('x-journey-step', stepName);
 
     // Custom journey tracking headers
     if (payload.journeyId) {

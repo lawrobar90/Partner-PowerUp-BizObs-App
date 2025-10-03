@@ -89,9 +89,8 @@ async function callDynamicService(stepName, port, payload, incomingHeaders = {})
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-correlation-id': incomingHeaders['x-correlation-id'] || payload.correlationId,
-        // Forward all tracing headers for Dynatrace distributed tracing
-        ...incomingHeaders
+        // Only pass correlation/business headers; let OneAgent inject tracing headers
+        'x-correlation-id': incomingHeaders['x-correlation-id'] || payload.correlationId
       }
     };
     

@@ -1,7 +1,7 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import eventService, { buildEventPayload, emitEvent, inferDomain } from '../services/eventService.js';
-import { ensureServiceRunning, getServiceNameFromStep, getServicePort } from '../services/service-manager.js';
+import { ensureServiceRunning, getServiceNameFromStep, getServicePort, ensureServiceReadyForStep } from '../services/service-manager.js';
 
 const router = express.Router();
 
@@ -69,94 +69,85 @@ router.post('/step5', stepHandler(5));
 router.post('/step6', stepHandler(6));
 
 // Optional: trigger a chained flow across services starting at the first step
+// Copilot Prompt: Always return steps as an array ordered by execution (step1, step2, ...), each with a unique serviceName and stepName.
 router.post('/step1-chained', async (req, res) => {
   try {
     const { stepName, journeyId, domain, journey, steps: customSteps } = req.body || {};
     console.log(`🔥🔥🔥 [STEP1-CHAINED ROUTE] Body: ${JSON.stringify(req.body)} 🔥🔥🔥`);
     const correlationId = req.correlationId;
-    
-    // Use the stepName from the request body first, then fall back to journey configuration
-    let firstStepName = stepName; // Use the explicit stepName from the request
-    let stepNames = [];
-    
-    if (firstStepName) {
-      // If we have an explicit stepName, use it as the first step
-      stepNames = [firstStepName];
-    } else if (customSteps && Array.isArray(customSteps)) {
-      stepNames = customSteps.map(step => typeof step === 'string' ? step : step.stepName || step.name);
-      firstStepName = stepNames[0];
+
+    // Build ordered steps array
+    let stepsArr = [];
+    if (customSteps && Array.isArray(customSteps)) {
+      stepsArr = customSteps.map((step, idx) => ({
+        stepName: step.stepName || step.name || `Step${idx+1}`,
+        serviceName: step.serviceName || getServiceNameFromStep(step.stepName || step.name || `Step${idx+1}`)
+      }));
     } else if (journey && journey.steps && Array.isArray(journey.steps)) {
-      stepNames = journey.steps.map(step => step.stepName || step.name || `Step${step.stepIndex || 1}`);
-      firstStepName = stepNames[0];
+      stepsArr = journey.steps.map((step, idx) => ({
+        stepName: step.stepName || step.name || `Step${idx+1}`,
+        serviceName: step.serviceName || getServiceNameFromStep(step.stepName || step.name || `Step${idx+1}`)
+      }));
+    } else if (stepName) {
+      stepsArr = [{ stepName, serviceName: getServiceNameFromStep(stepName) }];
     } else {
-      // Default fallback - but this should rarely be used
-      stepNames = ['Discovery', 'Awareness', 'Consideration', 'Purchase', 'Retention', 'Advocacy'];
-      firstStepName = stepNames[0];
+      stepsArr = [
+        { stepName: 'Discovery', serviceName: getServiceNameFromStep('Discovery') },
+        { stepName: 'Awareness', serviceName: getServiceNameFromStep('Awareness') },
+        { stepName: 'Consideration', serviceName: getServiceNameFromStep('Consideration') },
+        { stepName: 'Purchase', serviceName: getServiceNameFromStep('Purchase') },
+        { stepName: 'Retention', serviceName: getServiceNameFromStep('Retention') },
+        { stepName: 'Advocacy', serviceName: getServiceNameFromStep('Advocacy') }
+      ];
     }
-    
-    console.log(`[steps.js] Using step name: ${firstStepName}`);
-    console.log(`[steps.js] All step names: ${JSON.stringify(stepNames)}`);
-    
-    const secondStepName = stepNames[1] || null;
-    
-    console.log(`[steps.js] First step: ${firstStepName}`);
-    
-    // Ensure the dynamic service is running before making the request
-    console.log(`[steps.js] Ensuring service running for step: ${firstStepName}`);
-    ensureServiceRunning(firstStepName);
-    console.log(`[steps.js] Service ensured for step: ${firstStepName}`);
-    
-    // Wait for service to start
+
+    // Ensure all dynamic services are running before chaining
+    for (const s of stepsArr) {
+      ensureServiceRunning(s.stepName, { serviceName: s.serviceName });
+    }
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const serviceName = getServiceNameFromStep(firstStepName);
-    const servicePort = getServicePort(firstStepName);
+
+  const first = stepsArr[0];
+  const second = stepsArr[1] || null;
+  // Ensure first service is started and ready
+  const servicePort = await ensureServiceReadyForStep(first.stepName, { serviceName: first.serviceName });
     const http = await import('http');
-    
-    const payload = { 
-      stepName: firstStepName, 
-      nextStepName: secondStepName,
-      correlationId, 
-      journeyId, 
+
+    const payload = {
+      stepName: first.stepName,
+      serviceName: first.serviceName,
+      nextStepName: second ? second.stepName : null,
+      correlationId,
+      journeyId,
       domain,
       journey,
-      steps: stepNames.map(name => ({ stepName: name })) // All steps for chaining
+      steps: stepsArr,
+      thinkTimeMs: req.body.thinkTimeMs
     };
-    
-    const options = { 
-      hostname: '127.0.0.1', 
-      port: servicePort, 
-      path: '/process', 
-      method: 'POST', 
-      headers: { 
-        'Content-Type': 'application/json', 
-        'x-correlation-id': correlationId,
-        // Propagate Dynatrace headers
-        ...Object.fromEntries(
-          Object.entries(req.headers).filter(([key]) => 
-            key.startsWith('x-dynatrace') || key === 'traceparent' || key === 'tracestate'
-          )
-        )
-      } 
+
+    const options = {
+      hostname: '127.0.0.1',
+      port: servicePort,
+      path: '/process',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-correlation-id': correlationId
+      }
     };
-    
-    // Ensure the dynamic service is running before making the request
-    if (ensureServiceRunning) {
-      ensureServiceRunning(firstStepName);
-    }
-    
+
     const result = await new Promise((resolve, reject) => {
-      const rq = http.request(options, (rs) => { 
-        let b=''; 
-        rs.on('data', c => b+=c); 
-        rs.on('end', () => { 
-          try { resolve(JSON.parse(b||'{}')); } catch(e){ reject(e);} 
-        }); 
+      const rq = http.request(options, (rs) => {
+        let b = '';
+        rs.on('data', c => b += c);
+        rs.on('end', () => {
+          try { resolve(JSON.parse(b || '{}')); }
+          catch (e) { resolve({ raw: b, parseError: e.message }); }
+        });
       });
-      rq.on('error', reject); 
+      rq.on('error', reject);
       rq.end(JSON.stringify(payload));
     });
-    
     res.json({ ok: true, pipeline: 'chained-child-services', result });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });

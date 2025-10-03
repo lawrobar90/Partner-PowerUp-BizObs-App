@@ -50,42 +50,19 @@ function getServicePortFromStep(stepNameOrServiceName) {
   return port;
 }
 
-function callService(serviceName, payload, headers = {}) {
+function callService(serviceName, payload, headers = {}, overridePort) {
   return new Promise((resolve, reject) => {
-    // Get port using the exact service name (hash-based mapping)
-    const port = getServicePortFromStep(serviceName) || SERVICE_PORTS[serviceName];
+    // Use overridePort if provided, else hash-based mapping
+    const port = overridePort || getServicePortFromStep(serviceName) || SERVICE_PORTS[serviceName];
     if (!port) return reject(new Error(`Unknown service: ${serviceName}`));
-    
-    // Prepare headers with complete Dynatrace trace propagation
-    const requestHeaders = {
-      'Content-Type': 'application/json',
-      // Forward all incoming tracing headers first
-      ...headers
-    };
-    
-    // Only create new traceparent if none exists (preserve existing trace context)
-    if (!requestHeaders.traceparent && !requestHeaders['x-dynatrace']) {
-      const traceId = crypto.randomBytes(16).toString('hex');
-      const spanId = crypto.randomBytes(8).toString('hex');
-      requestHeaders.traceparent = `00-${traceId}-${spanId}-01`;
-    }
-    
-    // Add custom journey tracking headers for Dynatrace (only if not already present)
+    // Prepare headers; avoid traceparent/tracestate/x-dynatrace/dt-* so OneAgent can inject/link spans
+    const requestHeaders = { 'Content-Type': 'application/json' };
     if (payload) {
-      if (payload.journeyId && !requestHeaders['x-journey-id']) {
-        requestHeaders['x-journey-id'] = payload.journeyId;
-      }
-      if (payload.stepName && !requestHeaders['x-journey-step']) {
-        requestHeaders['x-journey-step'] = payload.stepName;
-      }
-      if (payload.domain && !requestHeaders['x-customer-segment']) {
-        requestHeaders['x-customer-segment'] = payload.domain;
-      }
-      if (payload.correlationId && !requestHeaders['x-correlation-id']) {
-        requestHeaders['x-correlation-id'] = payload.correlationId;
-      }
+      if (payload.journeyId) requestHeaders['x-journey-id'] = payload.journeyId;
+      if (payload.stepName) requestHeaders['x-journey-step'] = payload.stepName;
+      if (payload.domain) requestHeaders['x-customer-segment'] = payload.domain;
+      if (payload.correlationId) requestHeaders['x-correlation-id'] = payload.correlationId;
     }
-    
     const options = {
       hostname: '127.0.0.1',
       port,
@@ -93,9 +70,7 @@ function callService(serviceName, payload, headers = {}) {
       method: 'POST',
       headers: requestHeaders
     };
-    
-  console.log(`🔗 [${serviceName}] Calling service on port ${port} with trace headers:`, Object.keys(requestHeaders).filter(h => h.startsWith('x-') || h === 'traceparent'));
-    
+    console.log(`🔗 [${serviceName}] Calling service on port ${port} with headers:`, Object.keys(requestHeaders));
     const req = http.request(options, (res) => {
       let body = '';
       res.setEncoding('utf8');
@@ -111,12 +86,10 @@ function callService(serviceName, payload, headers = {}) {
         }
       });
     });
-    
     req.on('error', (err) => {
       console.error(`❌ [${serviceName}] Service call failed:`, err.message);
       reject(err);
     });
-    
     req.end(JSON.stringify(payload || {}));
   });
 }
