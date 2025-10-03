@@ -36,11 +36,8 @@ function extractTracingHeaders(req) {
 }
 
 // Call a service
-async function callDynamicService(stepName, port, payload, incomingHeaders = {}, req = null) {
+async function callDynamicService(stepName, port, payload, incomingHeaders = {}) {
   return new Promise((resolve, reject) => {
-    // Extract tracing headers from original request if available
-    const tracingHeaders = req ? extractTracingHeaders(req) : {};
-    
     const options = {
       hostname: '127.0.0.1',
       port: port,
@@ -50,8 +47,6 @@ async function callDynamicService(stepName, port, payload, incomingHeaders = {},
         'Content-Type': 'application/json',
         'x-correlation-id': incomingHeaders['x-correlation-id'] || payload.correlationId,
         // Forward all tracing headers for Dynatrace distributed tracing
-        ...tracingHeaders,
-        // Override with any specific headers passed in
         ...incomingHeaders
       }
     };
@@ -116,6 +111,9 @@ router.post('/simulate-journey', async (req, res) => {
       stepData = DEFAULT_JOURNEY_STEPS.map(name => ({ stepName: name, serviceName: null }));
     }
     
+    // Extract tracing headers once at the beginning for use throughout the journey
+    const tracingHeaders = extractTracingHeaders(req);
+    
     // Ensure stepData is valid
     if (!Array.isArray(stepData) || stepData.length === 0) {
       stepData = DEFAULT_JOURNEY_STEPS.map(name => ({ stepName: name, serviceName: null }));
@@ -168,7 +166,7 @@ router.post('/simulate-journey', async (req, res) => {
         steps: stepData
       };
       
-      const chainedResult = await callDynamicService(first.stepName, firstPort, payload, { 'x-correlation-id': correlationId }, req);
+      const chainedResult = await callDynamicService(first.stepName, firstPort, payload, { 'x-correlation-id': correlationId, ...tracingHeaders });
       
       if (chainedResult) {
         journeyResults.push({
@@ -200,7 +198,7 @@ router.post('/simulate-journey', async (req, res) => {
             stepName,
             stepIndex: i + 1,
             totalSteps: stepData.length
-          }, { 'x-correlation-id': correlationId }, req);
+          }, { 'x-correlation-id': correlationId, ...tracingHeaders });
           
           journeyResults.push({
             ...stepResult,

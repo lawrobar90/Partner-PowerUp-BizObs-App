@@ -15,7 +15,7 @@ process.env.DT_PROCESS_GROUP_INSTANCE = process.env.SERVICE_NAME + '-' + (proces
 process.env.DT_APPLICATION_NAME = 'BizObs-CustomerJourney';
 process.env.DT_CLUSTER_ID = process.env.SERVICE_NAME;
 process.env.DT_NODE_ID = process.env.SERVICE_NAME + '-node';
-// Dynatrace simplified tags - company first
+// Dynatrace simplified tags - space separated for proper parsing
 process.env.DT_TAGS = 'company=' + process.env.COMPANY_NAME + ' app=BizObs-CustomerJourney service=' + process.env.SERVICE_NAME;
 process.env.DT_CUSTOM_PROP_company = process.env.COMPANY_NAME;
 process.env.DT_CUSTOM_PROP_app = 'BizObs-CustomerJourney';
