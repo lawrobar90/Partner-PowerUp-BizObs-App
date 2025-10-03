@@ -30,9 +30,11 @@ function getServiceNameFromStep(stepName) {
   return serviceName;
 }
 
-function getServicePortFromStep(stepName) {
-  // Convert stepName to serviceName first
-  const serviceName = getServiceNameFromStep(stepName);
+function getServicePortFromStep(stepNameOrServiceName) {
+  // Accept either a step name or an exact service name; prefer using as-is if it already looks like a Service
+  const serviceName = /Service$/.test(String(stepNameOrServiceName))
+    ? String(stepNameOrServiceName)
+    : getServiceNameFromStep(stepNameOrServiceName);
   if (!serviceName) return null;
   
   // Create a consistent hash-based port allocation (same as eventService)
@@ -50,8 +52,8 @@ function getServicePortFromStep(stepName) {
 
 function callService(serviceName, payload, headers = {}) {
   return new Promise((resolve, reject) => {
-    // Get port using the service name directly (it should already be in ServiceName format)
-    const port = getServicePortFromStep(serviceName.replace('Service', '')) || SERVICE_PORTS[serviceName];
+    // Get port using the exact service name (hash-based mapping)
+    const port = getServicePortFromStep(serviceName) || SERVICE_PORTS[serviceName];
     if (!port) return reject(new Error(`Unknown service: ${serviceName}`));
     
     // Prepare headers with complete Dynatrace trace propagation

@@ -36,6 +36,10 @@ function createService(serviceName, mountFn) {
   }
   
   const app = express();
+  
+  // CRITICAL: Add body parsing middleware for JSON payloads
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use((req, res, next) => {
     // Capture inbound W3C Trace Context and custom correlation
     const inboundTraceparent = req.headers['traceparent'];

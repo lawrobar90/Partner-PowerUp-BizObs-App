@@ -35,6 +35,50 @@ function extractTracingHeaders(req) {
   return tracingHeaders;
 }
 
+// Generate dynamic service name based on AI/Copilot response details
+function generateDynamicServiceName(stepName, description = '', category = '', originalStep = {}) {
+  // If step already has a service-like name, use it
+  if (/Service$/.test(stepName)) {
+    return stepName;
+  }
+  
+  // Extract meaningful keywords from description
+  const descriptionKeywords = description.toLowerCase().match(/\b(api|service|endpoint|processor|handler|manager|controller|gateway|orchestrator)\b/g) || [];
+  
+  // Determine service type based on content analysis
+  let serviceType = 'Service'; // default
+  
+  if (description.toLowerCase().includes('api') || originalStep.endpoint) {
+    serviceType = 'API';
+  } else if (description.toLowerCase().includes('process') || description.toLowerCase().includes('handle')) {
+    serviceType = 'Processor';
+  } else if (description.toLowerCase().includes('manage') || description.toLowerCase().includes('control')) {
+    serviceType = 'Manager';
+  } else if (description.toLowerCase().includes('gateway') || description.toLowerCase().includes('proxy')) {
+    serviceType = 'Gateway';
+  } else if (category) {
+    // Use category as service type if available
+    serviceType = category.charAt(0).toUpperCase() + category.slice(1) + 'Service';
+  }
+  
+  // Clean and format the step name
+  const cleaned = String(stepName).replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
+  const serviceBase = cleaned
+    .replace(/[\-_]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join('');
+  
+  const dynamicServiceName = `${serviceBase}${serviceType}`;
+  console.log(`[journey-sim] Generated dynamic service name: ${stepName} -> ${dynamicServiceName}`);
+  
+  return dynamicServiceName;
+}
+
 // Call a service
 async function callDynamicService(stepName, port, payload, incomingHeaders = {}) {
   return new Promise((resolve, reject) => {
@@ -64,13 +108,16 @@ async function callDynamicService(stepName, port, payload, incomingHeaders = {})
     });
     
     req.on('error', reject);
-    req.write(JSON.stringify(payload));
+    const payloadString = JSON.stringify(payload);
+    console.log(`[journey-sim] Sending to ${stepName}:`, payloadString);
+    req.write(payloadString);
     req.end();
   });
 }
 
 // Simulate journey
 router.post('/simulate-journey', async (req, res) => {
+  console.log('[journey-sim] Route handler called with body:', JSON.stringify(req.body, null, 2));
   try {
     const { 
       journeyId = `journey_${Date.now()}`, 
@@ -97,13 +144,37 @@ router.post('/simulate-journey', async (req, res) => {
       }
       
       if (stepsArray) {
-        stepData = stepsArray.slice(0, 6).map(step => ({
-          stepName: step.stepName || step.name || 'UnknownStep',
-          serviceName: step.serviceName || null
-        }));
-        console.log('[journey-sim] Extracted stepData with serviceName:', stepData);
+        stepData = stepsArray.slice(0, 6).map(step => {
+          // Extract step name from various AI response formats
+          const stepName = step.stepName || step.name || step.step || step.title || 'UnknownStep';
+          
+          // Generate dynamic service name based on AI response details
+          let serviceName = step.serviceName;
+          if (!serviceName) {
+            // Try to extract service name from description, action, or other fields
+            const description = step.description || step.action || step.summary || '';
+            const category = step.category || step.type || step.phase || '';
+            
+            // Create intelligent service name based on available data
+            serviceName = generateDynamicServiceName(stepName, description, category, step);
+          }
+          
+          return {
+            stepName,
+            serviceName,
+            description: step.description || '',
+            category: step.category || step.type || '',
+            originalStep: step // Keep original for reference
+          };
+        });
+        console.log('[journey-sim] Extracted dynamic stepData:', stepData);
       } else {
-        stepData = DEFAULT_JOURNEY_STEPS.map(name => ({ stepName: name, serviceName: null }));
+        stepData = DEFAULT_JOURNEY_STEPS.map(name => ({ 
+          stepName: name, 
+          serviceName: null,
+          description: '',
+          category: ''
+        }));
         console.log('[journey-sim] Using default steps');
       }
     } catch (error) {
@@ -140,8 +211,16 @@ router.post('/simulate-journey', async (req, res) => {
       industryType: currentPayload.industryType
     };
     
-    for (const { stepName, serviceName } of stepData) {
-      ensureServiceRunning(stepName, { ...companyContext, stepName, serviceName });
+    for (const stepInfo of stepData) {
+      const { stepName, serviceName, description, category } = stepInfo;
+      ensureServiceRunning(stepName, { 
+        ...companyContext, 
+        stepName, 
+        serviceName,
+        description,
+        category,
+        type: category
+      });
     }
 
     await new Promise(resolve => setTimeout(resolve, 5000));  // Wait for services to fully start
@@ -165,6 +244,8 @@ router.post('/simulate-journey', async (req, res) => {
         thinkTimeMs,
         steps: stepData
       };
+      
+      console.log(`[journey-sim] [chained] Payload for first service:`, JSON.stringify(payload, null, 2));
       
       const chainedResult = await callDynamicService(first.stepName, firstPort, payload, { 'x-correlation-id': correlationId, ...tracingHeaders });
       

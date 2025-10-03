@@ -1,6 +1,6 @@
-// Auto-generated wrapper for CartAdditionService
-process.env.SERVICE_NAME = "CartAdditionService";
-process.env.STEP_NAME = "CartAddition";
+// Auto-generated wrapper for LoginGatewayService
+process.env.SERVICE_NAME = "LoginGatewayService";
+process.env.STEP_NAME = "Login Gateway";
 process.title = process.env.SERVICE_NAME;
 // Company context for tagging
 process.env.COMPANY_NAME = process.env.COMPANY_NAME || 'DefaultCompany';

@@ -47,7 +47,9 @@ function createStepService(serviceName, stepName) {
       const currentStepName = payload.stepName || stepName;
 
       // Log service processing
-      console.log(`[${properServiceName}] Processing step: ${JSON.stringify(payload)}`);
+      console.log(`[${properServiceName}] Processing step with payload:`, JSON.stringify(payload, null, 2));
+      console.log(`[${properServiceName}] Current step name: ${currentStepName}`);
+      console.log(`[${properServiceName}] Steps array:`, payload.steps);
 
       // Simulate processing with realistic timing
       const processingTime = Math.floor(Math.random() * 200) + 100; // 100-300ms
@@ -70,30 +72,44 @@ function createStepService(serviceName, stepName) {
         
         console.log(`[${properServiceName}] Completed processing in ${processingTime}ms`);
 
-        // Dynamic chaining to next service
+        // Dynamic chaining to next service (prefer exact serviceName from payload if provided)
         let nextStepName = payload.nextStepName;
-        if (!nextStepName && payload.steps && Array.isArray(payload.steps)) {
+        let nextServiceName;
+        if ((!nextStepName || !nextServiceName) && payload.steps && Array.isArray(payload.steps)) {
           // Find current step and get the next one
-          const currentIndex = payload.steps.findIndex(s => s.stepName === currentStepName);
+          const currentIndex = payload.steps.findIndex(s => 
+            (s.stepName === currentStepName) || 
+            (s.name === currentStepName) ||
+            (getServiceNameFromStep(s.stepName || s.name) === properServiceName)
+          );
+          console.log(`[${properServiceName}] Current step index: ${currentIndex}, looking for: ${currentStepName}`);
+          console.log(`[${properServiceName}] Available steps:`, payload.steps.map(s => s.stepName || s.name));
+          
           if (currentIndex >= 0 && currentIndex < payload.steps.length - 1) {
             const nextStep = payload.steps[currentIndex + 1];
-            nextStepName = nextStep ? nextStep.stepName : null;
+            nextStepName = nextStep ? (nextStep.stepName || nextStep.name) : null;
+            // IMPORTANT: prefer exact serviceName from payload when provided
+            nextServiceName = nextStep && nextStep.serviceName ? nextStep.serviceName : (nextStepName ? getServiceNameFromStep(nextStepName) : undefined);
+            console.log(`[${properServiceName}] Found next step: ${nextStepName} -> service: ${nextServiceName}`);
           }
         }
         
         if (nextStepName) {
-          const nextServiceName = getServiceNameFromStep(nextStepName);
+          // nextServiceName already computed above (prefers payload's serviceName). Fallback for safety:
+          nextServiceName = nextServiceName || getServiceNameFromStep(nextStepName);
           
           try {
             // Simulate user think time before next step
             await new Promise(r => setTimeout(r, thinkTimeMs));
             const nextPayload = {
+              ...payload, // Inherit all original payload properties
               stepName: nextStepName,
               action: 'auto_chained',
               parentStep: currentStepName,
               correlationId,
               journeyId: payload.journeyId,
               domain: payload.domain,
+              companyName: payload.companyName,
               thinkTimeMs,
               steps: payload.steps
             };

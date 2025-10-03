@@ -50,13 +50,35 @@ async function isServiceReady(port, timeout = 5000) {
   });
 }
 
-// Convert step name to service format: "Plan Discovery" -> "PlanDiscoveryService"
-export function getServiceNameFromStep(stepName) {
+// Convert step name to service format with enhanced dynamic generation
+export function getServiceNameFromStep(stepName, context = {}) {
   if (!stepName) return null;
+  
   // If already a proper service name, keep it
-  if (/Service$/.test(String(stepName))) {
+  if (/Service$|API$|Processor$|Manager$|Gateway$/.test(String(stepName))) {
     return String(stepName);
   }
+  
+  // Extract context information for more intelligent naming
+  const description = context.description || '';
+  const category = context.category || context.type || '';
+  
+  // Determine service suffix based on context
+  let serviceSuffix = 'Service'; // default
+  
+  if (description.toLowerCase().includes('api') || context.endpoint) {
+    serviceSuffix = 'API';
+  } else if (description.toLowerCase().includes('process') || description.toLowerCase().includes('handle')) {
+    serviceSuffix = 'Processor';
+  } else if (description.toLowerCase().includes('manage') || description.toLowerCase().includes('control')) {
+    serviceSuffix = 'Manager';
+  } else if (description.toLowerCase().includes('gateway') || description.toLowerCase().includes('proxy')) {
+    serviceSuffix = 'Gateway';
+  } else if (category && !category.toLowerCase().includes('step')) {
+    // Use category as suffix if it's meaningful
+    serviceSuffix = category.charAt(0).toUpperCase() + category.slice(1) + 'Service';
+  }
+  
   // Normalize: handle spaces, underscores, hyphens, and existing CamelCase
   const cleaned = String(stepName).replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
   // Insert spaces between camelCase boundaries to preserve capitalization
@@ -73,8 +95,9 @@ export function getServiceNameFromStep(stepName) {
     .filter(Boolean)
     .map(w => w.charAt(0).toUpperCase() + w.slice(1))
     .join('');
-  const serviceName = `${serviceBase}Service`;
-  console.log(`[service-manager] Converting step "${stepName}" to service "${serviceName}"`);
+  
+  const serviceName = `${serviceBase}${serviceSuffix}`;
+  console.log(`[service-manager] Converting step "${stepName}" to dynamic service "${serviceName}" (context: ${JSON.stringify(context)})`);
   return serviceName;
 }
 
@@ -164,9 +187,15 @@ export function startChildService(serviceName, scriptPath, env = {}) {
 export function ensureServiceRunning(stepName, companyContext = {}) {
   console.log(`[service-manager] ensureServiceRunning called for step: ${stepName}`);
   
-  // Use exact serviceName from payload if provided, otherwise auto-generate
-  const serviceName = companyContext.serviceName || getServiceNameFromStep(stepName);
-  console.log(`[service-manager] Service name: ${serviceName}`);
+  // Use exact serviceName from payload if provided, otherwise auto-generate with context
+  const stepContext = {
+    description: companyContext.description || '',
+    category: companyContext.category || companyContext.type || '',
+    endpoint: companyContext.endpoint
+  };
+  
+  const serviceName = companyContext.serviceName || getServiceNameFromStep(stepName, stepContext);
+  console.log(`[service-manager] Dynamic service name: ${serviceName}`);
   
   // Extract company context with defaults
   const companyName = companyContext.companyName || 'DefaultCompany';
