@@ -180,17 +180,66 @@
                     <p class="text-sm text-dt-light-gray mt-1">Enter credentials to access the casino</p>
                 </div>
                 
+                <!-- User details -->
                 <!-- Username input with glow effect -->
-                <div class="mb-6">
+                <div class="mb-4">
                     <label class="block text-sm font-medium text-dt-cyan mb-2">
-                        AGENT IDENTIFIER
+                        Username
                     </label>
                     <input 
                         type="text" 
                         id="usernameInput" 
                         class="glow-input w-full px-4 py-3 rounded-lg text-white placeholder-dt-light-gray focus:outline-none font-mono"
-                        placeholder="Enter your codename..."
-                        maxlength="20"
+                        placeholder="Enter your name or codename..."
+                        maxlength="40"
+                    >
+                </div>
+
+                <!-- Email Address -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-dt-cyan mb-2">
+                        Email Address
+                    </label>
+                    <input 
+                        type="email" 
+                        id="emailInput" 
+                        class="glow-input w-full px-4 py-3 rounded-lg text-white placeholder-dt-light-gray focus:outline-none"
+                        placeholder="name@example.com"
+                        maxlength="100"
+                    >
+                </div>
+
+                <!-- Company Name -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-dt-cyan mb-2">
+                        Company Name
+                    </label>
+                    <input 
+                        type="text" 
+                        id="companyInput" 
+                        class="glow-input w-full px-4 py-3 rounded-lg text-white placeholder-dt-light-gray focus:outline-none"
+                        placeholder="Your company"
+                        maxlength="100"
+                    >
+                </div>
+
+                <!-- Customer Type -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-dt-cyan mb-2">
+                        Customer Type
+                    </label>
+                    <select id="customerTypeSelect" class="glow-input w-full px-4 py-3 rounded-lg text-white bg-dt-gray focus:outline-none">
+                        <option value="existing">Existing Customer</option>
+                        <option value="prospect">Prospect</option>
+                        <option value="partner">Partner</option>
+                        <option value="other">Other (Please specify)</option>
+                    </select>
+                    <input 
+                        type="text" 
+                        id="customerTypeOtherInput" 
+                        class="glow-input w-full px-4 py-3 rounded-lg text-white placeholder-dt-light-gray focus:outline-none mt-3 hidden"
+                        placeholder="Please specify..."
+                        maxlength="100"
                     >
                 </div>
                 
@@ -306,23 +355,41 @@
         // Vault access sequence
         function initiateVaultAccess() {
             const username = document.getElementById('usernameInput').value.trim();
+            const email = document.getElementById('emailInput').value.trim();
+            const company = document.getElementById('companyInput').value.trim();
+            const customerType = document.getElementById('customerTypeSelect').value;
+            const customerTypeOther = document.getElementById('customerTypeOtherInput').value.trim();
             const securityLevel = document.getElementById('securityLevel').value;
             
             if (!username) {
-                updateStatus('ERROR: AGENT IDENTIFIER REQUIRED', 'text-red-400');
+                updateStatus('ERROR: USERNAME REQUIRED', 'text-red-400');
                 shakeElement('usernameInput');
                 return;
             }
             
             if (username.length < 3) {
-                updateStatus('ERROR: IDENTIFIER TOO SHORT', 'text-red-400');
+                updateStatus('ERROR: USERNAME TOO SHORT', 'text-red-400');
                 shakeElement('usernameInput');
+                return;
+            }
+            
+            if (customerType === 'other' && !customerTypeOther) {
+                updateStatus('PLEASE SPECIFY CUSTOMER TYPE', 'text-red-400');
+                shakeElement('customerTypeOtherInput');
                 return;
             }
             
             // Store user data (use a single canonical key for username)
             localStorage.setItem('vegasUser', username);
             localStorage.setItem('vegas.username', username);
+            if (email) localStorage.setItem('vegas.email', email); else localStorage.removeItem('vegas.email');
+            if (company) localStorage.setItem('vegas.company', company); else localStorage.removeItem('vegas.company');
+            localStorage.setItem('vegas.customerType', customerType);
+            if (customerType === 'other') {
+                localStorage.setItem('vegas.customerTypeOther', customerTypeOther);
+            } else {
+                localStorage.removeItem('vegas.customerTypeOther');
+            }
             localStorage.setItem('securityLevel', securityLevel);
 
             // Initialize or sync balance from server instead of forcing a default
@@ -349,12 +416,12 @@
                     }
                 } finally {
                     // Start access sequence
-                    startAccessSequence(username, securityLevel);
+                    startAccessSequence(username, securityLevel, { email, company, customerType, customerTypeOther });
                 }
             })();
         }
         
-        function startAccessSequence(username, securityLevel) {
+        function startAccessSequence(username, securityLevel, extra = {}) {
             const loadingOverlay = document.getElementById('loadingOverlay');
             const loadingStep = document.getElementById('loadingStep');
             
@@ -380,9 +447,13 @@
                 } else {
                     clearInterval(stepInterval);
                     
-                    // Emit user login event
+                    // Emit user login event with additional profile fields
                     socket.emit('user-login', {
                         username: username,
+                        email: extra.email || localStorage.getItem('vegas.email') || '',
+                        company: extra.company || localStorage.getItem('vegas.company') || '',
+                        customerType: extra.customerType || localStorage.getItem('vegas.customerType') || 'existing',
+                        customerTypeOther: extra.customerTypeOther || localStorage.getItem('vegas.customerTypeOther') || '',
                         securityLevel: securityLevel,
                         timestamp: new Date().toISOString()
                     });
@@ -412,6 +483,37 @@
         
         // Auto-focus username input
         document.getElementById('usernameInput').addEventListener('focus', simulateBiometricScan);
+        
+        // Customer type toggle for Other field
+        document.getElementById('customerTypeSelect').addEventListener('change', function() {
+            const otherInput = document.getElementById('customerTypeOtherInput');
+            if (this.value === 'other') {
+                otherInput.classList.remove('hidden');
+            } else {
+                otherInput.classList.add('hidden');
+                otherInput.value = '';
+            }
+        });
+        
+        // Pre-populate fields from localStorage if available
+        document.addEventListener('DOMContentLoaded', function() {
+            const u = localStorage.getItem('vegas.username');
+            const e = localStorage.getItem('vegas.email');
+            const c = localStorage.getItem('vegas.company');
+            const t = localStorage.getItem('vegas.customerType');
+            const to = localStorage.getItem('vegas.customerTypeOther');
+            if (u) document.getElementById('usernameInput').value = u;
+            if (e) document.getElementById('emailInput').value = e;
+            if (c) document.getElementById('companyInput').value = c;
+            if (t) {
+                document.getElementById('customerTypeSelect').value = t;
+                if (t === 'other') {
+                    const otherInput = document.getElementById('customerTypeOtherInput');
+                    otherInput.classList.remove('hidden');
+                    if (to) otherInput.value = to;
+                }
+            }
+        }, { once: true });
         
         // Enter key handler
         document.addEventListener('keypress', function(e) {

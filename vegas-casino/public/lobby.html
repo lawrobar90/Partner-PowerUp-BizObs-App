@@ -431,6 +431,10 @@
         async function quickSpin() {
             // Trigger a quick slots spin and show result in popup
             const username = localStorage.getItem('vegas.username') || localStorage.getItem('vegasUser') || 'Anonymous';
+            const email = localStorage.getItem('vegas.email') || '';
+            const company = localStorage.getItem('vegas.company') || '';
+            const customerType = localStorage.getItem('vegas.customerType') || 'existing';
+            const customerTypeOther = localStorage.getItem('vegas.customerTypeOther') || '';
             try {
                 const bet = 5;
                 const corrId = `sim_${Date.now()}_${Math.floor(Math.random()*1e9)}`;
@@ -441,6 +445,10 @@
                         Game: 'Vegas Slots Machine',
                         BetAmount: bet,
                         Username: username,
+                        EmailAddress: email,
+                        CompanyName: company,
+                        CustomerType: customerType,
+                        CustomerTypeOther: customerType === 'other' ? customerTypeOther : '',
                         WinFlag: null,
                         WinningAmount: 0,
                         LossAmount: 0,
@@ -583,13 +591,32 @@
             // Show profile modal
             const modal = document.createElement('div');
             modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center';
+            const username = localStorage.getItem('vegas.username') || localStorage.getItem('vegasUser') || 'Anonymous';
+            const email = localStorage.getItem('vegas.email') || '';
+            const company = localStorage.getItem('vegas.company') || '';
+            const ctype = localStorage.getItem('vegas.customerType') || 'existing';
+            const ctypeOther = localStorage.getItem('vegas.customerTypeOther') || '';
+            const ctypeLabelMap = { existing: 'Existing Customer', prospect: 'Prospect', partner: 'Partner', other: 'Other' };
+            const ctypeLabel = ctypeLabelMap[ctype] || ctype;
             modal.innerHTML = `
                 <div class="bg-dt-dark border border-dt-cyan/30 rounded-xl p-6 mx-4 max-w-md w-full">
                     <h3 class="text-xl font-bold text-dt-cyan text-center mb-4">Agent Profile</h3>
                     <div class="space-y-4">
                         <div>
                             <label class="text-dt-light-gray text-sm">Agent Name:</label>
-                            <p class="text-white font-mono">${localStorage.getItem('vegas.username') || localStorage.getItem('vegasUser') || 'Anonymous'}</p>
+                            <p class="text-white font-mono">${username}</p>
+                        </div>
+                        <div>
+                            <label class="text-dt-light-gray text-sm">Email Address:</label>
+                            <p class="text-white font-mono">${email || '—'}</p>
+                        </div>
+                        <div>
+                            <label class="text-dt-light-gray text-sm">Company Name:</label>
+                            <p class="text-white font-mono">${company || '—'}</p>
+                        </div>
+                        <div>
+                            <label class="text-dt-light-gray text-sm">Customer Type:</label>
+                            <p class="text-white font-mono">${ctypeLabel}${ctype === 'other' && ctypeOther ? ` (${ctypeOther})` : ''}</p>
                         </div>
                         <div>
                             <label class="text-dt-light-gray text-sm">Security Level:</label>

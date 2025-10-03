@@ -24,7 +24,6 @@ import stepsRouter from './routes/steps.js';
 import flowRouter from './routes/flow.js';
 import serviceProxyRouter from './routes/serviceProxy.js';
 import journeySimulationRouter from './routes/journey-simulation.js';
-import backfillRouter from './routes/backfill.js';
 
 dotenv.config();
 
@@ -48,19 +47,28 @@ const PORT = process.env.PORT || 4000;
 // ensureServiceRunning is now in service-manager.js
 
 // Helper to call child service and get JSON response
-function callChildService(serviceName, payload, port) {
+function callChildService(serviceName, payload, port, tracingHeaders = {}) {
   return new Promise((resolve, reject) => {
     const targetPort = port;
-    // Generate basic W3C trace context for correlation if not already present
-    const traceId = (payload && payload.traceIdHex) || randomBytes(16).toString('hex');
-    const spanId = randomBytes(8).toString('hex');
-    const traceparent = `00-${traceId}-${spanId}-01`;
+    // Use existing trace context if available, otherwise generate new one
+    let traceparent = tracingHeaders.traceparent;
+    if (!traceparent) {
+      const traceId = (payload && payload.traceIdHex) || randomBytes(16).toString('hex');
+      const spanId = randomBytes(8).toString('hex');
+      traceparent = `00-${traceId}-${spanId}-01`;
+    }
+    
     const options = {
       hostname: '127.0.0.1',
       port: targetPort,
       path: '/process',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', traceparent }
+      headers: { 
+        'Content-Type': 'application/json', 
+        traceparent,
+        // Forward all tracing headers for distributed tracing
+        ...tracingHeaders
+      }
     };
     
     const req = http.request(options, (res) => {
@@ -99,11 +107,30 @@ function hostToLabel(host) {
   return host;
 }
 
-// Attach helpful request context
+// Attach helpful request context and distributed tracing
 app.use((req, res, next) => {
   const cid = req.headers['x-correlation-id'] || uuidv4();
   req.correlationId = cid;
   res.setHeader('x-correlation-id', cid);
+
+  // Extract and preserve all Dynatrace tracing headers for propagation
+  req.tracingHeaders = {};
+  const headerKeys = Object.keys(req.headers || {});
+  for (const key of headerKeys) {
+    const lowerKey = key.toLowerCase();
+    // Capture Dynatrace, W3C Trace Context, and other distributed tracing headers
+    if (lowerKey.startsWith('x-dynatrace') || 
+        lowerKey.startsWith('traceparent') || 
+        lowerKey.startsWith('tracestate') || 
+        lowerKey.startsWith('x-trace') || 
+        lowerKey.startsWith('x-request-id') || 
+        lowerKey.startsWith('x-correlation-id') || 
+        lowerKey.startsWith('x-span-id') || 
+        lowerKey.startsWith('dt-') ||
+        lowerKey.startsWith('uber-trace-id')) {
+      req.tracingHeaders[key] = req.headers[key];
+    }
+  }
 
   const host = req.headers['x-forwarded-host'] || req.headers.host || '';
   req.frontendHostLabel = hostToLabel(host);
@@ -199,7 +226,6 @@ app.use('/api/steps', stepsRouter);
 app.use('/api/flow', flowRouter);
 app.use('/api/service-proxy', serviceProxyRouter);
 app.use('/api/journey-simulation', journeySimulationRouter);
-app.use('/api/backfill', backfillRouter);
 
 // Health check with service status
 app.get('/api/health', (req, res) => {

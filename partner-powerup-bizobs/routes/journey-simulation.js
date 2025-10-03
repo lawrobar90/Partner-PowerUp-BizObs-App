@@ -10,9 +10,37 @@ const DEFAULT_JOURNEY_STEPS = [
   'Discovery', 'Awareness', 'Consideration', 'Purchase', 'Retention', 'Advocacy'
 ];
 
+// Extract Dynatrace tracing headers from incoming request
+function extractTracingHeaders(req) {
+  const tracingHeaders = {};
+  
+  // Extract all potential Dynatrace and tracing headers
+  const headerKeys = Object.keys(req.headers || {});
+  for (const key of headerKeys) {
+    const lowerKey = key.toLowerCase();
+    // Capture Dynatrace, W3C Trace Context, and other distributed tracing headers
+    if (lowerKey.startsWith('x-dynatrace') || 
+        lowerKey.startsWith('traceparent') || 
+        lowerKey.startsWith('tracestate') || 
+        lowerKey.startsWith('x-trace') || 
+        lowerKey.startsWith('x-request-id') || 
+        lowerKey.startsWith('x-correlation-id') || 
+        lowerKey.startsWith('x-span-id') || 
+        lowerKey.startsWith('dt-') ||
+        lowerKey.startsWith('uber-trace-id')) {
+      tracingHeaders[key] = req.headers[key];
+    }
+  }
+  
+  return tracingHeaders;
+}
+
 // Call a service
-async function callDynamicService(stepName, port, payload, headers = {}) {
+async function callDynamicService(stepName, port, payload, incomingHeaders = {}, req = null) {
   return new Promise((resolve, reject) => {
+    // Extract tracing headers from original request if available
+    const tracingHeaders = req ? extractTracingHeaders(req) : {};
+    
     const options = {
       hostname: '127.0.0.1',
       port: port,
@@ -20,7 +48,11 @@ async function callDynamicService(stepName, port, payload, headers = {}) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-correlation-id': headers['x-correlation-id'] || payload.correlationId
+        'x-correlation-id': incomingHeaders['x-correlation-id'] || payload.correlationId,
+        // Forward all tracing headers for Dynatrace distributed tracing
+        ...tracingHeaders,
+        // Override with any specific headers passed in
+        ...incomingHeaders
       }
     };
     
@@ -136,7 +168,7 @@ router.post('/simulate-journey', async (req, res) => {
         steps: stepData
       };
       
-      const chainedResult = await callDynamicService(first.stepName, firstPort, payload, { 'x-correlation-id': correlationId });
+      const chainedResult = await callDynamicService(first.stepName, firstPort, payload, { 'x-correlation-id': correlationId }, req);
       
       if (chainedResult) {
         journeyResults.push({
@@ -168,7 +200,7 @@ router.post('/simulate-journey', async (req, res) => {
             stepName,
             stepIndex: i + 1,
             totalSteps: stepData.length
-          }, { 'x-correlation-id': correlationId });
+          }, { 'x-correlation-id': correlationId }, req);
           
           journeyResults.push({
             ...stepResult,

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Stop BizObs app
+./project-control.sh stop bizobs

@@ -1,0 +1,45 @@
+#!/bin/bash
+
+echo "🔧 Dynatrace Service Flow Configuration Helper"
+echo "=============================================="
+
+echo ""
+echo "📋 MANUAL CONFIGURATION STEPS:"
+echo ""
+
+echo "1️⃣ Process Group Detection Rule"
+echo "   Navigate to: Settings → Processes and containers → Process group detection"
+echo "   • Click 'Add detection rule'"
+echo "   • Rule name: 'BizObs Customer Journey Services'"
+echo "   • Process group naming format: Use environment variable"
+echo "   • Environment variable: DT_PROCESS_GROUP_NAME"
+echo "   • Conditions:"
+echo "     - Environment variable exists: DT_APPLICATION_NAME" 
+echo "     - Environment variable value: BizObs-CustomerJourney"
+echo "   • Save and enable"
+
+echo ""
+echo "2️⃣ Service Detection Rule"
+echo "   Navigate to: Settings → Server-side service monitoring → Service detection rules"
+echo "   • Click 'Add detection rule'"
+echo "   • Rule name: 'BizObs Service Detection'"
+echo "   • Service naming: Use environment variable"
+echo "   • Environment variable: DT_SERVICE_NAME"
+echo "   • Conditions:"
+echo "     - Process group name contains: Service"
+echo "     - Environment variable exists: DT_APPLICATION_NAME"
+echo "   • Save and enable"
+
+echo ""
+echo "3️⃣ Verify Configuration"
+echo "   • Wait 2-3 minutes for rules to take effect"
+echo "   • Run: ./test-horizontal-flow.sh"
+echo "   • Check Services → Service flow in Dynatrace"
+
+echo ""
+echo "✅ Expected Result:"
+echo "   ProductDiscoveryService → ProductSelectionService → CartAdditionService"
+echo "   → CheckoutProcessService → OrderConfirmationService → PostPurchaseService"
+
+echo ""
+echo "🏃 Ready to test? Run: ./test-horizontal-flow.sh"

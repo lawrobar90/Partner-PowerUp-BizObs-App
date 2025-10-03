@@ -54,29 +54,32 @@ function callService(serviceName, payload, headers = {}) {
     const port = getServicePortFromStep(serviceName.replace('Service', '')) || SERVICE_PORTS[serviceName];
     if (!port) return reject(new Error(`Unknown service: ${serviceName}`));
     
-    // Prepare headers with Dynatrace trace propagation
+    // Prepare headers with complete Dynatrace trace propagation
     const requestHeaders = {
       'Content-Type': 'application/json',
+      // Forward all incoming tracing headers first
       ...headers
     };
-    if (!requestHeaders.traceparent) {
+    
+    // Only create new traceparent if none exists (preserve existing trace context)
+    if (!requestHeaders.traceparent && !requestHeaders['x-dynatrace']) {
       const traceId = crypto.randomBytes(16).toString('hex');
       const spanId = crypto.randomBytes(8).toString('hex');
       requestHeaders.traceparent = `00-${traceId}-${spanId}-01`;
     }
     
-    // Add custom journey tracking headers for Dynatrace
+    // Add custom journey tracking headers for Dynatrace (only if not already present)
     if (payload) {
-      if (payload.journeyId) {
+      if (payload.journeyId && !requestHeaders['x-journey-id']) {
         requestHeaders['x-journey-id'] = payload.journeyId;
       }
-      if (payload.stepName) {
+      if (payload.stepName && !requestHeaders['x-journey-step']) {
         requestHeaders['x-journey-step'] = payload.stepName;
       }
-      if (payload.domain) {
+      if (payload.domain && !requestHeaders['x-customer-segment']) {
         requestHeaders['x-customer-segment'] = payload.domain;
       }
-      if (payload.correlationId) {
+      if (payload.correlationId && !requestHeaders['x-correlation-id']) {
         requestHeaders['x-correlation-id'] = payload.correlationId;
       }
     }

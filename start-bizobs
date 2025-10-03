@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Start BizObs app
+./project-control.sh start bizobs

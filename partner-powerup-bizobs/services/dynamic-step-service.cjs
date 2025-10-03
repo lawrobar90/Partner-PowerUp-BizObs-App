@@ -98,11 +98,27 @@ function createStepService(serviceName, stepName) {
               steps: payload.steps
             };
             
-            // Propagate Dynatrace headers for trace continuity
+            // Extract and propagate all Dynatrace tracing headers for trace continuity
             const traceHeaders = {
-              'x-correlation-id': correlationId,
-              ...req.dynatraceHeaders
+              'x-correlation-id': correlationId
             };
+            
+            // Extract all potential Dynatrace and tracing headers from incoming request
+            const headerKeys = Object.keys(req.headers || {});
+            for (const key of headerKeys) {
+              const lowerKey = key.toLowerCase();
+              // Capture Dynatrace, W3C Trace Context, and other distributed tracing headers
+              if (lowerKey.startsWith('x-dynatrace') || 
+                  lowerKey.startsWith('traceparent') || 
+                  lowerKey.startsWith('tracestate') || 
+                  lowerKey.startsWith('x-trace') || 
+                  lowerKey.startsWith('x-request-id') || 
+                  lowerKey.startsWith('x-span-id') || 
+                  lowerKey.startsWith('dt-') ||
+                  lowerKey.startsWith('uber-trace-id')) {
+                traceHeaders[key] = req.headers[key];
+              }
+            }
             
             const next = await callService(nextServiceName, nextPayload, traceHeaders);
             response.next = next;
