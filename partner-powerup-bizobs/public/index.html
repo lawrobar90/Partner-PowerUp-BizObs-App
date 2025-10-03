@@ -31,6 +31,27 @@
       <span id="host-label" class="text-sm text-dtgray">Smartscape UI · Real-time overlays</span>
     </header>
 
+    <!-- Dynatrace Company Filter Helper -->
+    <div class="mb-6 p-4 rounded-lg bg-dtpurple bg-opacity-20 border border-dtpurple">
+      <h3 class="text-lg font-semibold text-dtcyan mb-2">🔍 Dynatrace Filtering</h3>
+      <p class="text-sm text-gray-300 mb-3">To filter services by company in Dynatrace, use these simplified tags:</p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-dtdark p-3 rounded border border-dtgray">
+          <span class="text-dtcyan font-mono text-sm">company=YourCompanyName</span>
+          <p class="text-xs text-gray-400 mt-1">Primary filter by company</p>
+        </div>
+        <div class="bg-dtdark p-3 rounded border border-dtgray">
+          <span class="text-dtcyan font-mono text-sm">app=BizObs-CustomerJourney</span>
+          <p class="text-xs text-gray-400 mt-1">Filter by application</p>
+        </div>
+        <div class="bg-dtdark p-3 rounded border border-dtgray">
+          <span class="text-dtcyan font-mono text-sm">service=DiscoveryService</span>
+          <p class="text-xs text-gray-400 mt-1">Filter by specific service</p>
+        </div>
+      </div>
+      <p class="text-xs text-gray-400 mt-3">💡 <strong>Quick Filter:</strong> In Dynatrace Services, use <code class="bg-dtdark px-1 rounded">company=AcmeCorp</code> to see only that company's services</p>
+    </div>
+
     <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="md:col-span-2 p-4 rounded-lg bg-[#1b1b1b] border border-dtgray">
         <h2 class="text-xl mb-4 text-dtcyan">Journey Generator</h2>
@@ -39,20 +60,67 @@
         <div class="mb-4">
           <label class="block text-sm font-medium text-dtcyan mb-2">Generation Method</label>
           <select id="generationMethod" class="w-full p-2 rounded bg-dtgray text-white border border-dtgray focus:border-dtcyan">
-            <option value="template">Quick Template (No AI)</option>
-            <option value="copilot">🤖 Copilot Copy-Paste Workflow</option>
+            <option value="copilot">🤖 Copilot (AI-Generated Journey)</option>
+            <option value="template">Quick Template (Retail Example, No AI)</option>
           </select>
         </div>
 
         <!-- Basic Form -->
-        <form id="journey-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <input id="companyName" class="p-2 rounded bg-dtgray text-white" name="customer" placeholder="Company name" />
-          <input id="domain" class="p-2 rounded bg-dtgray text-white" name="website" placeholder="Website domain" />
-          <input id="industryType" class="p-2 rounded bg-dtgray text-white" name="region" placeholder="Industry type" />
-          <input class="p-2 rounded bg-dtgray text-white" name="journeyType" placeholder="Journey type (optional)" />
-          <input class="p-2 rounded bg-dtgray text-white md:col-span-2" name="details" placeholder="Additional context (optional)" />
-          <button id="generateJourney" type="button" class="md:col-span-2 bg-dtblue hover:bg-dtcyan text-black font-semibold rounded p-2">
-            Generate Journey
+        <form id="journey-form" class="space-y-4 mb-4">
+          <!-- Company Information -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="companyName" class="block text-sm font-medium text-dtcyan mb-2">Company Name</label>
+              <input id="companyName" class="w-full p-2 rounded bg-dtgray text-white border border-dtgray focus:border-dtcyan" name="customer" placeholder="e.g., ShopMart, TechCorp, HealthPlus" />
+            </div>
+            <div>
+              <label for="domain" class="block text-sm font-medium text-dtcyan mb-2">Website Domain</label>
+              <input id="domain" class="w-full p-2 rounded bg-dtgray text-white border border-dtgray focus:border-dtcyan" name="website" placeholder="e.g., shopmart.com, techcorp.io" />
+            </div>
+          </div>
+
+          <!-- Industry Type -->
+          <div>
+            <label for="industryType" class="block text-sm font-medium text-dtcyan mb-2">Industry Type</label>
+            <input id="industryType" class="w-full p-2 rounded bg-dtgray text-white border border-dtgray focus:border-dtcyan" name="region" placeholder="e.g., retail, technology, healthcare, finance" />
+          </div>
+
+          <!-- Journey Requirements (Copilot Mode Only) -->
+          <div id="journeyRequirementsContainer" style="display: none;">
+            <label for="journeyRequirements" class="block text-sm font-medium text-dtcyan mb-2">Journey Requirements & Specific Context</label>
+            <textarea id="journeyRequirements" rows="3" class="w-full p-3 rounded bg-dtgray text-white border border-dtgray focus:border-dtcyan resize-none" placeholder="Describe the specific customer journey you want to create. Be detailed about:
+• What type of customer interaction/transaction?
+• Key touchpoints or critical steps?
+• Specific business processes to include?
+• Any particular outcomes or goals?
+• Special requirements or constraints?
+
+Example: 'Create a B2B software trial signup journey including lead qualification, demo scheduling, trial activation, feature exploration, and conversion to paid subscription with technical onboarding steps.'"></textarea>
+            <p class="text-xs text-gray-400 mt-1">💡 The more specific you are, the better the AI can tailor the journey to your exact needs</p>
+          </div>
+
+          <!-- Custom Steps (Template Mode Only) -->
+          <div id="customStepsContainer" style="display: none;">
+            <label for="customSteps" class="block text-sm font-medium text-dtcyan mb-2">Custom Step Names</label>
+            <input id="customSteps" class="w-full p-2 rounded bg-dtgray text-white border border-dtgray focus:border-dtcyan" name="customSteps" placeholder="e.g., Product Discovery, Add to Cart, Checkout, Confirmation" />
+            <p class="text-xs text-gray-400 mt-1">Comma-separated list of journey steps</p>
+          </div>
+
+          <!-- Optional Fields (Template Mode Only) -->
+          <div id="optionalFieldsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4" style="display: none;">
+            <div>
+              <label for="journeyType" class="block text-sm font-medium text-dtcyan mb-2">Journey Type</label>
+              <input id="journeyType" class="w-full p-2 rounded bg-dtgray text-white border border-dtgray focus:border-dtcyan" name="journeyType" placeholder="e.g., E-commerce Purchase, Service Signup" />
+            </div>
+            <div>
+              <label for="details" class="block text-sm font-medium text-dtcyan mb-2">Additional Context</label>
+              <input id="details" class="w-full p-2 rounded bg-dtgray text-white border border-dtgray focus:border-dtcyan" name="details" placeholder="Any specific requirements or context" />
+            </div>
+          </div>
+
+          <!-- Generate Button -->
+          <button id="generateJourney" type="button" class="w-full bg-dtblue hover:bg-dtcyan text-black font-semibold rounded p-3 transition-colors">
+            🚀 Generate Journey
           </button>
         </form>
 
@@ -87,6 +155,158 @@
             </button>
           </div>
         </div>
+        <!-- Example Template -->
+        <div id="templateExample" class="bg-dtgray rounded-lg p-4 mb-4" style="display: none;">
+          <h3 class="text-lg font-semibold text-dtcyan mb-4">📋 Quick Template: Retail Customer Journey</h3>
+          <p class="text-sm text-white mb-3">Use this built-in retail journey template with pre-filled form values. This template uses realistic step and service names, matching the backend logic:</p>
+          <pre class="text-xs bg-black p-3 rounded overflow-auto max-h-48" id="retailTemplateJson">{
+  "journey": {
+    "companyName": "ShopMart",
+    "domain": "shopmart.com",
+    "industryType": "retail",
+    "journeyId": "journey_retail_example",
+    "steps": [
+      {
+        "stepIndex": 1,
+        "stepName": "Product Discovery",
+        "description": "Customer explores products",
+        "duration": "3-8 minutes",
+        "substeps": [
+          {
+            "substepIndex": 1,
+            "substepName": "BrowseCatalog",
+            "serviceName": "ProductDiscoveryService",
+            "endpoint": "/api/product-discovery",
+            "eventType": "browse_initiated"
+          },
+          {
+            "substepIndex": 2,
+            "substepName": "FilterResults",
+            "serviceName": "ProductDiscoveryService",
+            "endpoint": "/api/filter",
+            "eventType": "filter_applied"
+          }
+        ]
+      },
+      {
+        "stepIndex": 2,
+        "stepName": "Product Selection",
+        "description": "Customer evaluates items",
+        "duration": "2-5 minutes",
+        "substeps": [
+          {
+            "substepIndex": 1,
+            "substepName": "ViewDetails",
+            "serviceName": "ProductSelectionService",
+            "endpoint": "/api/product-selection",
+            "eventType": "view_details"
+          },
+          {
+            "substepIndex": 2,
+            "substepName": "AddToCart",
+            "serviceName": "ProductSelectionService",
+            "endpoint": "/api/add-to-cart",
+            "eventType": "add_to_cart"
+          }
+        ]
+      },
+      {
+        "stepIndex": 3,
+        "stepName": "Cart Addition",
+        "description": "Customer adds items to cart",
+        "duration": "1-3 minutes",
+        "substeps": [
+          {
+            "substepIndex": 1,
+            "substepName": "ReviewCart",
+            "serviceName": "CartAdditionService",
+            "endpoint": "/api/cart",
+            "eventType": "review_cart"
+          }
+        ]
+      },
+      {
+        "stepIndex": 4,
+        "stepName": "Checkout Process",
+        "description": "Customer completes checkout",
+        "duration": "2-4 minutes",
+        "substeps": [
+          {
+            "substepIndex": 1,
+            "substepName": "EnterShipping",
+            "serviceName": "CheckoutProcessService",
+            "endpoint": "/api/checkout/shipping",
+            "eventType": "enter_shipping"
+          },
+          {
+            "substepIndex": 2,
+            "substepName": "EnterPayment",
+            "serviceName": "CheckoutProcessService",
+            "endpoint": "/api/checkout/payment",
+            "eventType": "enter_payment"
+          }
+        ]
+      },
+      {
+        "stepIndex": 5,
+        "stepName": "Order Confirmation",
+        "description": "Order is confirmed",
+        "duration": "1-2 minutes",
+        "substeps": [
+          {
+            "substepIndex": 1,
+            "substepName": "ShowConfirmation",
+            "serviceName": "OrderConfirmationService",
+            "endpoint": "/api/order/confirmation",
+            "eventType": "order_confirmed"
+          }
+        ]
+      },
+      {
+        "stepIndex": 6,
+        "stepName": "Post Purchase",
+        "description": "Customer receives and reviews order",
+        "duration": "varies",
+        "substeps": [
+          {
+            "substepIndex": 1,
+            "substepName": "TrackOrder",
+            "serviceName": "PostPurchaseService",
+            "endpoint": "/api/order/track",
+            "eventType": "order_shipped"
+          },
+          {
+            "substepIndex": 2,
+            "substepName": "LeaveReview",
+            "serviceName": "PostPurchaseService",
+            "endpoint": "/api/reviews/create",
+            "eventType": "review_submitted"
+          }
+        ]
+      }
+    ]
+  },
+  "customerProfile": {
+    "userId": "user_retail_demo",
+    "email": "customer@example.com",
+    "demographic": "consumers aged 18-65",
+    "painPoints": ["high prices", "limited selection"],
+    "goals": ["quality products", "good prices"]
+  },
+  "traceMetadata": {
+    "correlationId": "trace_retail_example",
+    "sessionId": "session_retail_demo",
+    "businessContext": {"campaignSource": "organic", "customerSegment": "consumer", "businessValue": 500}
+  },
+  "additionalFields": {
+    "deviceType": "mobile", "browser": "Chrome", "location": "London, UK", "entryChannel": "organic",
+    "customerIntent": "purchase", "loyaltyStatus": "new", "abandonmentRisk": "medium",
+    "conversionProbability": 0.85, "personalizationTags": ["shopping", "products"]
+  }
+}</pre>
+          <button id="useRetailExample" class="mt-2 bg-dtpurple text-white px-4 py-2 rounded font-semibold">📱 Use Retail Example</button>
+        </div>
+
         <!-- Journey Output -->
         <div class="mt-4">
           <div class="flex items-center justify-between">
@@ -107,8 +327,7 @@
         </form>
         <div id="sim-status" class="mt-2 text-sm text-dtyellow"></div>
         <div class="flex gap-2 mt-3">
-          <button id="run-flow" class="flex-1 bg-dtblue hover:bg-dtcyan text-black font-semibold rounded p-2">Run 6-Step Flow</button>
-          <button id="run-flow-chained" class="flex-1 bg-dtgreen hover:bg-dtcyan text-black font-semibold rounded p-2" title="Trigger connected service chaining">Run Chained Flow</button>
+          <button id="run-journey-simulation" class="flex-1 bg-dtgreen hover:bg-dtcyan text-black font-semibold rounded p-2" title="Simulate complete customer journey with service traceability">🚀 Simulate Customer Journey</button>
         </div>
       </div>
     </section>
@@ -150,7 +369,7 @@
     const seedFlowBtn = document.getElementById('seed-flow');
     const simulateForm = document.getElementById('simulate-form');
     const simStatus = document.getElementById('sim-status');
-    const runFlowBtn = document.getElementById('run-flow');
+    const runJourneySimBtn = document.getElementById('run-journey-simulation');
 
     let lastJourney = null;
     let currentJourneyData = null;
@@ -158,11 +377,37 @@
     // Handle generation method change
     document.getElementById('generationMethod').addEventListener('change', (e) => {
       const copilotWorkflow = document.getElementById('copilotWorkflow');
+      const templateExample = document.getElementById('templateExample');
+      const customStepsContainer = document.getElementById('customStepsContainer');
+      const optionalFieldsContainer = document.getElementById('optionalFieldsContainer');
+      const journeyRequirementsContainer = document.getElementById('journeyRequirementsContainer');
+      const journeyForm = document.getElementById('journey-form');
+      
       if (e.target.value === 'copilot') {
         copilotWorkflow.classList.remove('hidden');
+        templateExample.classList.add('hidden');
+        // In Copilot mode: show basic form fields + journey requirements, hide template-specific fields
+        journeyForm.classList.remove('hidden');
+        customStepsContainer.style.display = 'none';
+        optionalFieldsContainer.style.display = 'none';
+        journeyRequirementsContainer.style.display = 'block';
         generateCopilotPrompt();
       } else {
         copilotWorkflow.classList.add('hidden');
+        templateExample.classList.remove('hidden');
+        // In Template mode: show all form fields except journey requirements
+        journeyForm.classList.remove('hidden');
+        customStepsContainer.style.display = 'block';
+        optionalFieldsContainer.style.display = 'block';
+        journeyRequirementsContainer.style.display = 'none';
+        
+        // Pre-fill form fields with retail example values
+        document.getElementById('companyName').value = 'ShopMart';
+        document.getElementById('domain').value = 'shopmart.com';
+        document.getElementById('industryType').value = 'retail';
+        document.getElementById('customSteps').value = 'Product Discovery, Product Selection, Cart Addition, Checkout Process, Order Confirmation, Post Purchase';
+        document.getElementById('journeyType').value = 'E-commerce Purchase';
+        document.getElementById('details').value = 'Customer journey for online retail shopping experience';
       }
     });
 
@@ -185,57 +430,77 @@
       }
     });
 
+    document.getElementById('journeyRequirements').addEventListener('input', () => {
+      if (document.getElementById('generationMethod').value === 'copilot') {
+        generateCopilotPrompt();
+      }
+    });
+
+    document.getElementById('customSteps').addEventListener('input', () => {
+      if (document.getElementById('generationMethod').value === 'copilot') {
+        generateCopilotPrompt();
+      }
+    });
+
     // Generate Copilot Prompt
     function generateCopilotPrompt() {
-      const companyName = document.getElementById('companyName').value || '[Company Name]';
-      const domain = document.getElementById('domain').value || '[company.com]';
-      const industryType = document.getElementById('industryType').value || 'technology';
-      
-      // Generate industry-specific step names and examples
-      const industrySteps = getIndustrySpecificSteps(industryType, companyName);
+      const companyName = document.getElementById('companyName').value || '[Your Company Name]';
+      const domain = document.getElementById('domain').value || '[your-domain.com]';
+      const industryType = document.getElementById('industryType').value || '[Your Industry]';
+      const journeyRequirements = document.getElementById('journeyRequirements').value.trim();
+      const customStepsInput = document.getElementById('customSteps').value.trim();
+
+      // Use custom steps if provided, otherwise let AI generate steps
+      let industrySteps;
+      let useCustomSteps = false;
+      if (customStepsInput) {
+        industrySteps = customStepsInput.split(',').map(step => step.trim()).filter(step => step);
+        // Ensure we have exactly 6 steps
+        while (industrySteps.length < 6) {
+          industrySteps.push(`Step${industrySteps.length + 1}`);
+        }
+        industrySteps = industrySteps.slice(0, 6); // Limit to 6 steps
+        useCustomSteps = true;
+      } else {
+        // Let AI generate step names - no hardcoded defaults
+        industrySteps = ['[AI-Generated Step 1]', '[AI-Generated Step 2]', '[AI-Generated Step 3]', '[AI-Generated Step 4]', '[AI-Generated Step 5]', '[AI-Generated Step 6]'];
+        useCustomSteps = false;
+      }
+
       const industryExample = getIndustryExample(industryType, companyName, domain);
-      
+
       const prompt = `Create a realistic customer journey for ${companyName} (${domain}) in ${industryType}. Generate step names that reflect the actual customer experience for this industry.
 
-Respond with this EXACT JSON structure:
+${journeyRequirements ? `SPECIFIC REQUIREMENTS:
+${journeyRequirements}
 
+` : ''}CONTEXT:
+- Company: ${companyName}
+- Domain: ${domain}
+- Industry: ${industryType}
+- Target Steps: ${industrySteps.join(', ')}
+
+Respond with this EXACT JSON structure:
 {
   "journey": {
     "companyName": "${companyName}",
     "domain": "${domain}",
     "industryType": "${industryType}",
-    "journeyId": "journey_\${Date.now()}",
+    "journeyId": "journey_${Date.now()}",
     "steps": [
-      {
-        "stepIndex": 1,
-        "stepName": "${industrySteps[0]}",
-        "description": "Customer ${industrySteps[0].toLowerCase()} phase",
-        "duration": "2-5 minutes",
-        "substeps": [
-          {
-            "substepIndex": 1,
-            "substepName": "Initial_Action",
-            "description": "Customer's first interaction",
-            "serviceName": "${industrySteps[0].toLowerCase()}-service",
-            "endpoint": "/api/${industrySteps[0].toLowerCase()}",
-            "duration": 800,
-            "eventType": "${industrySteps[0].toLowerCase()}_initiated",
-            "metadata": ${industryExample}
-          }
-        ]
-      }
+      // 6 steps, each with 2-3 realistic substeps for this industry
     ]
   },
   "customerProfile": {
-    "userId": "user_\${Math.random().toString(36).substr(2, 9)}",
+    "userId": "user_${Math.random().toString(36).substr(2, 9)}",
     "email": "customer@example.com",
     "demographic": "${getIndustryDemographic(industryType)}",
     "painPoints": ${JSON.stringify(getIndustryPainPoints(industryType))},
     "goals": ${JSON.stringify(getIndustryGoals(industryType, companyName))}
   },
   "traceMetadata": {
-    "correlationId": "trace_\${Date.now()}",
-    "sessionId": "session_\${Math.random().toString(36).substr(2, 9)}",
+    "correlationId": "trace_${Date.now()}",
+    "sessionId": "session_${Math.random().toString(36).substr(2, 9)}",
     "businessContext": {"campaignSource": "organic", "customerSegment": "consumer", "businessValue": ${getIndustryValue(industryType)}}
   },
   "additionalFields": {
@@ -245,8 +510,17 @@ Respond with this EXACT JSON structure:
   }
 }
 
-REQUIREMENTS: Create exactly 6 steps using these names: ${industrySteps.join(', ')}. Each step has 2-3 realistic substeps for ${industryType}. Use industry-specific service names, endpoints, and metadata. Keep descriptions brief but specific to ${companyName}'s ${industryType} business.`;
-      
+REQUIREMENTS:
+${useCustomSteps ?
+  `- Create exactly 6 steps using these names: ${industrySteps.join(', ')}.\n- Each step must use the provided name as both the stepName and for the serviceName (in PascalCase, ending with 'Service').\n- Each step must have 2-3 realistic substeps for ${industryType}.` :
+  `- Create exactly 6 steps using your knowledge of the ${industryType} industry to generate appropriate, professional step names (e.g., for retail: Product Discovery, Product Selection, Cart Addition, Checkout Process, Order Confirmation, Post Purchase).\n- Each step must use its stepName as the serviceName (in PascalCase, ending with 'Service').\n- Each step must have 2-3 realistic substeps for ${industryType}.`
+}
+
+IMPORTANT:
+- For serviceName, use PascalCase format ending with 'Service' (e.g., "ProductDiscoveryService", "CheckoutProcessService", "OrderConfirmationService").
+- The system dynamically creates these services using the step names you provide. Each service will be automatically instantiated on dedicated ports and traced with Dynatrace.
+- Use industry-specific service names, endpoints, and metadata.\n- Keep descriptions brief but specific to ${companyName}'s ${industryType} business.\n- Do NOT use any legacy service names (like advocacy, retention, etc).\n- All service names must match the step names in PascalCase + 'Service'.`;
+
       document.getElementById('promptText').value = prompt;
     }
 
@@ -435,17 +709,51 @@ REQUIREMENTS: Create exactly 6 steps using these names: ${industrySteps.join(', 
       generateCopilotPrompt();
     });
 
-    // Generate Journey (Template Mode)
+    // Generate Journey (Both Template and Copilot Mode)
     document.getElementById('generateJourney').addEventListener('click', async () => {
       const generationMethod = document.getElementById('generationMethod').value;
       
       if (generationMethod === 'copilot') {
-        alert('Please use the copy-paste workflow above for Copilot integration');
+        // For Copilot mode, create a basic journey structure with the provided requirements
+        const companyName = document.getElementById('companyName').value || 'YourCompany';
+        const domain = document.getElementById('domain').value || 'yourcompany.com';
+        const industryType = document.getElementById('industryType').value || 'general';
+        const journeyRequirements = document.getElementById('journeyRequirements').value || 'Standard customer journey';
+        
+        // Create a simple journey structure for simulation
+        const basicJourney = {
+          companyName,
+          domain,
+          industryType,
+          steps: [
+            { stepName: 'Discovery', description: 'Initial customer discovery' },
+            { stepName: 'Awareness', description: 'Customer becomes aware' },
+            { stepName: 'Consideration', description: 'Customer considers options' },
+            { stepName: 'Purchase', description: 'Customer makes purchase' },
+            { stepName: 'Retention', description: 'Customer retention activities' },
+            { stepName: 'Advocacy', description: 'Customer becomes advocate' }
+          ],
+          requirements: journeyRequirements
+        };
+        
+        lastJourney = basicJourney;
+        currentJourneyData = { journey: basicJourney };
+        journeyOutput.textContent = JSON.stringify({ journey: basicJourney }, null, 2);
+        setupFlowButtons();
+        alert('Basic journey structure created! You can now simulate this journey or use the Copilot workflow above for AI-generated journeys.');
         return;
       }
 
+      // Template mode logic
       const data = Object.fromEntries(new FormData(journeyForm).entries());
-      const res = await fetch('/api/generateJourney', { 
+      
+      // Add custom steps if provided
+      const customStepsInput = document.getElementById('customSteps').value.trim();
+      if (customStepsInput) {
+        data.customSteps = customStepsInput.split(',').map(step => step.trim()).filter(step => step);
+      }
+      
+      const res = await fetch('/api/journey/generateJourney', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body: JSON.stringify(data) 
@@ -479,18 +787,57 @@ REQUIREMENTS: Create exactly 6 steps using these names: ${industrySteps.join(', 
     function setupFlowButtons() {
       // Setup seed flow button
       seedFlowBtn.onclick = async () => {
-        const payload = lastJourney ? { 
-          id: lastJourney.id, 
-          domain: (lastJourney.journeyType||'').toLowerCase(), 
-          steps: lastJourney.steps 
-        } : {};
-        const res = await fetch('/api/flow/runFlow', { 
+        if (!lastJourney) {
+          simStatus.textContent = 'Please generate a journey first';
+          return;
+        }
+        
+        const customerId = `customer_${Date.now()}`;
+        const journeyId = `journey_${Date.now()}`;
+        
+        // Use the same journey simulation logic for consistency
+        const journeyData = {
+          steps: lastJourney.steps || [],
+          journeyId: lastJourney.id || journeyId,
+          companyName: lastJourney.companyName || 'DefaultCompany',
+          domain: (lastJourney.journeyType||'').toLowerCase() || 'default.com',
+          industryType: lastJourney.industryType || 'general'
+        };
+        
+        simStatus.textContent = 'Starting 6-step journey flow with dynamic services...';
+        
+        const res = await fetch('/api/journey-simulation/simulate-journey', { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify({ payload }) 
+          body: JSON.stringify({ 
+            journeyId,
+            customerId,
+            aiJourney: journeyData,
+            companyName: journeyData.companyName,
+            domain: journeyData.domain,
+            industryType: journeyData.industryType,
+            chained: false // Use step-by-step execution for consistency
+          }) 
         });
+        
         const json = await res.json();
-        simStatus.textContent = json.ok ? `Flow complete. Correlation: ${json.correlationId}` : `Flow failed: ${json.error}`;
+        
+        if (json.success) {
+          const journey = json.journey;
+          simStatus.textContent = `✅ 6-Step Flow complete! ${journey.completedSteps}/${journey.totalSteps} steps successful. Correlation: ${journey.correlationId}`;
+          
+          // Show flow results
+          const stepSummary = journey.steps.map((step, idx) => {
+            const status = step.status === 'completed' ? '✅' : '❌';
+            const serviceName = step.serviceName || (step.stepName + 'Service');
+            return `${status} Step ${idx + 1}: ${serviceName} (${step.processingTime || 0}ms)`;
+          }).join('\n');
+          
+          flowResultsEl.textContent = `6-Step Flow Execution:\n${stepSummary}\n\nServices Used: ${journey.stepNames ? journey.stepNames.join(' → ') : 'N/A'}\n\nCorrelation ID: ${journey.correlationId}`;
+        } else {
+          simStatus.textContent = `❌ Flow failed: ${json.error}`;
+          flowResultsEl.textContent = `Flow Error: ${json.error}`;
+        }
       };
     }
 
@@ -506,33 +853,57 @@ REQUIREMENTS: Create exactly 6 steps using these names: ${industrySteps.join(', 
       const rps = Number(new FormData(simulateForm).get('rps'));
       const duration = Number(new FormData(simulateForm).get('duration'));
       
-      const payload = {
-        journey: currentJourneyData.journey,
-        customerProfile: currentJourneyData.customerProfile || {
-          userId: `user_${Date.now()}`,
-          email: 'customer@example.com'
-        },
-        traceMetadata: currentJourneyData.traceMetadata || {
-          correlationId: `trace_${Date.now()}`,
-          sessionId: `session_${Math.random().toString(36).substr(2, 9)}`
-        },
-        additionalFields: currentJourneyData.additionalFields || {},
-        ratePerSecond: rps,
-        durationSeconds: duration
-      };
+      simStatus.textContent = 'Starting customer journey simulation with dynamic services...';
+      
+      const customerId = `customer_${Date.now()}`;
+      const journeyId = `journey_${Date.now()}`;
+      
+      // Use the same logic as "Simulate Customer Journey" 
+      const journeyData = currentJourneyData.journey ? {
+        steps: currentJourneyData.journey.steps || [],
+        journeyId: currentJourneyData.journey.id || journeyId,
+        companyName: currentJourneyData.additionalFields?.companyName || 'DefaultCompany',
+        domain: currentJourneyData.additionalFields?.domain || 'default.com',
+        industryType: currentJourneyData.additionalFields?.industryType || 'general'
+      } : null;
 
-      const res = await fetch('/api/simulate/simulateEvents', { 
+      // Call the same endpoint as "Simulate Customer Journey"
+      const res = await fetch('/api/journey-simulation/simulate-journey', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(payload) 
+        body: JSON.stringify({ 
+          journeyId,
+          customerId,
+          aiJourney: journeyData,
+          companyName: journeyData?.companyName || 'DefaultCompany',
+          domain: journeyData?.domain || 'default.com',
+          industryType: journeyData?.industryType || 'general',
+          chained: false // Use step-by-step execution like other buttons
+        }) 
       });
+      
       const json = await res.json();
       
-      const additionalFieldsText = payload.additionalFields && Object.keys(payload.additionalFields).length > 0 
-        ? ` with ${Object.keys(payload.additionalFields).length} enrichment fields`
-        : '';
-      
-      simStatus.textContent = `Simulation started: ${json.stats.totalPlanned} events planned${additionalFieldsText}`;
+      if (json.success) {
+        const journey = json.journey;
+        const completedSteps = journey.completedSteps;
+        const totalSteps = journey.totalSteps;
+        
+        simStatus.textContent = `✅ Journey simulation completed! ${completedSteps}/${totalSteps} steps successful. Services: ${journey.stepNames ? journey.stepNames.map(s => s + 'Service').join(', ') : 'N/A'}`;
+        
+        // Show detailed results with service names
+        const stepSummary = journey.steps.map((step, idx) => {
+          const status = step.status === 'completed' ? '✅' : '❌';
+          const serviceName = step.serviceName || (step.stepName + 'Service');
+          return `${status} Step ${idx + 1}: ${serviceName} (${step.processingTime || 0}ms)`;
+        }).join('\n');
+        
+        flowResultsEl.textContent = `Journey Simulation Execution:\n${stepSummary}\n\nStep Names Used: ${journey.stepNames ? journey.stepNames.join(' → ') : 'N/A'}\n\nFull Journey Data:\n${JSON.stringify(json, null, 2)}`;
+        
+      } else {
+        simStatus.textContent = `❌ Journey simulation failed: ${json.error}`;
+        flowResultsEl.textContent = `Error: ${json.error}`;
+      }
     });
 
     // Add a details area for flow results
@@ -544,42 +915,72 @@ REQUIREMENTS: Create exactly 6 steps using these names: ${industrySteps.join(', 
       simStatus.parentElement.appendChild(flowResultsEl);
     }
 
-    runFlowBtn.addEventListener('click', async () => {
-      const payload = lastJourney ? { steps: lastJourney.steps } : {};
-      const res = await fetch('/api/flow/runFlow', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ payload }) 
-      });
-      const json = await res.json();
-      if (json.ok) {
-        const summary = (json.results || []).map((r, idx) => {
-          const mode = r.pipeline || (r.event ? 'legacy' : 'child-services');
-          const stepLabel = r.step || `Step${idx+1}`;
-          return `${stepLabel} (${mode})`;
-        }).join(' ➜ ');
-        simStatus.textContent = `Flow complete. Correlation: ${json.correlationId}. Steps: ${summary}`;
-        flowResultsEl.textContent = JSON.stringify(json, null, 2);
-      } else {
-        simStatus.textContent = `Flow failed: ${json.error}`;
+    // Run journey simulation (complete 6-step customer journey with dynamic service naming)
+    runJourneySimBtn.addEventListener('click', async () => {
+      try {
+        runJourneySimBtn.disabled = true;
+        runJourneySimBtn.textContent = '🔄 Simulating 6-Step Journey...';
+        simStatus.textContent = 'Starting 6-step customer journey simulation with dynamic services...';
+        
+        if (!lastJourney) {
+          simStatus.textContent = 'Please generate a journey first';
+          runJourneySimBtn.disabled = false;
+          runJourneySimBtn.textContent = '🚀 Simulate Customer Journey';
+          return;
+        }
+        
+        const customerId = `customer_${Date.now()}`;
+        const journeyId = `journey_${Date.now()}`;
+        
+        // Use the same journey simulation logic as the working 6-step flow button
+        const journeyData = {
+          steps: lastJourney.steps || [],
+          journeyId: lastJourney.id || journeyId,
+          companyName: lastJourney.companyName || 'DefaultCompany',
+          domain: (lastJourney.journeyType||'').toLowerCase() || 'default.com',
+          industryType: lastJourney.industryType || 'general'
+        };
+        
+        const res = await fetch('/api/journey-simulation/simulate-journey', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ 
+            journeyId,
+            customerId,
+            aiJourney: journeyData,
+            companyName: journeyData.companyName,
+            domain: journeyData.domain,
+            industryType: journeyData.industryType,
+            chained: false // Use step-by-step execution for consistency
+          }) 
+        });
+        
+        const json = await res.json();
+        
+        if (json.success) {
+          const journey = json.journey;
+          simStatus.textContent = `✅ Customer Journey complete! ${journey.completedSteps}/${journey.totalSteps} steps successful. Correlation: ${journey.correlationId}`;
+          
+          // Show detailed results with service names (same as 6-step flow)
+          const stepSummary = journey.steps.map((step, idx) => {
+            const status = step.status === 'completed' ? '✅' : '❌';
+            const serviceName = step.serviceName || (step.stepName + 'Service');
+            return `${status} Step ${idx + 1}: ${serviceName} (${step.processingTime || 0}ms)`;
+          }).join('\n');
+          
+          flowResultsEl.textContent = `Customer Journey Execution:\n${stepSummary}\n\nServices Used: ${journey.stepNames ? journey.stepNames.join(' → ') : 'N/A'}\n\nCorrelation ID: ${journey.correlationId}`;
+          
+        } else {
+          simStatus.textContent = `❌ Journey simulation failed: ${json.error}`;
+          flowResultsEl.textContent = `Journey Error: ${json.error}`;
+        }
+        
+      } catch (error) {
+        simStatus.textContent = `❌ Journey simulation error: ${error.message}`;
         flowResultsEl.textContent = '';
-      }
-    });
-
-    // Run chained flow (connected service sequence via child-service chaining)
-    const runFlowChainedBtn = document.getElementById('run-flow-chained');
-    runFlowChainedBtn.addEventListener('click', async () => {
-      const payload = lastJourney ? { id: lastJourney.id, domain: (lastJourney.journeyType||'').toLowerCase(), useChaining: true } : { useChaining: true };
-      const res = await fetch('/api/flow/runFlow', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload })
-      });
-      const json = await res.json();
-      if (json.ok) {
-        simStatus.textContent = `Chained flow complete. Correlation: ${json.correlationId}`;
-        flowResultsEl.textContent = JSON.stringify(json, null, 2);
-      } else {
-        simStatus.textContent = `Chained flow failed: ${json.error}`;
-        flowResultsEl.textContent = '';
+      } finally {
+        runJourneySimBtn.disabled = false;
+        runJourneySimBtn.textContent = '🚀 Simulate Customer Journey';
       }
     });
 
@@ -590,6 +991,248 @@ REQUIREMENTS: Create exactly 6 steps using these names: ${industrySteps.join(', 
     }
     setInterval(refreshMetrics, 2000);
     refreshMetrics();
+
+    // Use Retail Example functionality
+    document.getElementById('useRetailExample').addEventListener('click', () => {
+      const retailJourney = {
+        "journey": {
+          "companyName": "ShopMart",
+          "domain": "shopmart.com", 
+          "industryType": "retail",
+          "journeyId": "journey_retail_example",
+          "steps": [
+            {
+              "stepIndex": 1,
+              "stepName": "Product Discovery",
+              "description": "Customer exploring product catalog",
+              "duration": "3-8 minutes",
+              "substeps": [
+                {
+                  "substepIndex": 1,
+                  "substepName": "Browse_Catalog",
+                  "description": "Customer browsing main catalog",
+                  "serviceName": "ProductDiscoveryService",
+                  "endpoint": "/api/product-discovery",
+                  "duration": 1200,
+                  "eventType": "browse_initiated",
+                  "metadata": {"searchTerm": "winter jackets", "category": "clothing", "device": "mobile"}
+                },
+                {
+                  "substepIndex": 2,
+                  "substepName": "Filter_Results", 
+                  "description": "Customer applying search filters",
+                  "serviceName": "ProductDiscoveryService",
+                  "endpoint": "/api/filter",
+                  "duration": 800,
+                  "eventType": "filter_applied",
+                  "metadata": {"filters": ["size:M", "color:black"], "resultsCount": 24}
+                }
+              ]
+            },
+            {
+              "stepIndex": 2,
+              "stepName": "Product Selection",
+              "description": "Customer evaluating specific items", 
+              "duration": "2-5 minutes",
+              "substeps": [
+                {
+                  "substepIndex": 1,
+                  "substepName": "View_Details",
+                  "description": "Customer viewing product details",
+                  "serviceName": "ProductSelectionService",
+                  "endpoint": "/api/product-selection",
+                  "duration": 900,
+                  "eventType": "product_viewed",
+                  "metadata": {"productId": "jacket_123", "price": 89.99}
+                },
+                {
+                  "substepIndex": 2,
+                  "substepName": "Check_Reviews",
+                  "description": "Customer reading reviews and ratings",
+                  "serviceName": "ProductSelectionService", 
+                  "endpoint": "/api/reviews",
+                  "duration": 600,
+                  "eventType": "reviews_viewed",
+                  "metadata": {"rating": 4.5, "reviewCount": 127}
+                }
+              ]
+            },
+            {
+              "stepIndex": 3,
+              "stepName": "Cart Addition",
+              "description": "Customer adding items to cart",
+              "duration": "1-3 minutes", 
+              "substeps": [
+                {
+                  "substepIndex": 1,
+                  "substepName": "Add_To_Cart",
+                  "description": "Customer adding product to shopping cart",
+                  "serviceName": "CartAdditionService",
+                  "endpoint": "/api/cart-addition", 
+                  "duration": 500,
+                  "eventType": "cart_add",
+                  "metadata": {"quantity": 1, "cartValue": 89.99}
+                },
+                {
+                  "substepIndex": 2,
+                  "substepName": "View_Cart",
+                  "description": "Customer reviewing cart contents",
+                  "serviceName": "CartAdditionService",
+                  "endpoint": "/api/cart",
+                  "duration": 400,
+                  "eventType": "cart_viewed", 
+                  "metadata": {"itemCount": 1, "totalValue": 89.99}
+                }
+              ]
+            },
+            {
+              "stepIndex": 4,
+              "stepName": "Checkout Process",
+              "description": "Customer proceeding through checkout",
+              "duration": "3-7 minutes",
+              "substeps": [
+                {
+                  "substepIndex": 1,
+                  "substepName": "Enter_Details",
+                  "description": "Customer entering shipping and payment info",
+                  "serviceName": "CheckoutProcessService",
+                  "endpoint": "/api/checkout-process",
+                  "duration": 1800,
+                  "eventType": "checkout_started",
+                  "metadata": {"paymentMethod": "credit_card", "shippingMethod": "standard"}
+                },
+                {
+                  "substepIndex": 2,
+                  "substepName": "Apply_Promotion",
+                  "description": "Customer applying discount code",
+                  "serviceName": "CheckoutProcessService",
+                  "endpoint": "/api/promotions",
+                  "duration": 300,
+                  "eventType": "promotion_applied",
+                  "metadata": {"promoCode": "SAVE10", "discount": 9.00}
+                }
+              ]
+            },
+            {
+              "stepIndex": 5,
+              "stepName": "Order Confirmation",
+              "description": "Customer completing purchase",
+              "duration": "1-2 minutes",
+              "substeps": [
+                {
+                  "substepIndex": 1,
+                  "substepName": "Process_Payment",
+                  "description": "Payment processing and order completion",
+                  "serviceName": "OrderConfirmationService",
+                  "endpoint": "/api/order-confirmation",
+                  "duration": 1000,
+                  "eventType": "order_completed",
+                  "metadata": {"orderId": "ORD_789", "finalAmount": 80.99}
+                },
+                {
+                  "substepIndex": 2,
+                  "substepName": "Send_Confirmation",
+                  "description": "Sending order confirmation email",
+                  "serviceName": "OrderConfirmationService",
+                  "endpoint": "/api/confirmation-email",
+                  "duration": 200,
+                  "eventType": "confirmation_sent",
+                  "metadata": {"email": "customer@example.com", "estimatedDelivery": "3-5 days"}
+                }
+              ]
+            },
+            {
+              "stepIndex": 6,
+              "stepName": "Post Purchase",
+              "description": "Customer post-purchase activities",
+              "duration": "varies",
+              "substeps": [
+                {
+                  "substepIndex": 1,
+                  "substepName": "Track_Order",
+                  "description": "Customer tracking order status",
+                  "serviceName": "PostPurchaseService",
+                  "endpoint": "/api/post-purchase",
+                  "duration": 400,
+                  "eventType": "order_tracked",
+                  "metadata": {"trackingNumber": "TRK123456", "status": "shipped"}
+                },
+                {
+                  "substepIndex": 2,
+                  "substepName": "Leave_Review",
+                  "description": "Customer leaving product review",
+                  "serviceName": "PostPurchaseService",
+                  "endpoint": "/api/reviews/create",
+                  "duration": 600,
+                  "eventType": "review_submitted",
+                  "metadata": {"rating": 5, "reviewText": "Great quality jacket!"}
+                }
+              ]
+            }
+          ]
+        },
+        "customerProfile": {
+          "userId": "user_retail_demo",
+          "email": "customer@example.com",
+          "demographic": "consumers aged 18-65",
+          "painPoints": ["high prices", "limited selection"],
+          "goals": ["quality products", "good prices"]
+        },
+        "traceMetadata": {
+          "correlationId": "trace_retail_example",
+          "sessionId": "session_retail_demo",
+          "businessContext": {"campaignSource": "organic", "customerSegment": "consumer", "businessValue": 500}
+        },
+        "additionalFields": {
+          "deviceType": "mobile", "browser": "Chrome", "location": "London, UK", "entryChannel": "organic",
+          "customerIntent": "purchase", "loyaltyStatus": "new", "abandonmentRisk": "medium",
+          "conversionProbability": 0.85, "personalizationTags": ["shopping", "products"]
+        }
+      };
+      
+      lastJourney = retailJourney.journey;
+      currentJourneyData = retailJourney;
+      
+      journeyOutput.textContent = JSON.stringify(retailJourney, null, 2);
+      journeyProvider.textContent = 'Provider: Retail Template Example';
+      journeySources.innerHTML = '<div>Source: Built-in retail journey template</div>';
+      
+      setupFlowButtons();
+      alert('Retail journey example loaded! You can now use this for simulation or modify the form to create your own.');
+    });
+
+    // Initialize the page with Copilot method selected by default
+    document.addEventListener('DOMContentLoaded', () => {
+      const generationMethod = document.getElementById('generationMethod');
+      const copilotWorkflow = document.getElementById('copilotWorkflow');
+      const templateExample = document.getElementById('templateExample');
+      const customStepsContainer = document.getElementById('customStepsContainer');
+      const optionalFieldsContainer = document.getElementById('optionalFieldsContainer');
+      const journeyRequirementsContainer = document.getElementById('journeyRequirementsContainer');
+      
+      console.log('Initializing page with Copilot mode');
+      
+      // Set Copilot as default
+      generationMethod.value = 'copilot';
+      
+      // Set up Copilot mode UI
+      copilotWorkflow.classList.remove('hidden');
+      templateExample.classList.add('hidden');
+      customStepsContainer.style.display = 'none';
+      optionalFieldsContainer.style.display = 'none';
+      journeyRequirementsContainer.style.display = 'block';
+      
+      // Clear form fields for Copilot mode
+      document.getElementById('companyName').value = '';
+      document.getElementById('domain').value = '';
+      document.getElementById('industryType').value = '';
+      document.getElementById('journeyRequirements').value = '';
+      
+      // Generate the initial prompt
+      generateCopilotPrompt();
+      
+      console.log('Copilot mode initialized');
+    });
 
     // Fetch domain label from response header
     (async () => {

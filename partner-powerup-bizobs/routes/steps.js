@@ -1,6 +1,7 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import eventService, { buildEventPayload, emitEvent, inferDomain } from '../services/eventService.js';
+import { ensureServiceRunning, getServiceNameFromStep, getServicePort } from '../services/service-manager.js';
 
 const router = express.Router();
 
@@ -70,22 +71,46 @@ router.post('/step6', stepHandler(6));
 // Optional: trigger a chained flow across services starting at the first step
 router.post('/step1-chained', async (req, res) => {
   try {
-    const { journeyId, domain, journey } = req.body || {};
+    const { stepName, journeyId, domain, journey, steps: customSteps } = req.body || {};
+    console.log(`🔥🔥🔥 [STEP1-CHAINED ROUTE] Body: ${JSON.stringify(req.body)} 🔥🔥🔥`);
     const correlationId = req.correlationId;
     
-    // Extract step names from journey configuration if provided
-    let stepNames = ['Discovery', 'Awareness', 'Consideration', 'Purchase', 'Retention', 'Advocacy'];
-    if (journey && journey.steps && Array.isArray(journey.steps)) {
+    // Use the stepName from the request body first, then fall back to journey configuration
+    let firstStepName = stepName; // Use the explicit stepName from the request
+    let stepNames = [];
+    
+    if (firstStepName) {
+      // If we have an explicit stepName, use it as the first step
+      stepNames = [firstStepName];
+    } else if (customSteps && Array.isArray(customSteps)) {
+      stepNames = customSteps.map(step => typeof step === 'string' ? step : step.stepName || step.name);
+      firstStepName = stepNames[0];
+    } else if (journey && journey.steps && Array.isArray(journey.steps)) {
       stepNames = journey.steps.map(step => step.stepName || step.name || `Step${step.stepIndex || 1}`);
+      firstStepName = stepNames[0];
+    } else {
+      // Default fallback - but this should rarely be used
+      stepNames = ['Discovery', 'Awareness', 'Consideration', 'Purchase', 'Retention', 'Advocacy'];
+      firstStepName = stepNames[0];
     }
     
-    // Start with the first step name
-    const firstStepName = stepNames[0];
-    const secondStepName = stepNames[1] || 'Step2';
+    console.log(`[steps.js] Using step name: ${firstStepName}`);
+    console.log(`[steps.js] All step names: ${JSON.stringify(stepNames)}`);
     
-    // Call the appropriate service based on step name
-    const serviceName = `Step1Service`;
-    const SERVICE_PORTS = { 'Step1Service': 4101 };
+    const secondStepName = stepNames[1] || null;
+    
+    console.log(`[steps.js] First step: ${firstStepName}`);
+    
+    // Ensure the dynamic service is running before making the request
+    console.log(`[steps.js] Ensuring service running for step: ${firstStepName}`);
+    ensureServiceRunning(firstStepName);
+    console.log(`[steps.js] Service ensured for step: ${firstStepName}`);
+    
+    // Wait for service to start
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const serviceName = getServiceNameFromStep(firstStepName);
+    const servicePort = getServicePort(firstStepName);
     const http = await import('http');
     
     const payload = { 
@@ -95,16 +120,30 @@ router.post('/step1-chained', async (req, res) => {
       journeyId, 
       domain,
       journey,
-      stepNames: stepNames.slice(1) // Pass remaining step names for chaining
+      steps: stepNames.map(name => ({ stepName: name })) // All steps for chaining
     };
     
     const options = { 
       hostname: '127.0.0.1', 
-      port: SERVICE_PORTS['Step1Service'], 
+      port: servicePort, 
       path: '/process', 
       method: 'POST', 
-      headers: { 'Content-Type': 'application/json', 'x-correlation-id': correlationId } 
+      headers: { 
+        'Content-Type': 'application/json', 
+        'x-correlation-id': correlationId,
+        // Propagate Dynatrace headers
+        ...Object.fromEntries(
+          Object.entries(req.headers).filter(([key]) => 
+            key.startsWith('x-dynatrace') || key === 'traceparent' || key === 'tracestate'
+          )
+        )
+      } 
     };
+    
+    // Ensure the dynamic service is running before making the request
+    if (ensureServiceRunning) {
+      ensureServiceRunning(firstStepName);
+    }
     
     const result = await new Promise((resolve, reject) => {
       const rq = http.request(options, (rs) => { 

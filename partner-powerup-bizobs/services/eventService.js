@@ -7,18 +7,39 @@ import { v4 as uuidv4 } from 'uuid';
 import http from 'http';
 
 const eventService = {
-  // Service mapping for journey steps
+  // Dynamic service mapping for journey steps
   getServiceNameFromStep(stepName) {
-    const stepToService = {
-      'Discovery': 'discovery-service',
-      'Awareness': 'awareness-service', 
-      'Consideration': 'consideration-service',
-      'Purchase': 'purchase-service',
-      'Retention': 'retention-service',
-      'Advocacy': 'advocacy-service'
-    };
-    
-    return stepToService[stepName] || 'discovery-service';
+    // Normalize: preserve CamelCase and handle spaces/underscores/hyphens
+    if (/Service$/.test(String(stepName || ''))) return String(stepName);
+    const cleaned = String(stepName || '').replace(/[^a-zA-Z0-9_\-\s]/g, '').trim();
+    const spaced = cleaned
+      .replace(/[\-_]+/g, ' ')
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const serviceBase = spaced
+      .split(' ')
+      .filter(Boolean)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join('');
+    const serviceName = `${serviceBase}Service`;
+    console.log(`[EventService] Converting step "${stepName}" to service "${serviceName}"`);
+    return serviceName;
+  },
+
+  // Get port for service (dynamic allocation starting from 4101)
+  getServicePort(serviceName) {
+    // Create a consistent hash-based port allocation
+    let hash = 0;
+    for (let i = 0; i < serviceName.length; i++) {
+      const char = serviceName.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    // Map to port range 4101-4199
+    const port = 4101 + (Math.abs(hash) % 99);
+    console.log(`[EventService] Service "${serviceName}" mapped to port ${port}`);
+    return port;
   },
 
   // Call a child service via HTTP
@@ -63,19 +84,9 @@ const eventService = {
         // Process each substep through its dedicated service
         const results = [];
         
-        // Service port mapping
-        const SERVICE_PORTS = {
-          'discovery-service': 4101,
-          'awareness-service': 4102,
-          'consideration-service': 4103,
-          'purchase-service': 4104,
-          'retention-service': 4105,
-          'advocacy-service': 4106
-        };
-        
         for (const substep of substeps) {
-          const serviceName = this.getServiceNameFromStep(substep.stepName);
-          const servicePort = SERVICE_PORTS[serviceName];
+          const serviceName = this.getServiceNameFromStep(substep.stepName || stepName);
+          const servicePort = this.getServicePort(serviceName);
           
           if (servicePort) {
             try {

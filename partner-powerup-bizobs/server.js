@@ -14,6 +14,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
+import { randomBytes } from 'crypto';
+import { ensureServiceRunning, getServiceNameFromStep, getServicePort, stopAllServices, getChildServices } from './services/service-manager.js';
 
 import journeyRouter from './routes/journey.js';
 import simulateRouter from './routes/simulate.js';
@@ -21,6 +23,8 @@ import metricsRouter from './routes/metrics.js';
 import stepsRouter from './routes/steps.js';
 import flowRouter from './routes/flow.js';
 import serviceProxyRouter from './routes/serviceProxy.js';
+import journeySimulationRouter from './routes/journey-simulation.js';
+import backfillRouter from './routes/backfill.js';
 
 dotenv.config();
 
@@ -36,56 +40,27 @@ const io = new SocketIOServer(server, {
 // Configuration
 const PORT = process.env.PORT || 4000;
 
-// Child service management for separate processes (like vegas-casino approach)
-const childServices = {};
-const SERVICE_PORTS = {
-  'Step1Service': 4101,
-  'Step2Service': 4102,
-  'Step3Service': 4103,
-  'Step4Service': 4104,
-  'Step5Service': 4105,
-  'Step6Service': 4106
-};
+// Child service management now handled by service-manager.js
+// Services are created dynamically based on journey steps
 
-// Start child service process
-function startChildService(serviceName, scriptPath, env = {}) {
-  if (childServices[serviceName]) return childServices[serviceName];
-  
-  console.log(`🚀 Starting child service: ${serviceName} on port ${SERVICE_PORTS[serviceName]}`);
-  
-  const child = spawn('node', [scriptPath], {
-    cwd: __dirname,
-    env: { 
-      ...process.env, 
-      PORT: String(SERVICE_PORTS[serviceName]), 
-      SERVICE_NAME: serviceName,
-      NODE_ENV: 'production',
-      ...env 
-    },
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-  
-  child.stdout.on('data', d => console.log(`[${serviceName}] ${d.toString().trim()}`));
-  child.stderr.on('data', d => console.error(`[${serviceName}][ERR] ${d.toString().trim()}`));
-  child.on('exit', code => {
-    console.log(`[${serviceName}] exited with code ${code}`);
-    delete childServices[serviceName];
-  });
-  
-  childServices[serviceName] = child;
-  return child;
-}
+// startChildService is now in service-manager.js
+
+// ensureServiceRunning is now in service-manager.js
 
 // Helper to call child service and get JSON response
-function callChildService(serviceName, payload) {
+function callChildService(serviceName, payload, port) {
   return new Promise((resolve, reject) => {
-    const targetPort = SERVICE_PORTS[serviceName];
+    const targetPort = port;
+    // Generate basic W3C trace context for correlation if not already present
+    const traceId = (payload && payload.traceIdHex) || randomBytes(16).toString('hex');
+    const spanId = randomBytes(8).toString('hex');
+    const traceparent = `00-${traceId}-${spanId}-01`;
     const options = {
       hostname: '127.0.0.1',
       port: targetPort,
       path: '/process',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', traceparent }
     };
     
     const req = http.request(options, (res) => {
@@ -112,7 +87,8 @@ app.use(cors());
 app.use(compression());
 // Request logging for easier debugging
 app.use(morgan('dev'));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increase JSON payload limit
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Frontend host label (avoid showing raw 'localhost')
@@ -152,38 +128,37 @@ const eventService = {
         const results = [];
         
         for (const substep of substeps) {
-          const serviceName = this.getServiceNameFromStep(substep.stepName);
+          const serviceName = getServiceNameFromStep(substep.stepName);
           
-          if (SERVICE_PORTS[serviceName]) {
-            try {
-              // Start the service if it's not running
-              startChildService(serviceName, path.join('services', `${serviceName}.cjs`));
-              
-              // Wait a moment for service to be ready
-              await new Promise(resolve => setTimeout(resolve, 100));
-              
-              // Call the dedicated service
-              const payload = {
-                ...substep,
-                correlationId,
-                parentStep: stepName,
-                timestamp: new Date().toISOString()
-              };
-              
-              const result = await callChildService(serviceName, payload);
-              results.push(result);
-              
-              console.log(`✅ ${serviceName} processed successfully`);
-            } catch (error) {
-              console.error(`❌ Error processing ${serviceName}:`, error.message);
-              results.push({
-                stepName: substep.stepName,
-                service: serviceName,
-                status: 'error',
-                error: error.message,
-                correlationId
-              });
-            }
+          try {
+            // Ensure the service is running using service manager
+            ensureServiceRunning(substep.stepName);
+            
+            // Wait a moment for service to be ready
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Call the dedicated service
+            const payload = {
+              ...substep,
+              correlationId,
+              parentStep: stepName,
+              timestamp: new Date().toISOString()
+            };
+            
+            const servicePort = getServicePort(substep.stepName);
+            const result = await callChildService(serviceName, payload, servicePort);
+            results.push(result);
+            
+            console.log(`✅ ${serviceName} processed successfully`);
+          } catch (error) {
+            console.error(`❌ Error processing ${serviceName}:`, error.message);
+            results.push({
+              stepName: substep.stepName,
+              service: serviceName,
+              status: 'error',
+              error: error.message,
+              correlationId
+            });
           }
         }
         
@@ -204,19 +179,6 @@ const eventService = {
       console.error('Event emission error:', error);
       return { success: false, error: error.message };
     }
-  },
-  
-  getServiceNameFromStep(stepName) {
-    const stepToService = {
-      'Discovery': 'discovery-service',
-      'Awareness': 'awareness-service', 
-      'Consideration': 'consideration-service',
-      'Purchase': 'purchase-service',
-      'Retention': 'retention-service',
-      'Advocacy': 'advocacy-service'
-    };
-    
-    return stepToService[stepName] || 'discovery-service';
   }
 };
 
@@ -236,14 +198,16 @@ app.use('/api/metrics', metricsRouter);
 app.use('/api/steps', stepsRouter);
 app.use('/api/flow', flowRouter);
 app.use('/api/service-proxy', serviceProxyRouter);
+app.use('/api/journey-simulation', journeySimulationRouter);
+app.use('/api/backfill', backfillRouter);
 
 // Health check with service status
 app.get('/api/health', (req, res) => {
-  const serviceStatuses = Object.keys(SERVICE_PORTS).map(serviceName => ({
+  const runningServices = getChildServices();
+  const serviceStatuses = Object.keys(runningServices).map(serviceName => ({
     service: serviceName,
-    port: SERVICE_PORTS[serviceName],
-    running: !!childServices[serviceName],
-    pid: childServices[serviceName]?.pid || null
+    running: true,
+    pid: runningServices[serviceName]?.pid || null
   }));
   
   res.json({
@@ -256,6 +220,12 @@ app.get('/api/health', (req, res) => {
     },
     childServices: serviceStatuses
   });
+});
+
+// Simple metrics endpoint to silence polling 404s
+app.get('/api/metrics', (req, res) => {
+  res.setHeader('Content-Type', 'text/plain');
+  res.send('# Basic metrics placeholder\napp_status 1\n');
 });
 
 // Expose event service for routes
@@ -279,11 +249,11 @@ server.listen(PORT, () => {
   app.locals.port = PORT;
   
   // Pre-start all child services for better performance
-  console.log('🔧 Starting child services...');
-  Object.keys(SERVICE_PORTS).forEach(serviceName => {
-    const fileName = serviceName.toLowerCase().replace('service', '-service');
-    startChildService(serviceName, path.join('services', `${fileName}.cjs`));
-  });
+  console.log('🔧 Child services will be started on demand based on journey steps...');
+  // Commented out auto-startup to allow dynamic service creation
+  // Object.keys(SERVICE_PORTS).forEach(serviceName => {
+  //   startChildService(serviceName, path.join('services', `${serviceName}.cjs`));
+  // });
 });
 
 // Graceful shutdown
@@ -291,9 +261,7 @@ process.on('SIGTERM', () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
   
   // Close child services
-  Object.values(childServices).forEach(child => {
-    child.kill('SIGTERM');
-  });
+  stopAllServices();
   
   server.close(() => {
     console.log('👋 Server closed');
@@ -304,10 +272,8 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   console.log('🛑 Received SIGINT, shutting down gracefully...');
   
-  // Close child services
-  Object.values(childServices).forEach(child => {
-    child.kill('SIGTERM');
-  });
+  // Close child services using service manager
+  stopAllServices();
   
   server.close(() => {
     console.log('👋 Server closed');

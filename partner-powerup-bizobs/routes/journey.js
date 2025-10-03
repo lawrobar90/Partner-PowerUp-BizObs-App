@@ -6,7 +6,7 @@ const router = express.Router();
 // POST /api/generateJourney
 router.post('/generateJourney', async (req, res) => {
   try {
-    const { customer = '', region = '', journeyType = '', details = '', website = '' } = req.body || {};
+    const { customer = '', region = '', journeyType = '', details = '', website = '', customSteps = null } = req.body || {};
     const aiHint = [
       customer && `Company: ${customer}.`,
       region && `Region: ${region}.`,
@@ -16,7 +16,7 @@ router.post('/generateJourney', async (req, res) => {
       details && `Additional notes: ${details}`
     ].filter(Boolean).join(' ');
 
-    const journey = await generateJourney({ customer, region, journeyType, details: aiHint, website });
+    const journey = await generateJourney({ customer, region, journeyType, details: aiHint, website, customSteps });
     res.json({ journey });
   } catch (err) {
     console.error('generateJourney error', err);
