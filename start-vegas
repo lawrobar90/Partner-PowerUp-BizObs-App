@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-# Start Vegas Casino app
-./project-control.sh start vegas
