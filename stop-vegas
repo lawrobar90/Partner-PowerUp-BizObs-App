@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-# Stop Vegas Casino app
-./project-control.sh stop vegas

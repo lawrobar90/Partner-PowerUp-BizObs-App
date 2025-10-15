@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-# Stop both apps
-./project-control.sh stop all
