@@ -6,38 +6,6 @@
   <title>Partner PowerUp BizObs</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    // Fallback CSS in case Tailwind CDN fails
-    if (!window.tailwind) {
-      const fallbackCSS = `
-        body { background: #181A20; color: white; font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-        .bg-dtdark { background: #181A20; }
-        .text-white { color: white; }
-        .min-h-screen { min-height: 100vh; }
-        .fixed { position: fixed; }
-        .p-4 { padding: 1rem; }
-        .bg-dtcard { background: #22242A; }
-        .border { border: 1px solid #2D2D2D; }
-        .rounded { border-radius: 0.25rem; }
-        .text-dtcyan { color: #00D4FF; }
-        .bg-dtgreen { background: #73BE28; }
-        .hover\\:bg-green-700:hover { background: #15803d; }
-        .transition-all { transition: all 0.3s; }
-        .grid { display: grid; }
-        .gap-4 { gap: 1rem; }
-        .mb-4 { margin-bottom: 1rem; }
-        .p-6 { padding: 1.5rem; }
-        .text-2xl { font-size: 1.5rem; }
-        .font-bold { font-weight: bold; }
-        .px-4 { padding-left: 1rem; padding-right: 1rem; }
-        .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-        .cursor-pointer { cursor: pointer; }
-        .disabled\\:opacity-50:disabled { opacity: 0.5; }
-      `;
-      const style = document.createElement('style');
-      style.textContent = fallbackCSS;
-      document.head.appendChild(style);
-    }
-    
     tailwind.config = {
       theme: {
         extend: {
@@ -281,6 +249,9 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           </div>
           <pre id="journey-output" class="mt-2 text-xs bg-black p-4 rounded-lg overflow-auto max-h-60 border border-dtcyan"></pre>
           <div class="mt-4 flex flex-wrap gap-3">
+            <button id="run-chained-flow" onclick="runDistributedFlow()" class="bg-dtblue hover:bg-dtcyan text-black font-semibold rounded-lg p-3 shadow-card transition-all">🔗 Run Distributed Flow</button>
+            <button id="run-full-chain" onclick="runFullChain()" class="bg-dtpurple hover:bg-dtcyan text-white font-semibold rounded-lg p-3 shadow-card transition-all">⚡ Run Full Chain</button>
+            <button id="run-true-chain" onclick="runTrueDistributedChain()" class="bg-dtgreen hover:bg-dtcyan text-black font-semibold rounded-lg p-3 shadow-card transition-all">🌊 True Chain Flow</button>
             <button id="reset-ports" onclick="resetServices()" class="bg-dtgray text-white font-semibold rounded-lg p-3 border border-dtcyan shadow-card hover:bg-dtpurple transition-all">🔄 Reset Services</button>
           </div>
           <div id="chain-status" class="mt-2 text-sm text-dtyellow"></div>
@@ -443,7 +414,6 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           },
           additionalFields: [...additionalFields],
           generatedPrompt: document.getElementById('promptText').value,
-          copilotResponse: document.getElementById('copilotResponse').value,  // Save the Copilot response
           lastJourney: lastJourney ? { ...lastJourney } : null,
           currentJourneyData: currentJourneyData ? { ...currentJourneyData } : null
         };
@@ -579,10 +549,6 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           additionalFields.push(...promptState.additionalFields);
           renderAdditionalFields();
         }
-
-        // Restore generated prompt and Copilot response
-        document.getElementById('promptText').value = promptState.generatedPrompt || '';
-        document.getElementById('copilotResponse').value = promptState.copilotResponse || '';
 
         // Restore journey data
         if (promptState.lastJourney) {
@@ -797,11 +763,176 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
     // Initialize prompt cache
     const promptCache = new PromptCache();
 
-    window.runJourneySimulation = async function() {
-      console.log('🔥 GREEN BUTTON CLICKED! 🔥');
-      const runJourneySimBtn = document.getElementById('run-journey-simulation');
-      const simStatus = document.getElementById('sim-status');
-      let flowResultsEl = document.getElementById('flow-results');
+    // Global functions for onclick handlers
+    window.runDistributedFlow = async function() {
+      console.log('🔥 BLUE BUTTON CLICKED! 🔥');
+      const runChainedBtn = document.getElementById('run-chained-flow');
+      const chainStatus = document.getElementById('chain-status');
+      const chainedTraceOutput = document.getElementById('chained-trace-output');
+      
+      try {
+        runChainedBtn.disabled = true;
+        runChainedBtn.textContent = '🔄 Running...';
+        chainStatus.textContent = '🚀 Starting distributed flow...';
+        chainedTraceOutput.textContent = '';
+
+        // Create test journey if none exists
+        if (!lastJourney || !lastJourney.steps || !lastJourney.steps.length) {
+          chainStatus.textContent = '⚠️ No journey data available. Creating test journey...';
+          
+          lastJourney = {
+            companyName: 'TestCorp',
+            domain: 'testcorp.com',
+            industryType: 'retail',
+            steps: [
+              { stepName: 'Discovery', description: 'Customer discovery' },
+              { stepName: 'Selection', description: 'Product selection' },
+              { stepName: 'Purchase', description: 'Purchase process' }
+            ]
+          };
+          
+          chainStatus.textContent = '✅ Test journey created! Running distributed flow...';
+        }
+
+        // Build steps from the journey
+        let stepNames = lastJourney.steps.slice(0, 6).map(s => s.stepName || s.name || String(s));
+        while (stepNames.length < 6) stepNames.push(`Step${stepNames.length + 1}`);
+        stepNames = stepNames.slice(0, 6);
+
+        const body = { 
+          steps: stepNames.map(n => ({ stepName: n })),
+          thinkTimeMs: 200,
+          companyName: lastJourney?.companyName || 'DefaultCompany',
+          domain: lastJourney?.domain || 'default.com',
+          industryType: lastJourney?.industryType || 'general'
+        };
+        
+        chainStatus.textContent = '🔗 Running distributed flow with OneAgent tracing...';
+        
+        const res = await fetch('/api/steps/step1-chained', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+
+        if (!json.ok) {
+          chainStatus.textContent = `❌ Chained flow failed: ${json.error || 'Unknown error'}`;
+          chainedTraceOutput.textContent = `Error Details:\n${JSON.stringify(json, null, 2)}`;
+          return;
+        }
+
+        const trace = json.result?.journeyTrace || [];
+        const plannedSteps = Array.isArray(json.result?.steps) ? json.result.steps.length : 0;
+        const stepsStr = trace.map(t => t.stepName).join(' → ') || (json.result?.stepName || 'N/A');
+        const totalDuration = json.result?.processingTime || 0;
+
+        // If journeyTrace length is less than planned steps, indicate partial execution
+        if (trace.length >= plannedSteps && plannedSteps > 0) {
+          chainStatus.textContent = `✅ Distributed flow completed! ${trace.length} spans traced (${totalDuration}ms total) • ${stepsStr}`;
+        } else if (trace.length > 0) {
+          chainStatus.textContent = `⚠️ Partial distributed flow: ${trace.length}/${plannedSteps} spans traced (${totalDuration}ms). Click Run Distributed Flow again to continue the chain.`;
+        } else {
+          chainStatus.textContent = `⚠️ Distributed flow returned no spans. (${totalDuration}ms)`;
+        }
+
+        chainedTraceOutput.textContent = JSON.stringify(trace, null, 2);
+      } catch (e) {
+        chainStatus.textContent = `❌ Error: ${e.message}`;
+        chainedTraceOutput.textContent = `Error Details:\n${e.stack}`;
+      } finally {
+        // Re-query the button to avoid outer-scope ReferenceErrors
+        const runChainedBtnLocal = document.getElementById('run-chained-flow');
+        if (runChainedBtnLocal) {
+          runChainedBtnLocal.disabled = false;
+          runChainedBtnLocal.textContent = '🔗 Run Distributed Flow';
+        }
+      }
+    };
+
+    window.runFullChain = async function() {
+      console.log('🔥 PURPLE BUTTON CLICKED! Full Chain Execution! 🔥');
+      const runFullChainBtn = document.getElementById('run-full-chain');
+      const chainStatus = document.getElementById('chain-status');
+      const chainedTraceOutput = document.getElementById('chained-trace-output');
+      
+      try {
+        runFullChainBtn.disabled = true;
+        runFullChainBtn.textContent = '🔄 Running Full Chain...';
+        chainStatus.textContent = '🚀 Starting full chain execution...';
+        chainedTraceOutput.textContent = '';
+
+        // Create test journey if none exists
+        if (!lastJourney || !lastJourney.steps || !lastJourney.steps.length) {
+          chainStatus.textContent = '⚠️ No journey data available. Creating test journey...';
+          
+          lastJourney = {
+            companyName: 'TestCorp',
+            domain: 'testcorp.com',
+            industryType: 'retail',
+            steps: [
+              { stepName: 'Discovery', description: 'Customer discovery' },
+              { stepName: 'Selection', description: 'Product selection' },
+              { stepName: 'Purchase', description: 'Purchase process' }
+            ]
+          };
+          
+          chainStatus.textContent = '✅ Test journey created! Running full chain...';
+        }
+
+        // Build steps from the journey
+        let stepNames = lastJourney.steps.slice(0, 6).map(s => s.stepName || s.name || String(s));
+        while (stepNames.length < 6) stepNames.push(`Step${stepNames.length + 1}`);
+        stepNames = stepNames.slice(0, 6);
+
+        const body = { 
+          steps: stepNames.map(n => ({ stepName: n })),
+          thinkTimeMs: 200,
+          companyName: lastJourney?.companyName || 'DefaultCompany',
+          domain: lastJourney?.domain || 'default.com',
+          industryType: lastJourney?.industryType || 'general'
+        };
+        
+        chainStatus.textContent = '⚡ Executing full chain with all steps...';
+        
+        const res = await fetch('/api/steps/full-chain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+
+        if (!json.ok) {
+          chainStatus.textContent = `❌ Full chain failed: ${json.error || 'Unknown error'}`;
+          chainedTraceOutput.textContent = `Error Details:\n${JSON.stringify(json, null, 2)}`;
+          return;
+        }
+
+        const trace = json.result?.journeyTrace || [];
+        const totalSteps = json.result?.totalSteps || 0;
+        const completedSteps = json.result?.completedSteps || 0;
+        const totalDuration = json.result?.totalDuration || 0;
+        const stepsStr = trace.map(t => t.stepName).join(' → ');
+        
+        chainStatus.textContent = `✅ Full chain completed! ${completedSteps}/${totalSteps} steps executed (${totalDuration}ms total) • ${stepsStr}`;
+        chainedTraceOutput.textContent = JSON.stringify(trace, null, 2);
+      } catch (e) {
+        chainStatus.textContent = `❌ Full chain error: ${e.message}`;
+        chainedTraceOutput.textContent = `Error Details:\n${e.stack}`;
+      } finally {
+        const runFullChainBtnLocal = document.getElementById('run-full-chain');
+        if (runFullChainBtnLocal) {
+          runFullChainBtnLocal.disabled = false;
+          runFullChainBtnLocal.textContent = '⚡ Run Full Chain';
+        }
+      }
+    };
+
+    window.runTrueDistributedChain = async function() {
+      console.log('🔥 GREEN BUTTON CLICKED! True Distributed Chain! 🔥');
+      const runTrueChainBtn = document.getElementById('run-true-chain');
+      const chainStatus = document.getElementById('chain-status');
+      const chainedTraceOutput = document.getElementById('chained-trace-output');
       
       try {
         runTrueChainBtn.disabled = true;
@@ -970,74 +1101,33 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
         
         simStatus.textContent = '🚀 Running customer journey simulation...';
         
-        // Get customer count from UI
-        const customerCount = parseInt(document.getElementById('customerCount').value) || 1;
-        console.log(`Running simulation for ${customerCount} customers`);
-        
-        // Use appropriate endpoint based on customer count
-        const endpoint = customerCount > 1 ? '/api/journey-simulation/simulate-multiple-journeys' : '/api/journey-simulation/simulate-journey';
-        
-        const requestBody = {
-          journeyId,
-          customerId,
-          journey: journeyData,  // Use 'journey' instead of 'aiJourney' for consistency
-          companyName: journeyData.companyName,
-          domain: journeyData.domain,
-          industryType: journeyData.industryType,
-          chained: false
-        };
-        
-        // Add customers parameter for multiple journey endpoint
-        if (customerCount > 1) {
-          requestBody.customers = customerCount;
-        }
-        
-        const res = await fetch(endpoint, { 
+        const res = await fetch('/api/journey-simulation/simulate-journey', { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' }, 
-          body: JSON.stringify(requestBody) 
+          body: JSON.stringify({ 
+            journeyId,
+            customerId,
+            aiJourney: journeyData,
+            companyName: journeyData.companyName,
+            domain: journeyData.domain,
+            industryType: journeyData.industryType,
+            chained: false
+          }) 
         });
         
         const json = await res.json();
         
         if (json.success) {
-          // Handle multiple customers response
-          if (json.loadTestSummary && customerCount > 1) {
-            const summary = json.loadTestSummary;
-            simStatus.textContent = `✅ ${customerCount} Customer Journey Simulation Complete! ${summary.successfulCustomers}/${summary.customersProcessed} customers successful (${summary.successRate})`;
-            
-            const summaryText = [
-              `Load Test Results:`,
-              `• Customers Processed: ${summary.customersProcessed}`,
-              `• Successful: ${summary.successfulCustomers}`,
-              `• Failed: ${summary.failedCustomers}`, 
-              `• Success Rate: ${summary.successRate}`,
-              `• Average Completion Time: ${summary.averageCompletionTime}`,
-              `• Average Steps Completed: ${summary.averageStepsCompleted}`,
-              ``,
-              `Correlation IDs: ${json.correlationIds ? json.correlationIds.slice(0, 3).join(', ') : 'N/A'}${json.correlationIds && json.correlationIds.length > 3 ? '...' : ''}`
-            ];
-            
-            if (json.journeyExample) {
-              summaryText.push(``, `Example Journey Execution:`, json.journeyExample.execution);
-              summaryText.push(``, `Services Used: ${json.journeyExample.servicesUsed}`);
-            }
-            
-            flowResultsEl.textContent = summaryText.join('\n');
-            
-          } else {
-            // Handle single customer response
-            const journey = json.journey;
-            simStatus.textContent = `✅ Customer Journey complete! ${journey.completedSteps}/${journey.totalSteps} steps successful. Correlation: ${journey.correlationId}`;
-            
-            const stepSummary = journey.steps.map((step, idx) => {
-              const status = step.status === 'completed' ? '✅' : '❌';
-              const serviceName = step.serviceName || (step.stepName + 'Service');
-              return `${status} Step ${idx + 1}: ${serviceName} (${step.processingTime || 0}ms)`;
-            }).join('\n');
-            
-            flowResultsEl.textContent = `Customer Journey Execution:\n${stepSummary}\n\nServices Used: ${journey.stepNames ? journey.stepNames.join(' → ') : 'N/A'}\n\nCorrelation ID: ${journey.correlationId}`;
-          }
+          const journey = json.journey;
+          simStatus.textContent = `✅ Customer Journey complete! ${journey.completedSteps}/${journey.totalSteps} steps successful. Correlation: ${journey.correlationId}`;
+          
+          const stepSummary = journey.steps.map((step, idx) => {
+            const status = step.status === 'completed' ? '✅' : '❌';
+            const serviceName = step.serviceName || (step.stepName + 'Service');
+            return `${status} Step ${idx + 1}: ${serviceName} (${step.processingTime || 0}ms)`;
+          }).join('\n');
+          
+          flowResultsEl.textContent = `Customer Journey Execution:\n${stepSummary}\n\nServices Used: ${journey.stepNames ? journey.stepNames.join(' → ') : 'N/A'}\n\nCorrelation ID: ${journey.correlationId}`;
           
         } else {
           simStatus.textContent = `❌ Journey simulation failed: ${json.error}`;
@@ -1268,7 +1358,7 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
       }
     });
 
-  // Generate Copilot Prompt
+    // Generate Copilot Prompt
     function generateCopilotPrompt() {
       console.log('generateCopilotPrompt called');
       
@@ -1289,177 +1379,12 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           ? `\n\nFor each field listed below, generate 2-3 realistic example values based on its type and the business context. Do not omit any field.\nPopulate every field with a plausible, context-aware value.\nFor example:\n- Handset: ["Samsung Galaxy S23 Ultra", "iPhone 15 Pro Max", "Google Pixel 8 Pro"]\n- HandsetPrice: ["£1,199.00", "£999.00", "£849.00"]\n- PlanType: ["Unlimited Data + Roaming", "20GB Data + Calls", "SIM-Only"]\n- PaymentModel: ["24-month contract with monthly installments", "Pay-as-you-go", "12-month upfront"]\n- List of fields:\n${additionalFields.map(f => `  - ${f.name} (${f.type})`).join('\n')}`
           : '';
 
-        // Generate current timestamp and formatted versions
-        const currentTimestamp = new Date().toISOString();
-        const journeyStartTime = currentTimestamp;
-        
-        const prompt = `🚨 CRITICAL: This response REQUIRES duration fields or it will be rejected 🚨
+        const prompt = `Create a realistic customer journey for ${companyName} (${domain}) in ${industryType}. Generate step names that reflect the actual customer experience for this industry.${additionalFieldsText}
+${additionalFieldsInstruction}
 
-Create a customer journey for ${companyName} (${domain}) in ${industryType} with MANDATORY realistic duration estimates.
+${journeyRequirements ? `SPECIFIC REQUIREMENTS:\n${journeyRequirements}\n\n` : ''}CONTEXT:\n- Company: ${companyName}\n- Domain: ${domain}\n- Industry: ${industryType}\n- Target Steps: [AI-Generated Step 1], [AI-Generated Step 2], [AI-Generated Step 3], [AI-Generated Step 4], [AI-Generated Step 5], [AI-Generated Step 6]${additionalFieldsText}
 
-⚠️ YOUR RESPONSE WILL BE DELETED IF IT LACKS DURATION FIELDS ⚠️
-
-Journey starts at: ${journeyStartTime}
-
-🕐 DURATION REQUIREMENTS:
-- Each step must have "estimatedDuration" in minutes
-- Each substep must have "duration" in minutes  
-- Durations should reflect realistic ${industryType} industry timing
-- Dynatrace will calculate actual timestamps based on real execution + these durations
-- Consider typical customer behavior patterns for timing estimates
-
-${journeyRequirements ? `SPECIFIC REQUIREMENTS:\n${journeyRequirements}\n\n` : ''}${additionalFieldsInstruction}
-
-You MUST respond with this EXACT structure with REALISTIC DURATION estimates:
-
-{
-  "journey": {
-    "companyName": "${companyName}",
-    "domain": "${domain}",
-    "industryType": "${industryType}",
-    "journeyId": "journey_${Date.now()}",
-    "journeyStartTime": "${journeyStartTime}",
-    "steps": [
-      {
-        "stepIndex": 1,
-        "stepName": "RealStepName",
-        "serviceName": "RealStepNameService",
-        "description": "What happens in this step",
-        "category": "StepCategory",
-        "timestamp": "${journeyStartTime}",
-        "estimatedDuration": 15,
-        "businessRationale": "Why this typically takes 15 minutes in ${industryType}",
-        "substeps": [
-          {
-            "substepName": "Real substep 1",
-            "duration": 5
-          },
-          {
-            "substepName": "Real substep 2", 
-            "duration": 10
-          }
-        ]
-      },
-      {
-        "stepIndex": 2,
-        "stepName": "SecondRealStepName",
-        "serviceName": "SecondRealStepNameService",
-        "description": "What happens in step 2",
-        "category": "StepCategory",
-        "estimatedDuration": 8,
-        "businessRationale": "Why this typically takes 8 minutes in ${industryType}",
-        "substeps": [
-          {
-            "substepName": "Real substep 1",
-            "duration": 3
-          },
-          {
-            "substepName": "Real substep 2",
-            "duration": 5
-          }
-        ]
-      },
-      {
-        "stepIndex": 3,
-        "stepName": "ThirdRealStepName",
-        "serviceName": "ThirdRealStepNameService",
-        "estimatedDuration": 5,
-        "businessRationale": "Why this typically takes 5 minutes",
-        "substeps": [...]
-      },
-      {
-        "stepIndex": 4,
-        "stepName": "FourthRealStepName",
-        "serviceName": "FourthRealStepNameService",
-        "estimatedDuration": 3,
-        "businessRationale": "Why this typically takes 3 minutes",
-        "substeps": [...]
-      },
-      {
-        "stepIndex": 5,
-        "stepName": "FifthRealStepName",
-        "serviceName": "FifthRealStepNameService",
-        "estimatedDuration": 10,
-        "businessRationale": "Why this typically takes 10 minutes",
-        "substeps": [...]
-      },
-      {
-        "stepIndex": 6,
-        "stepName": "SixthRealStepName",
-        "serviceName": "SixthRealStepNameService",
-        "estimatedDuration": 1440,
-        "businessRationale": "Why this typically takes 1440 minutes (24 hours) for next-day processing",
-        "substeps": [...]
-      }
-    ]
-  },
-  "customerProfile": {
-    "userId": "user_${Math.random().toString(36).substr(2, 9)}",
-    "email": "customer@${domain}",
-    "demographic": "${getIndustryDemographic ? getIndustryDemographic(industryType) : 'general consumers'}",
-    "painPoints": ${JSON.stringify(getIndustryPainPoints ? getIndustryPainPoints(industryType) : ['complexity', 'cost'])},
-    "goals": ${JSON.stringify(getIndustryGoals ? getIndustryGoals(industryType, companyName) : ['good service', 'value'])}
-  },
-  "traceMetadata": {
-    "correlationId": "trace_${Date.now()}",
-    "sessionId": "session_${Math.random().toString(36).substr(2, 9)}",
-    "businessContext": {
-      "campaignSource": "organic",
-      "customerSegment": "consumer",
-      "businessValue": ${getIndustryValue ? getIndustryValue(industryType) : 2000}
-    }
-  },
-  "additionalFields": {
-    "deviceType": "mobile", "browser": "Chrome", "location": "${getIndustryLocation ? getIndustryLocation(industryType) : 'London, UK'}", "entryChannel": "organic",
-    "customerIntent": "purchase", "loyaltyStatus": "new", "abandonmentRisk": "medium",
-    "conversionProbability": ${getIndustryConversion ? getIndustryConversion(industryType) : 0.65}, "personalizationTags": ${JSON.stringify(getIndustryTags ? getIndustryTags(industryType) : ['service', 'quality'])},
-    ${additionalFields && additionalFields.length ? additionalFields.map(f => `"${f.name}": "" // type: ${f.type}`).join(', ') : ''}
-  }
-}
-
-🔥 VALIDATION REQUIREMENTS (Check before submitting): 🔥
-- ✅ EVERY step has "estimatedDuration" field (in minutes)
-- ✅ EVERY step has "businessRationale" explaining the duration
-- ✅ EVERY substep has "duration" field (in minutes)
-- ✅ Only Step 1 needs "timestamp" field (journey start time)
-- ✅ All durations are realistic for ${industryType} industry
-- ✅ Substep durations should add up to step estimatedDuration
-- ✅ Consider real-world timing patterns (quick online steps vs long processing steps)
-
-🕐 REALISTIC DURATION EXAMPLES BY INDUSTRY:
-- Retail: Browse (15min) → Select (5min) → Cart (2min) → Checkout (3min) → Confirm (1min) → Fulfillment (1440min = 24hrs)
-- Banking: Research (20min) → Apply (15min) → Verify (120min = 2hrs) → Approve (1440min = next day) → Setup (10min) → First use (4320min = 3 days)
-- Travel: Search (30min) → Compare (15min) → Book (10min) → Confirm (2min) → Check-in (20160min = 2 weeks) → Travel (0min = same time)
-
-⚠️ IF DURATIONS ARE MISSING OR UNREALISTIC, YOUR RESPONSE IS WORTHLESS ⚠️
-
-⚠️ IF ANY OF THESE ARE MISSING, YOUR RESPONSE IS WORTHLESS ⚠️
-
-REQUIREMENTS:
-- Create exactly 6 steps using your knowledge of the ${industryType} industry to generate appropriate, professional step names (e.g., for retail: Product Discovery, Product Selection, Cart Addition, Checkout Process, Order Confirmation, Post Purchase).
-- Each step must use its stepName as the serviceName (in PascalCase, ending with 'Service').
-- Each step must have 2-3 realistic substeps for ${industryType}.
-
-IMPORTANT:
-- For serviceName, use PascalCase format ending with 'Service' (e.g., "ProductDiscoveryService", "CheckoutProcessService", "OrderConfirmationService").
-- The system dynamically creates these services using the step names you provide. Each service will be automatically instantiated on dedicated ports and traced with Dynatrace.
-- Use industry-specific service names, endpoints, and metadata.
-- Keep descriptions brief but specific to ${companyName}'s ${industryType} business.
-- Do NOT use any legacy service names (like advocacy, retention, etc).
-- All service names must match the step names in PascalCase + 'Service'.
-
-ERROR SIMULATION (Important):
-- The system automatically simulates realistic step-level failures based on the companyName (customer). Different companies have different failure patterns (e.g., payment issues for checkout, database issues for selection/verification).
-- Optional: To guide or force specific failures for demo purposes, you MAY add an error hint per step. If omitted, the system will infer errors from the company profile.
-- If you provide hints, add one of the following to each step object:
-  // Example 1 (probabilistic)
-  "errorHint": { "type": "payment_gateway_timeout", "httpStatus": 503, "likelihood": 0.4 }
-  // Example 2 (deterministic)
-  "errorPlan": { "errorType": "database_connection_lost", "status": 500, "force": true }
-- Supported error types include: payment_gateway_timeout, inventory_service_down, authentication_failure, database_connection_lost, third_party_api_failure, rate_limit_exceeded, session_timeout, validation_error.
-- Supported statuses include HTTP 500, 503, 502, 429, 422, 408. Likelihood is 0..1, force overrides randomness.
-
-🚨 REMEMBER: NO TIMESTAMPS = REJECTED RESPONSE 🚨`;
+Respond with this EXACT JSON structure:\n{\n  "journey": {\n    "companyName": "${companyName}",\n    "domain": "${domain}",\n    "industryType": "${industryType}",\n    "journeyId": "journey_${Date.now()}",\n    "steps": [\n      // 6 steps, each with 2-3 realistic substeps for this industry\n    ]\n  },\n  "customerProfile": {\n    "userId": "user_${Math.random().toString(36).substr(2, 9)}",\n    "email": "customer@example.com",\n    "demographic": "${getIndustryDemographic ? getIndustryDemographic(industryType) : 'general consumers'}",\n    "painPoints": ${JSON.stringify(getIndustryPainPoints ? getIndustryPainPoints(industryType) : ['complexity', 'cost'])},\n    "goals": ${JSON.stringify(getIndustryGoals ? getIndustryGoals(industryType, companyName) : ['good service', 'value'])}\n  },\n  "traceMetadata": {\n    "correlationId": "trace_${Date.now()}",\n    "sessionId": "session_${Math.random().toString(36).substr(2, 9)}",\n    "businessContext": {"campaignSource": "organic", "customerSegment": "consumer", "businessValue": ${getIndustryValue ? getIndustryValue(industryType) : 2000}}\n  },\n  "additionalFields": {\n    "deviceType": "mobile", "browser": "Chrome", "location": "${getIndustryLocation ? getIndustryLocation(industryType) : 'London, UK'}", "entryChannel": "organic",\n    "customerIntent": "purchase", "loyaltyStatus": "new", "abandonmentRisk": "medium",\n    "conversionProbability": ${getIndustryConversion ? getIndustryConversion(industryType) : 0.65}, "personalizationTags": ${JSON.stringify(getIndustryTags ? getIndustryTags(industryType) : ['service', 'quality'])},\n    ${additionalFields && additionalFields.length ? additionalFields.map(f => `"${f.name}": "" // type: ${f.type}`).join(', ') : ''}\n  }\n}\n\nREQUIREMENTS:\n- Create exactly 6 steps using your knowledge of the ${industryType} industry to generate appropriate, professional step names (e.g., for retail: Product Discovery, Product Selection, Cart Addition, Checkout Process, Order Confirmation, Post Purchase).\n- Each step must use its stepName as the serviceName (in PascalCase, ending with 'Service').\n- Each step must have 2-3 realistic substeps for ${industryType}.\n\nIMPORTANT:\n- For serviceName, use PascalCase format ending with 'Service' (e.g., "ProductDiscoveryService", "CheckoutProcessService", "OrderConfirmationService").\n- The system dynamically creates these services using the step names you provide. Each service will be automatically instantiated on dedicated ports and traced with Dynatrace.\n- Use industry-specific service names, endpoints, and metadata.\n- Keep descriptions brief but specific to ${companyName}'s ${industryType} business.\n- Do NOT use any legacy service names (like advocacy, retention, etc).\n- All service names must match the step names in PascalCase + 'Service'.\n\nERROR SIMULATION (Important):\n- The system automatically simulates realistic step-level failures based on the companyName (customer). Different companies have different failure patterns (e.g., payment issues for checkout, database issues for selection/verification).\n- Optional: To guide or force specific failures for demo purposes, you MAY add an error hint per step. If omitted, the system will infer errors from the company profile.\n- If you provide hints, add one of the following to each step object:\n  // Example 1 (probabilistic)\n  "errorHint": { "type": "payment_gateway_timeout", "httpStatus": 503, "likelihood": 0.4 }\n  // Example 2 (deterministic)\n  "errorPlan": { "errorType": "database_connection_lost", "status": 500, "force": true }\n- Supported error types include: payment_gateway_timeout, inventory_service_down, authentication_failure, database_connection_lost, third_party_api_failure, rate_limit_exceeded, session_timeout, validation_error.\n- Supported statuses include HTTP 500, 503, 502, 429, 422, 408. Likelihood is 0..1, force overrides randomness.\n`;
 
       console.log('Setting prompt text:', prompt.substring(0, 100) + '...');
       const promptTextElement = document.getElementById('promptText');
@@ -1610,48 +1535,18 @@ ERROR SIMULATION (Important):
         const industryType = document.getElementById('industryType').value || 'general';
         const journeyRequirements = document.getElementById('journeyRequirements').value || 'Standard customer journey';
         
-        // Create a simple journey structure for simulation with proper service names
+        // Create a simple journey structure for simulation
         const basicJourney = {
           companyName,
           domain,
           industryType,
           steps: [
-            { 
-              stepName: 'Discovery', 
-              description: 'Initial customer discovery',
-              serviceName: 'DiscoveryService',
-              substeps: [{ serviceName: 'DiscoveryService' }]
-            },
-            { 
-              stepName: 'Awareness', 
-              description: 'Customer becomes aware',
-              serviceName: 'AwarenessService',
-              substeps: [{ serviceName: 'AwarenessService' }]
-            },
-            { 
-              stepName: 'Consideration', 
-              description: 'Customer considers options',
-              serviceName: 'ConsiderationService',
-              substeps: [{ serviceName: 'ConsiderationService' }]
-            },
-            { 
-              stepName: 'Purchase', 
-              description: 'Customer makes purchase',
-              serviceName: 'PurchaseService',
-              substeps: [{ serviceName: 'PurchaseService' }]
-            },
-            { 
-              stepName: 'Retention', 
-              description: 'Customer retention activities',
-              serviceName: 'RetentionService',
-              substeps: [{ serviceName: 'RetentionService' }]
-            },
-            { 
-              stepName: 'Advocacy', 
-              description: 'Customer becomes advocate',
-              serviceName: 'AdvocacyService',
-              substeps: [{ serviceName: 'AdvocacyService' }]
-            }
+            { stepName: 'Discovery', description: 'Initial customer discovery' },
+            { stepName: 'Awareness', description: 'Customer becomes aware' },
+            { stepName: 'Consideration', description: 'Customer considers options' },
+            { stepName: 'Purchase', description: 'Customer makes purchase' },
+            { stepName: 'Retention', description: 'Customer retention activities' },
+            { stepName: 'Advocacy', description: 'Customer becomes advocate' }
           ],
           requirements: journeyRequirements
         };
@@ -1682,11 +1577,10 @@ ERROR SIMULATION (Important):
         journeyId: `journey_${Date.now()}`,
         steps: steps.map((stepName, index) => ({
           stepName,
-          serviceName: stepName.replace(/\s+/g, '') + 'Service',
+          serviceName: stepName.replace(/\\s+/g, '') + 'Service',
           description: `Customer ${stepName.toLowerCase()} step`,
           order: index + 1,
-          endpoints: [`/${stepName.toLowerCase().replace(/\s+/g, '-')}`],
-          substeps: [{ serviceName: stepName.replace(/\s+/g, '') + 'Service' }],
+          endpoints: [`/${stepName.toLowerCase().replace(/\\s+/g, '-')}`],
           metadata: {
             stepType: 'retail',
             processingTime: Math.floor(Math.random() * 200) + 100,
@@ -2261,75 +2155,34 @@ ERROR SIMULATION (Important):
           
           simStatus.textContent = '🚀 Running customer journey simulation...';
           
-          // Get customer count from UI
-          const customerCount = parseInt(document.getElementById('customerCount').value) || 1;
-          console.log(`Running simulation for ${customerCount} customers`);
-          
-          // Use appropriate endpoint based on customer count
-          const endpoint = customerCount > 1 ? '/api/journey-simulation/simulate-multiple-journeys' : '/api/journey-simulation/simulate-journey';
-          
-          const requestBody = {
-            journeyId,
-            customerId,
-            journey: journeyData,  // Use 'journey' instead of 'aiJourney' for consistency
-            companyName: journeyData.companyName,
-            domain: journeyData.domain,
-            industryType: journeyData.industryType,
-            chained: false // Use step-by-step execution for consistency
-          };
-          
-          // Add customers parameter for multiple journey endpoint
-          if (customerCount > 1) {
-            requestBody.customers = customerCount;
-          }
-          
-          const res = await fetch(endpoint, { 
+          const res = await fetch('/api/journey-simulation/simulate-journey', { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify(requestBody) 
+            body: JSON.stringify({ 
+              journeyId,
+              customerId,
+              aiJourney: journeyData,
+              companyName: journeyData.companyName,
+              domain: journeyData.domain,
+              industryType: journeyData.industryType,
+              chained: false // Use step-by-step execution for consistency
+            }) 
           });
           
           const json = await res.json();
           
           if (json.success) {
-            // Handle multiple customers response
-            if (json.loadTestSummary && customerCount > 1) {
-              const summary = json.loadTestSummary;
-              simStatus.textContent = `✅ ${customerCount} Customer Journey Simulation Complete! ${summary.successfulCustomers}/${summary.customersProcessed} customers successful (${summary.successRate})`;
-              
-              const summaryText = [
-                `Load Test Results:`,
-                `• Customers Processed: ${summary.customersProcessed}`,
-                `• Successful: ${summary.successfulCustomers}`,
-                `• Failed: ${summary.failedCustomers}`, 
-                `• Success Rate: ${summary.successRate}`,
-                `• Average Completion Time: ${summary.averageCompletionTime}`,
-                `• Average Steps Completed: ${summary.averageStepsCompleted}`,
-                ``,
-                `Correlation IDs: ${json.correlationIds ? json.correlationIds.slice(0, 3).join(', ') : 'N/A'}${json.correlationIds && json.correlationIds.length > 3 ? '...' : ''}`
-              ];
-              
-              if (json.journeyExample) {
-                summaryText.push(``, `Example Journey Execution:`, json.journeyExample.execution);
-                summaryText.push(``, `Services Used: ${json.journeyExample.servicesUsed}`);
-              }
-              
-              flowResultsEl.textContent = summaryText.join('\n');
-              
-            } else {
-              // Handle single customer response
-              const journey = json.journey;
-              simStatus.textContent = `✅ Customer Journey complete! ${journey.completedSteps}/${journey.totalSteps} steps successful. Correlation: ${journey.correlationId}`;
-              
-              // Show detailed results with service names (same as 6-step flow)
-              const stepSummary = journey.steps.map((step, idx) => {
-                const status = step.status === 'completed' ? '✅' : '❌';
-                const serviceName = step.serviceName || (step.stepName + 'Service');
-                return `${status} Step ${idx + 1}: ${serviceName} (${step.processingTime || 0}ms)`;
-              }).join('\n');
-              
-              flowResultsEl.textContent = `Customer Journey Execution:\n${stepSummary}\n\nServices Used: ${journey.stepNames ? journey.stepNames.join(' → ') : 'N/A'}\n\nCorrelation ID: ${journey.correlationId}`;
-            }
+            const journey = json.journey;
+            simStatus.textContent = `✅ Customer Journey complete! ${journey.completedSteps}/${journey.totalSteps} steps successful. Correlation: ${journey.correlationId}`;
+            
+            // Show detailed results with service names (same as 6-step flow)
+            const stepSummary = journey.steps.map((step, idx) => {
+              const status = step.status === 'completed' ? '✅' : '❌';
+              const serviceName = step.serviceName || (step.stepName + 'Service');
+              return `${status} Step ${idx + 1}: ${serviceName} (${step.processingTime || 0}ms)`;
+            }).join('\n');
+            
+            flowResultsEl.textContent = `Customer Journey Execution:\n${stepSummary}\n\nServices Used: ${journey.stepNames ? journey.stepNames.join(' → ') : 'N/A'}\n\nCorrelation ID: ${journey.correlationId}`;
             
           } else {
             simStatus.textContent = `❌ Journey simulation failed: ${json.error}`;

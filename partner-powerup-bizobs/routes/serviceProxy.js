@@ -21,27 +21,30 @@ Object.entries(serviceEndpoints).forEach(([serviceName, endpoints]) => {
   endpoints.forEach(endpoint => {
     // GET endpoints
     router.get(endpoint, (req, res) => {
+      const requestStartTime = Date.now();
       const traceId = req.headers['x-trace-id'] || uuidv4();
       const spanId = uuidv4().slice(0, 16);
-      const duration = Math.floor(Math.random() * 500) + 50;
+      const processingDelay = Math.floor(Math.random() * 500) + 50;
       
       // Set response headers for Dynatrace
       res.set({
         'X-Service-Name': serviceName,
         'X-Trace-ID': traceId,
         'X-Span-ID': spanId,
-        'X-Duration': duration
+        'X-Duration': processingDelay
       });
       
       // Simulate processing time
       setTimeout(() => {
+        const actualDuration = Date.now() - requestStartTime;
+        
         const response = {
           service: serviceName,
           endpoint: endpoint,
           method: 'GET',
           traceId,
           spanId,
-          duration: `${duration}ms`,
+          duration: actualDuration,
           timestamp: new Date().toISOString(),
           status: 'success',
           data: generateMockResponse(serviceName, endpoint)
@@ -57,41 +60,64 @@ Object.entries(serviceEndpoints).forEach(([serviceName, endpoints]) => {
           'service.name': serviceName,
           method: 'GET',
           endpoint,
-          duration,
+          duration: actualDuration,
           statusCode: 200,
+          responseBody: response,
           message: `${serviceName} handled GET ${endpoint}`
         }));
         
         res.json(response);
-      }, duration);
+      }, processingDelay);
     });
     
     // POST endpoints
     router.post(endpoint, (req, res) => {
+      const requestStartTime = Date.now();
       const traceId = req.headers['x-trace-id'] || uuidv4();
       const spanId = uuidv4().slice(0, 16);
-      const duration = Math.floor(Math.random() * 800) + 100;
+      const processingDelay = Math.floor(Math.random() * 800) + 100;
+      
+      // Add request start time to request body for OneAgent capture
+      // Preserve all Copilot duration fields that came in the request
+      const enhancedRequestBody = {
+        ...req.body,
+        requestStartTime: requestStartTime,
+        // Preserve Copilot duration fields if they exist
+        estimatedDuration: req.body.estimatedDuration,
+        businessRationale: req.body.businessRationale,
+        category: req.body.category,
+        substeps: req.body.substeps,
+        estimatedDurationMs: req.body.estimatedDurationMs
+      };
       
       // Set response headers for Dynatrace
       res.set({
         'X-Service-Name': serviceName,
         'X-Trace-ID': traceId,
         'X-Span-ID': spanId,
-        'X-Duration': duration
+        'X-Duration': processingDelay
       });
       
       // Simulate processing time
       setTimeout(() => {
+        const actualDuration = Date.now() - requestStartTime;
+        
         const response = {
           service: serviceName,
           endpoint: endpoint,
           method: 'POST',
           traceId,
           spanId,
-          duration: `${duration}ms`,
+          duration: actualDuration,
           timestamp: new Date().toISOString(),
           status: 'success',
-          data: generateMockResponse(serviceName, endpoint, req.body)
+          data: generateMockResponse(serviceName, endpoint, enhancedRequestBody),
+          // Include Copilot duration fields in response for OneAgent capture
+          estimatedDuration: req.body.estimatedDuration,
+          businessRationale: req.body.businessRationale,
+          category: req.body.category,
+          substeps: req.body.substeps,
+          estimatedDurationMs: req.body.estimatedDurationMs
         };
         
         console.log(JSON.stringify({
@@ -104,14 +130,15 @@ Object.entries(serviceEndpoints).forEach(([serviceName, endpoints]) => {
           'service.name': serviceName,
           method: 'POST',
           endpoint,
-          duration,
+          duration: actualDuration,
           statusCode: 200,
-          requestBody: req.body,
+          requestBody: enhancedRequestBody,
+          responseBody: response,
           message: `${serviceName} handled POST ${endpoint}`
         }));
         
         res.json(response);
-      }, duration);
+      }, processingDelay);
     });
   });
 });

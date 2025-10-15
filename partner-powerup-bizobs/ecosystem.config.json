@@ -1,0 +1,19 @@
+{
+  "name": "bizobs-app",
+  "script": "server.js",
+  "instances": 1,
+  "exec_mode": "cluster",
+  "env": {
+    "NODE_ENV": "production",
+    "PORT": 4000
+  },
+  "log_file": "./logs/app.log",
+  "out_file": "./logs/out.log",
+  "error_file": "./logs/error.log",
+  "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+  "restart_delay": 3000,
+  "max_memory_restart": "500M",
+  "watch": false,
+  "ignore_watch": ["node_modules", "logs"],
+  "kill_timeout": 5000
+}

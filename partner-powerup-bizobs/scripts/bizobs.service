@@ -1,0 +1,35 @@
+[Unit]
+Description=BizObs Partner PowerUp Application
+Documentation=https://github.com/lawrobar90/Partner-PowerUp-BizObs-App
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/home/ec2-user/partner-powerup-bizobs
+Environment=NODE_ENV=production
+Environment=PORT=4000
+Environment=DEFAULT_COMPANY=DefaultCompany
+Environment=DEFAULT_DOMAIN=default.com
+Environment=DEFAULT_INDUSTRY=general
+ExecStartPre=/bin/bash -c 'cd /home/ec2-user/partner-powerup-bizobs && npm install --production --silent'
+ExecStart=/usr/bin/node server.js
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/bizobs.log
+StandardError=append:/var/log/bizobs-error.log
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/ec2-user/partner-powerup-bizobs
+ReadWritePaths=/var/log
+
+[Install]
+WantedBy=multi-user.target

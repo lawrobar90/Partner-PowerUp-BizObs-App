@@ -86,7 +86,12 @@ router.post('/step1-chained', async (req, res) => {
     } else if (journey && journey.steps && Array.isArray(journey.steps)) {
       stepsArr = journey.steps.map((step, idx) => ({
         stepName: step.stepName || step.name || `Step${idx+1}`,
-        serviceName: step.serviceName || getServiceNameFromStep(step.stepName || step.name || `Step${idx+1}`)
+        serviceName: step.serviceName || getServiceNameFromStep(step.stepName || step.name || `Step${idx+1}`),
+        estimatedDuration: step.estimatedDuration,
+        businessRationale: step.businessRationale,
+        timestamp: step.timestamp,
+        duration: step.duration,
+        substeps: step.substeps
       }));
     } else if (stepName) {
       stepsArr = [{ stepName, serviceName: getServiceNameFromStep(stepName) }];
@@ -101,9 +106,14 @@ router.post('/step1-chained', async (req, res) => {
       ];
     }
 
-    // Ensure all dynamic services are running before chaining
+    // Ensure all dynamic services are running before chaining with company context if journey provided
+    const companyContext = {
+      companyName: journey?.companyName || req.body.companyName,
+      domain: journey?.domain || req.body.domain,
+      industryType: journey?.industryType || req.body.industryType
+    };
     for (const s of stepsArr) {
-      ensureServiceRunning(s.stepName, { serviceName: s.serviceName });
+      ensureServiceRunning(s.stepName, { ...companyContext, stepName: s.stepName, serviceName: s.serviceName });
     }
     await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -112,6 +122,10 @@ router.post('/step1-chained', async (req, res) => {
   // Ensure first service is started and ready
   const servicePort = await ensureServiceReadyForStep(first.stepName, { serviceName: first.serviceName });
     const http = await import('http');
+
+    // Generate initial trace context for the chain
+    const rootTraceId = uuidv4().replace(/-/g, '');
+    const rootSpanId = uuidv4().slice(0, 16).replace(/-/g, '');
 
     const payload = {
       stepName: first.stepName,
@@ -122,7 +136,9 @@ router.post('/step1-chained', async (req, res) => {
       domain,
       journey,
       steps: stepsArr,
-      thinkTimeMs: req.body.thinkTimeMs
+      thinkTimeMs: req.body.thinkTimeMs,
+      traceId: rootTraceId,
+      spanId: rootSpanId
     };
 
     const options = {
@@ -132,7 +148,11 @@ router.post('/step1-chained', async (req, res) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-correlation-id': correlationId
+        'x-correlation-id': correlationId,
+        // Start the distributed trace chain with W3C headers
+        'traceparent': `00-${rootTraceId.padEnd(32, '0')}-${rootSpanId.padEnd(16, '0')}-01`,
+        'x-dynatrace-trace-id': rootTraceId,
+        'x-dynatrace-parent-span-id': rootSpanId
       }
     };
 
@@ -149,6 +169,140 @@ router.post('/step1-chained', async (req, res) => {
       rq.end(JSON.stringify(payload));
     });
     res.json({ ok: true, pipeline: 'chained-child-services', result });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Full chain execution - runs all steps in sequence
+router.post('/full-chain', async (req, res) => {
+  try {
+    const { stepName, journeyId, domain, journey, steps: customSteps } = req.body || {};
+    console.log(`🔥🔥🔥 [FULL-CHAIN ROUTE] Body: ${JSON.stringify(req.body)} 🔥🔥🔥`);
+    const correlationId = req.correlationId;
+
+    // Build ordered steps array (same logic as step1-chained)
+    let stepsArr = [];
+    if (customSteps && Array.isArray(customSteps)) {
+      stepsArr = customSteps.map((step, idx) => ({
+        stepName: step.stepName || step.name || `Step${idx+1}`,
+        serviceName: step.serviceName || getServiceNameFromStep(step.stepName || step.name || `Step${idx+1}`)
+      }));
+    } else if (journey && journey.steps && Array.isArray(journey.steps)) {
+      stepsArr = journey.steps.map((step, idx) => ({
+        stepName: step.stepName || step.name || `Step${idx+1}`,
+        serviceName: step.serviceName || getServiceNameFromStep(step.stepName || step.name || `Step${idx+1}`),
+        estimatedDuration: step.estimatedDuration,
+        businessRationale: step.businessRationale,
+        timestamp: step.timestamp,
+        duration: step.duration,
+        substeps: step.substeps
+      }));
+    } else if (stepName) {
+      stepsArr = [{ stepName, serviceName: getServiceNameFromStep(stepName) }];
+    } else {
+      stepsArr = [
+        { stepName: 'Discovery', serviceName: getServiceNameFromStep('Discovery') },
+        { stepName: 'Awareness', serviceName: getServiceNameFromStep('Awareness') },
+        { stepName: 'Consideration', serviceName: getServiceNameFromStep('Consideration') },
+        { stepName: 'Purchase', serviceName: getServiceNameFromStep('Purchase') },
+        { stepName: 'Retention', serviceName: getServiceNameFromStep('Retention') },
+        { stepName: 'Advocacy', serviceName: getServiceNameFromStep('Advocacy') }
+      ];
+    }
+
+    // Start all services
+    const companyContext = {
+      companyName: journey?.companyName || req.body.companyName,
+      domain: journey?.domain || req.body.domain,
+      industryType: journey?.industryType || req.body.industryType
+    };
+    
+    for (const s of stepsArr) {
+      ensureServiceRunning(s.stepName, { ...companyContext, stepName: s.stepName, serviceName: s.serviceName });
+    }
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for services to start
+
+    // Execute all steps in sequence
+    const http = await import('http');
+    const allResults = [];
+    let totalDuration = 0;
+
+    for (let i = 0; i < stepsArr.length; i++) {
+      const currentStep = stepsArr[i];
+      const nextStep = stepsArr[i + 1] || null;
+      
+      try {
+        const servicePort = await ensureServiceReadyForStep(currentStep.stepName, { serviceName: currentStep.serviceName });
+        
+        const payload = {
+          stepName: currentStep.stepName,
+          serviceName: currentStep.serviceName,
+          nextStepName: nextStep ? nextStep.stepName : null,
+          correlationId,
+          journeyId,
+          domain,
+          journey,
+          steps: stepsArr,
+          thinkTimeMs: req.body.thinkTimeMs || 100,
+          journeyTrace: allResults // Pass previous results as journey trace
+        };
+
+        const options = {
+          hostname: '127.0.0.1',
+          port: servicePort,
+          path: '/process',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-correlation-id': correlationId
+          }
+        };
+
+        const stepResult = await new Promise((resolve, reject) => {
+          const rq = http.request(options, (rs) => {
+            let b = '';
+            rs.on('data', c => b += c);
+            rs.on('end', () => {
+              try { resolve(JSON.parse(b || '{}')); }
+              catch (e) { resolve({ raw: b, parseError: e.message }); }
+            });
+          });
+          rq.on('error', reject);
+          rq.end(JSON.stringify(payload));
+        });
+
+        if (stepResult.journeyTrace && Array.isArray(stepResult.journeyTrace)) {
+          allResults.push(...stepResult.journeyTrace);
+        }
+        totalDuration += stepResult.processingTime || 0;
+        
+      } catch (stepError) {
+        console.error(`Error executing step ${currentStep.stepName}:`, stepError);
+        allResults.push({
+          stepName: currentStep.stepName,
+          serviceName: currentStep.serviceName,
+          timestamp: new Date().toISOString(),
+          correlationId,
+          error: stepError.message,
+          status: 'failed'
+        });
+      }
+    }
+
+    res.json({ 
+      ok: true, 
+      pipeline: 'full-chain-execution', 
+      result: {
+        steps: stepsArr,
+        journeyTrace: allResults,
+        totalSteps: stepsArr.length,
+        completedSteps: allResults.filter(r => r.status !== 'failed').length,
+        totalDuration,
+        correlationId,
+        journeyId
+      }
+    });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }

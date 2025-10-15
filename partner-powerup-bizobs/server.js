@@ -16,7 +16,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import { randomBytes } from 'crypto';
-import { ensureServiceRunning, getServiceNameFromStep, getServicePort, stopAllServices, getChildServices } from './services/service-manager.js';
+import { ensureServiceRunning, getServiceNameFromStep, getServicePort, stopAllServices, getChildServices, getChildServiceMeta } from './services/service-manager.js';
 
 import journeyRouter from './routes/journey.js';
 import simulateRouter from './routes/simulate.js';
@@ -25,6 +25,8 @@ import stepsRouter from './routes/steps.js';
 import flowRouter from './routes/flow.js';
 import serviceProxyRouter from './routes/serviceProxy.js';
 import journeySimulationRouter from './routes/journey-simulation.js';
+import configRouter from './routes/config.js';
+// MongoDB integration removed
 
 dotenv.config();
 
@@ -51,7 +53,7 @@ const PORT = process.env.PORT || 4000;
 function callChildService(serviceName, payload, port, tracingHeaders = {}) {
   return new Promise((resolve, reject) => {
     const targetPort = port;
-    // Do NOT set trace headers here; let OneAgent auto-instrumentation handle span/propagation
+    // Do NOT set custom trace headers; let OneAgent handle distributed tracing
     const options = {
       hostname: '127.0.0.1',
       port: targetPort,
@@ -59,8 +61,11 @@ function callChildService(serviceName, payload, port, tracingHeaders = {}) {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        // Only forward correlation and non-trace custom headers; avoid traceparent/tracestate/x-dynatrace/dt-*
-        'x-correlation-id': (tracingHeaders['x-correlation-id'] || payload?.correlationId) || uuidv4()
+        // Only forward correlation and business context headers
+        'x-correlation-id': (tracingHeaders['x-correlation-id'] || payload?.correlationId) || uuidv4(),
+        // Forward W3C Trace Context if present (OneAgent will handle this)
+        ...(tracingHeaders.traceparent && { 'traceparent': tracingHeaders.traceparent }),
+        ...(tracingHeaders.tracestate && { 'tracestate': tracingHeaders.tracestate })
       }
     };
     
@@ -219,6 +224,7 @@ app.use('/api/steps', stepsRouter);
 app.use('/api/flow', flowRouter);
 app.use('/api/service-proxy', serviceProxyRouter);
 app.use('/api/journey-simulation', journeySimulationRouter);
+app.use('/api/config', configRouter);
 
 // --- Admin endpoint to reset all dynamic service ports (for UI Reset button) ---
 app.post('/api/admin/reset-ports', (req, res) => {
@@ -244,7 +250,7 @@ app.post('/api/admin/ensure-service', async (req, res) => {
   }
 });
 
-// --- Admin endpoint to list running dynamic services ---
+// --- Admin endpoint to list running dynamic services (simple format) ---
 app.get('/api/admin/services', (req, res) => {
   try {
     const running = getChildServices();
@@ -258,6 +264,139 @@ app.get('/api/admin/services', (req, res) => {
   }
 });
 
+// --- Admin endpoint to get detailed service status including startup information ---
+app.get('/api/admin/services/status', (req, res) => {
+  try {
+    const running = getChildServices();
+    const metadata = getChildServiceMeta();
+    const detailedServices = Object.entries(running).map(([name, proc]) => {
+      const meta = metadata[name] || {};
+      const startTime = meta.startTime || null;
+      const port = meta.port || getServicePort(name) || 'unknown';
+      
+      return {
+        service: name,
+        pid: proc?.pid || null,
+        status: proc?.pid ? 'running' : 'stopped',
+        startTime: startTime,
+        uptime: startTime ? Math.floor((Date.now() - new Date(startTime).getTime()) / 1000) : 0,
+        port: port,
+        companyContext: {
+          companyName: meta.companyName || 'unknown',
+          domain: meta.domain || 'unknown',
+          industryType: meta.industryType || 'unknown'
+        }
+      };
+    });
+    
+    res.json({ 
+      ok: true, 
+      timestamp: new Date().toISOString(),
+      totalServices: detailedServices.length,
+      runningServices: detailedServices.filter(s => s.status === 'running').length,
+      services: detailedServices,
+      serverUptime: Math.floor(process.uptime()),
+      serverPid: process.pid
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Global trace validation store for debugging
+const traceValidationStore = {
+  recentCalls: [],
+  maxEntries: 50
+};
+
+// --- Admin endpoint for trace validation debugging ---
+app.get('/api/admin/trace-validation', (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    const recentCalls = traceValidationStore.recentCalls
+      .slice(-parseInt(limit))
+      .reverse(); // Most recent first
+    
+    res.json({
+      ok: true,
+      timestamp: new Date().toISOString(),
+      totalCalls: traceValidationStore.recentCalls.length,
+      recentCalls: recentCalls,
+      summary: {
+        callsWithTraceparent: recentCalls.filter(c => c.traceparent).length,
+        callsWithTracestate: recentCalls.filter(c => c.tracestate).length,
+        callsWithDynatraceId: recentCalls.filter(c => c.x_dynatrace_trace_id).length,
+        uniqueTraceIds: [...new Set(recentCalls.map(c => c.traceparent?.split('-')[1]).filter(Boolean))].length
+      }
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Helper function to record trace validation data
+function recordTraceValidation(stepName, headers, response) {
+  const entry = {
+    timestamp: new Date().toISOString(),
+    stepName,
+    traceparent: headers.traceparent || null,
+    tracestate: headers.tracestate || null,
+    x_dynatrace_trace_id: headers['x-dynatrace-trace-id'] || null,
+    x_correlation_id: headers['x-correlation-id'] || null,
+    responseStatus: response?.httpStatus || null,
+    responseTraceparent: response?.traceparent || null
+  };
+  
+  traceValidationStore.recentCalls.push(entry);
+  
+  // Keep only recent entries
+  if (traceValidationStore.recentCalls.length > traceValidationStore.maxEntries) {
+    traceValidationStore.recentCalls = traceValidationStore.recentCalls.slice(-traceValidationStore.maxEntries);
+  }
+}
+
+// Make recordTraceValidation available globally for journey simulation
+global.recordTraceValidation = recordTraceValidation;
+
+// --- Admin endpoint to restart all core services ---
+app.post('/api/admin/services/restart-all', async (req, res) => {
+  try {
+    console.log('🔄 Restarting all core services...');
+    
+    // Stop all current services
+    stopAllServices();
+    
+    // Wait a moment for cleanup
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Start all core services again
+    const coreServices = [
+      'Discovery', 'Awareness', 'Consideration', 'Purchase', 'Completion', 
+      'Retention', 'Advocacy', 'DataPersistence', 'PolicySelection', 
+      'QuotePersonalization', 'PolicyActivation', 'CoverageExploration',
+      'SecureCheckout', 'OngoingEngagement'
+    ];
+    
+    const companyContext = {
+      companyName: process.env.DEFAULT_COMPANY || 'DefaultCompany',
+      domain: process.env.DEFAULT_DOMAIN || 'default.com',
+      industryType: process.env.DEFAULT_INDUSTRY || 'general'
+    };
+    
+    for (const stepName of coreServices) {
+      try {
+        ensureServiceRunning(stepName, companyContext);
+      } catch (err) {
+        console.error(`Failed to restart service ${stepName}:`, err.message);
+      }
+    }
+    
+    res.json({ ok: true, message: 'All core services restart initiated', servicesCount: coreServices.length });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // Health check with service status
 app.get('/api/health', (req, res) => {
   const runningServices = getChildServices();
@@ -266,7 +405,6 @@ app.get('/api/health', (req, res) => {
     running: true,
     pid: runningServices[serviceName]?.pid || null
   }));
-  
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -285,6 +423,9 @@ app.get('/api/metrics', (req, res) => {
   res.send('# Basic metrics placeholder\napp_status 1\n');
 });
 
+// MongoDB Analytics Endpoints
+// MongoDB analytics and journey endpoints removed
+
 // Expose event service for routes
 app.locals.eventService = eventService;
 
@@ -302,15 +443,117 @@ app.use((err, req, res, next) => {
 server.listen(PORT, () => {
   console.log(`🚀 Business Observability Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  // Expose port to routes for internal HTTP calls
   app.locals.port = PORT;
+
+  // --- Pre-startup dependency validation ---
+  console.log('🔍 Validating dependencies and environment...');
   
-  // Pre-start all child services for better performance
-  console.log('🔧 Child services will be started on demand based on journey steps...');
-  // Commented out auto-startup to allow dynamic service creation
-  // Object.keys(SERVICE_PORTS).forEach(serviceName => {
-  //   startChildService(serviceName, path.join('services', `${serviceName}.cjs`));
-  // });
+  // Check essential dependencies
+  const essentialDependencies = [
+    { name: 'Express', check: () => app && typeof app.listen === 'function' },
+    { name: 'Socket.IO', check: () => io && typeof io.emit === 'function' },
+    { name: 'Service Manager', check: () => typeof ensureServiceRunning === 'function' },
+    { name: 'Event Service', check: () => typeof eventService === 'object' },
+    { name: 'UUID Generator', check: () => typeof uuidv4 === 'function' }
+  ];
+  
+  const failedDependencies = essentialDependencies.filter(dep => {
+    try {
+      return !dep.check();
+    } catch (error) {
+      console.error(`❌ Dependency check failed for ${dep.name}:`, error.message);
+      return true;
+    }
+  });
+  
+  if (failedDependencies.length > 0) {
+    console.error('❌ Critical dependencies missing:', failedDependencies.map(d => d.name).join(', '));
+    console.error('⚠️  Some features may not work correctly.');
+  } else {
+    console.log('✅ All essential dependencies validated successfully.');
+  }
+
+  // --- Check directory structure and permissions ---
+  const requiredDirectories = [
+    './services',
+    './services/.dynamic-runners',
+    './routes',
+    './public'
+  ];
+  
+  requiredDirectories.forEach(dir => {
+    try {
+      import('fs').then(fs => {
+        if (!fs.existsSync(dir)) {
+          console.warn(`⚠️  Required directory missing: ${dir}`);
+        }
+      });
+    } catch (error) {
+      console.warn(`⚠️  Cannot verify directory: ${dir}`);
+    }
+  });
+
+  // --- Auto-start only essential services (on-demand for others) ---
+  const coreServices = [
+    // Only the most commonly used services - others start on-demand
+    'Discovery',      // Most common first step in journeys
+    'Purchase',       // Most common transaction step
+    'DataPersistence' // Always needed for data storage
+  ];
+  
+  const companyContext = {
+    companyName: process.env.DEFAULT_COMPANY || 'DefaultCompany',
+    domain: process.env.DEFAULT_DOMAIN || 'default.com',
+    industryType: process.env.DEFAULT_INDUSTRY || 'general'
+  };
+  
+  console.log(`🚀 Starting ${coreServices.length} essential services (others will start on-demand)...`);
+  
+  // Start services with proper error handling and logging
+  const serviceStartPromises = coreServices.map(async (stepName, index) => {
+    try {
+      // Add a small delay between service starts to prevent port conflicts
+      await new Promise(resolve => setTimeout(resolve, index * 100));
+      
+      ensureServiceRunning(stepName, companyContext);
+      console.log(`✅ Essential service for step "${stepName}" started successfully.`);
+      return { stepName, status: 'started' };
+    } catch (err) {
+      console.error(`❌ Failed to start essential service for step "${stepName}":`, err.message);
+      return { stepName, status: 'failed', error: err.message };
+    }
+  });
+  
+  // Wait for all services to attempt startup
+  Promise.all(serviceStartPromises).then(results => {
+    const successful = results.filter(r => r.status === 'started').length;
+    const failed = results.filter(r => r.status === 'failed').length;
+    
+    console.log(`🔧 Service startup completed: ${successful} successful, ${failed} failed`);
+    
+    if (failed > 0) {
+      console.log('⚠️  Failed services:', results.filter(r => r.status === 'failed').map(r => r.stepName).join(', '));
+    }
+    
+    // Additional startup validation
+    setTimeout(async () => {
+      try {
+        const runningServices = getChildServices();
+        const runningCount = Object.keys(runningServices).length;
+        console.log(`📊 Status check: ${runningCount} services currently running`);
+        
+        if (runningCount < successful * 0.8) {
+          console.warn('⚠️  Some services may have failed to start properly. Check logs for details.');
+        } else {
+          console.log('✨ All core services appear to be running successfully!');
+        }
+      } catch (error) {
+        console.error('❌ Error during startup validation:', error.message);
+      }
+    }, 3000);
+  }).catch(error => {
+    console.error('❌ Critical error during service startup:', error.message);
+  });
 });
 
 // Graceful shutdown

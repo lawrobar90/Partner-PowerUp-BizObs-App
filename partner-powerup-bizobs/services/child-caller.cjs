@@ -55,14 +55,45 @@ function callService(serviceName, payload, headers = {}, overridePort) {
     // Use overridePort if provided, else hash-based mapping
     const port = overridePort || getServicePortFromStep(serviceName) || SERVICE_PORTS[serviceName];
     if (!port) return reject(new Error(`Unknown service: ${serviceName}`));
-    // Prepare headers; avoid traceparent/tracestate/x-dynatrace/dt-* so OneAgent can inject/link spans
+    
+    // Prepare headers with proper Dynatrace trace propagation
     const requestHeaders = { 'Content-Type': 'application/json' };
+    
+    // Add custom journey headers
     if (payload) {
       if (payload.journeyId) requestHeaders['x-journey-id'] = payload.journeyId;
       if (payload.stepName) requestHeaders['x-journey-step'] = payload.stepName;
       if (payload.domain) requestHeaders['x-customer-segment'] = payload.domain;
       if (payload.correlationId) requestHeaders['x-correlation-id'] = payload.correlationId;
     }
+    
+    // CRITICAL: Add Dynatrace trace propagation headers
+    // Use W3C Trace Context format for proper distributed tracing
+    if (payload && payload.traceId && payload.spanId) {
+      // W3C traceparent format: version-trace_id-parent_id-trace_flags
+      const traceId32 = payload.traceId.replace(/-/g, '').substring(0, 32).padEnd(32, '0');
+      const spanId16 = payload.spanId.replace(/-/g, '').substring(0, 16).padEnd(16, '0');
+      requestHeaders['traceparent'] = `00-${traceId32}-${spanId16}-01`;
+      
+      // Also add Dynatrace-specific headers for better compatibility
+      requestHeaders['x-dynatrace-trace-id'] = traceId32;
+      requestHeaders['x-dynatrace-parent-span-id'] = spanId16;
+    }
+    
+    // Pass through any existing trace headers from incoming request
+    if (headers) {
+      Object.keys(headers).forEach(key => {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey === 'traceparent' || 
+            lowerKey === 'tracestate' ||
+            lowerKey.startsWith('x-dynatrace') ||
+            lowerKey.includes('trace') ||
+            lowerKey.includes('span')) {
+          requestHeaders[key] = headers[key];
+        }
+      });
+    }
+    
     const options = {
       hostname: '127.0.0.1',
       port,
@@ -70,7 +101,14 @@ function callService(serviceName, payload, headers = {}, overridePort) {
       method: 'POST',
       headers: requestHeaders
     };
-    console.log(`🔗 [${serviceName}] Calling service on port ${port} with headers:`, Object.keys(requestHeaders));
+    
+    console.log(`🔗 [${serviceName}] Calling service on port ${port} with Dynatrace headers:`, 
+      Object.keys(requestHeaders).filter(k => 
+        k.toLowerCase().includes('trace') || 
+        k.toLowerCase().includes('span') || 
+        k.toLowerCase().includes('dynatrace')
+      ));
+    
     const req = http.request(options, (res) => {
       let body = '';
       res.setEncoding('utf8');
@@ -78,7 +116,7 @@ function callService(serviceName, payload, headers = {}, overridePort) {
       res.on('end', () => {
         try { 
           const result = body ? JSON.parse(body) : {};
-          console.log(`✅ [${serviceName}] Service call completed successfully`);
+          console.log(`✅ [${serviceName}] Service call completed with trace propagation`);
           resolve(result); 
         } catch (e) { 
           console.error(`❌ [${serviceName}] Failed to parse response:`, e.message);

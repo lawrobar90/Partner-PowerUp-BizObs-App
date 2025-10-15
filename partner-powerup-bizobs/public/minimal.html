@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Partner PowerUp BizObs - Minimal</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      background: #181A20; 
+      color: white; 
+      font-family: 'Arial', sans-serif;
+      line-height: 1.6;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .header { 
+      background: #22242A; 
+      padding: 20px; 
+      border-radius: 8px; 
+      margin-bottom: 20px;
+      border: 1px solid #00D4FF;
+    }
+    .title { 
+      color: #00D4FF; 
+      font-size: 2rem; 
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .subtitle { color: #6C2C9C; font-size: 1.2rem; }
+    .section { 
+      background: #22242A; 
+      padding: 20px; 
+      border-radius: 8px; 
+      margin-bottom: 20px;
+      border: 1px solid #2D2D2D;
+    }
+    .section h2 { 
+      color: #00D4FF; 
+      margin-bottom: 15px; 
+      font-size: 1.5rem;
+    }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { 
+      display: block; 
+      color: #00D4FF; 
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    .form-control { 
+      width: 100%; 
+      padding: 10px; 
+      background: #23272F; 
+      border: 1px solid #00D4FF; 
+      border-radius: 4px;
+      color: white;
+      font-size: 14px;
+    }
+    .form-control:focus { 
+      outline: none; 
+      border-color: #6C2C9C;
+      box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+    }
+    .btn { 
+      padding: 12px 24px; 
+      background: #73BE28; 
+      color: black; 
+      border: none; 
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      transition: all 0.3s;
+    }
+    .btn:hover { 
+      background: #00D4FF; 
+      transform: translateY(-2px);
+    }
+    .btn-blue { background: #00A1C9; color: white; }
+    .btn-blue:hover { background: #00D4FF; }
+    .btn-purple { background: #6C2C9C; color: white; }
+    .btn-purple:hover { background: #8A4CB8; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { 
+      .grid { grid-template-columns: 1fr; }
+    }
+    .status { 
+      padding: 10px; 
+      border-radius: 4px; 
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    .status.success { background: #73BE28; color: black; }
+    .status.error { background: #FF6B6B; color: white; }
+    .status.info { background: #00A1C9; color: white; }
+    .output { 
+      background: #000; 
+      padding: 15px; 
+      border-radius: 4px; 
+      border: 1px solid #00D4FF;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .sidebar-toggle {
+      position: fixed;
+      left: 20px;
+      top: 20px;
+      z-index: 1000;
+      background: #22242A;
+      border: 1px solid #00D4FF;
+      border-radius: 8px;
+      padding: 12px;
+      color: #00D4FF;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <button class="sidebar-toggle">💾 Prompts</button>
+  
+  <div class="container">
+    <div class="header">
+      <div class="title">🚀 Partner PowerUp BizObs</div>
+      <div class="subtitle">Business Observability & Customer Journey Simulation</div>
+      <div style="margin-top: 10px; color: #73BE28;">✅ Server Status: Running</div>
+    </div>
+
+    <div class="grid">
+      <div class="section">
+        <h2>🎯 Journey Generation</h2>
+        <div class="form-group">
+          <label>Generation Method:</label>
+          <select class="form-control" id="generationMethod">
+            <option value="copilot">🤖 AI Copilot (Recommended)</option>
+            <option value="template">📋 Quick Template</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Company Name:</label>
+          <input type="text" class="form-control" id="companyName" placeholder="e.g., TechCorp">
+        </div>
+        
+        <div class="form-group">
+          <label>Domain:</label>
+          <input type="text" class="form-control" id="domain" placeholder="e.g., techcorp.com">
+        </div>
+        
+        <div class="form-group">
+          <label>Industry Type:</label>
+          <select class="form-control" id="industryType">
+            <option value="">Select Industry</option>
+            <option value="retail">🛍️ Retail</option>
+            <option value="telecommunications">📱 Telecommunications</option>
+            <option value="banking">🏦 Banking</option>
+            <option value="travel">✈️ Travel</option>
+            <option value="insurance">🛡️ Insurance</option>
+            <option value="healthcare">🏥 Healthcare</option>
+            <option value="education">🎓 Education</option>
+            <option value="technology">💻 Technology</option>
+          </select>
+        </div>
+        
+        <button class="btn" id="generateJourney">🚀 Generate Journey</button>
+        <button class="btn btn-blue" id="useRetailExample">📋 Use Retail Example</button>
+      </div>
+
+      <div class="section">
+        <h2>🔄 Journey Simulation</h2>
+        <div class="form-group">
+          <label>Simulation Type:</label>
+          <select class="form-control">
+            <option>6-Step Chained Flow</option>
+            <option>Single Journey</option>
+            <option>Batch Processing</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Number of Customers:</label>
+          <input type="number" class="form-control" value="5" min="1" max="100">
+        </div>
+        
+        <button class="btn btn-blue" id="runChainedFlow">🔗 Run Distributed Flow</button>
+        <button class="btn btn-purple" id="runJourneySimulation">🚀 Run Journey Simulation</button>
+        
+        <div id="simulationStatus" class="status info" style="display: none;">
+          Ready to simulate! Generate a journey first or click to test with default flow.
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>📊 Journey Output</h2>
+      <div id="journeyOutput" class="output">
+        Generate a journey to see the output here...
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>🔍 Simulation Results</h2>
+      <div id="simulationResults" class="output">
+        Run a simulation to see results here...
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="section">
+        <h2>📈 Live Metrics</h2>
+        <div id="metrics" class="output" style="max-height: 200px;">
+          Loading metrics...
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>📡 Live Events</h2>
+        <div id="liveEvents" class="output" style="max-height: 200px;">
+          Waiting for events...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    console.log('BizObs Minimal App Loading...');
+    
+    // Initialize Socket.IO
+    const socket = io();
+    
+    // Global variables
+    let currentJourney = null;
+    
+    // DOM elements
+    const generateBtn = document.getElementById('generateJourney');
+    const retailBtn = document.getElementById('useRetailExample');
+    const chainedBtn = document.getElementById('runChainedFlow');
+    const journeyBtn = document.getElementById('runJourneySimulation');
+    const journeyOutput = document.getElementById('journeyOutput');
+    const simulationResults = document.getElementById('simulationResults');
+    const simulationStatus = document.getElementById('simulationStatus');
+    const metricsEl = document.getElementById('metrics');
+    const liveEventsEl = document.getElementById('liveEvents');
+    
+    // Show status
+    simulationStatus.style.display = 'block';
+    
+    // Event handlers
+    generateBtn.addEventListener('click', generateJourney);
+    retailBtn.addEventListener('click', useRetailExample);
+    chainedBtn.addEventListener('click', runChainedFlow);
+    journeyBtn.addEventListener('click', runJourneySimulation);
+    
+    function generateJourney() {
+      const companyName = document.getElementById('companyName').value || 'TestCorp';
+      const domain = document.getElementById('domain').value || 'testcorp.com';
+      const industry = document.getElementById('industryType').value || 'retail';
+      
+      const journey = {
+        companyName,
+        domain,
+        industryType: industry,
+        steps: [
+          { stepName: 'Discovery', description: 'Customer discovery phase' },
+          { stepName: 'Awareness', description: 'Building awareness' },
+          { stepName: 'Consideration', description: 'Evaluating options' },
+          { stepName: 'Purchase', description: 'Making purchase decision' },
+          { stepName: 'Completion', description: 'Completing transaction' },
+          { stepName: 'Retention', description: 'Customer retention' }
+        ]
+      };
+      
+      currentJourney = journey;
+      journeyOutput.textContent = JSON.stringify({ journey }, null, 2);
+      simulationStatus.textContent = `✅ Journey created for ${companyName}! Ready to simulate.`;
+      simulationStatus.className = 'status success';
+    }
+    
+    function useRetailExample() {
+      currentJourney = {
+        companyName: 'ShopMart',
+        domain: 'shopmart.com',
+        industryType: 'retail',
+        steps: [
+          { stepName: 'Product Discovery', description: 'Customer browsing products' },
+          { stepName: 'Product Selection', description: 'Selecting specific items' },
+          { stepName: 'Cart Addition', description: 'Adding items to cart' },
+          { stepName: 'Checkout Process', description: 'Processing checkout' },
+          { stepName: 'Order Confirmation', description: 'Confirming order' },
+          { stepName: 'Post Purchase', description: 'Post-purchase activities' }
+        ]
+      };
+      
+      document.getElementById('companyName').value = 'ShopMart';
+      document.getElementById('domain').value = 'shopmart.com';
+      document.getElementById('industryType').value = 'retail';
+      
+      journeyOutput.textContent = JSON.stringify({ journey: currentJourney }, null, 2);
+      simulationStatus.textContent = '✅ ShopMart retail journey loaded! Ready to simulate.';
+      simulationStatus.className = 'status success';
+    }
+    
+    async function runChainedFlow() {
+      simulationStatus.textContent = '🚀 Starting distributed flow...';
+      simulationStatus.className = 'status info';
+      
+      try {
+        const steps = currentJourney ? currentJourney.steps.map(s => ({ stepName: s.stepName })) : [
+          { stepName: 'Discovery' },
+          { stepName: 'Awareness' },
+          { stepName: 'Consideration' },
+          { stepName: 'Purchase' },
+          { stepName: 'Completion' }
+        ];
+        
+        const response = await fetch('/api/steps/step1-chained', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            steps,
+            companyName: currentJourney?.companyName || 'TestCorp',
+            domain: currentJourney?.domain || 'testcorp.com',
+            industryType: currentJourney?.industryType || 'general'
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.ok) {
+          simulationStatus.textContent = `✅ Distributed flow completed! ${result.result.trace.length} steps traced.`;
+          simulationStatus.className = 'status success';
+          simulationResults.textContent = JSON.stringify(result.result, null, 2);
+        } else {
+          simulationStatus.textContent = `❌ Flow failed: ${result.error}`;
+          simulationStatus.className = 'status error';
+        }
+      } catch (error) {
+        simulationStatus.textContent = `❌ Error: ${error.message}`;
+        simulationStatus.className = 'status error';
+      }
+    }
+    
+    async function runJourneySimulation() {
+      simulationStatus.textContent = '🚀 Starting journey simulation...';
+      simulationStatus.className = 'status info';
+      
+      try {
+        const journeyData = currentJourney || {
+          companyName: 'TestCorp',
+          domain: 'testcorp.com',
+          industryType: 'general',
+          steps: [
+            { stepName: 'Discovery' },
+            { stepName: 'Purchase' },
+            { stepName: 'Completion' }
+          ]
+        };
+        
+        const response = await fetch('/api/journey-simulation/simulate-journey', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            journeyId: `journey_${Date.now()}`,
+            customerId: `customer_${Date.now()}`,
+            aiJourney: journeyData
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          simulationStatus.textContent = `✅ Journey simulation completed! ${result.journey.completedSteps}/${result.journey.totalSteps} steps successful.`;
+          simulationStatus.className = 'status success';
+          simulationResults.textContent = JSON.stringify(result.journey, null, 2);
+        } else {
+          simulationStatus.textContent = `❌ Simulation failed: ${result.error}`;
+          simulationStatus.className = 'status error';
+        }
+      } catch (error) {
+        simulationStatus.textContent = `❌ Error: ${error.message}`;
+        simulationStatus.className = 'status error';
+      }
+    }
+    
+    // Load metrics
+    async function loadMetrics() {
+      try {
+        const response = await fetch('/api/metrics');
+        const metrics = await response.json();
+        metricsEl.textContent = JSON.stringify(metrics, null, 2);
+      } catch (error) {
+        metricsEl.textContent = 'Error loading metrics';
+      }
+    }
+    
+    // Socket.IO event handlers
+    socket.on('connect', () => {
+      liveEventsEl.textContent = '🟢 Connected to live events\n';
+    });
+    
+    socket.on('bizEvent', (event) => {
+      const eventText = `${new Date().toLocaleTimeString()} - ${event.journeyStep} - ${event.email} - $${event.cost}\n`;
+      liveEventsEl.textContent = eventText + liveEventsEl.textContent;
+      
+      // Keep only last 20 events
+      const lines = liveEventsEl.textContent.split('\n');
+      if (lines.length > 20) {
+        liveEventsEl.textContent = lines.slice(0, 20).join('\n');
+      }
+    });
+    
+    // Initialize
+    loadMetrics();
+    setInterval(loadMetrics, 5000);
+    
+    console.log('✅ BizObs Minimal App Loaded Successfully!');
+  </script>
+</body>
+</html>

@@ -7,7 +7,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "NODE_ENV=development node server.js"
+    "dev": "NODE_ENV=development node server.js",
+    "validate": "node scripts/validate-startup.cjs",
+    "restart-services": "curl -X POST http://localhost:4000/api/admin/services/restart-all"
   },
   "dependencies": {
     "compression": "^1.7.4",
@@ -17,5 +19,8 @@
     "morgan": "^1.10.0",
     "socket.io": "^4.7.5",
     "uuid": "^9.0.1"
+  },
+  "optionalDependencies": {
+    "@dynatrace/oneagent-sdk": "^1.5.0"
   }
 }

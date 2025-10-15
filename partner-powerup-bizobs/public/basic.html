@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><title>BizObs Basic</title></head>
+<body style="background:#181A20;color:white;padding:20px;font-family:Arial;">
+<h1 style="color:#00D4FF;">🚀 BizObs Working</h1>
+<p>✅ Server is responding</p>
+<p>✅ HTML is loading</p>
+<button onclick="testAPI()">Test API</button>
+<div id="result" style="background:#000;padding:10px;margin:10px 0;border:1px solid #00D4FF;">Click test button...</div>
+<script>
+async function testAPI() {
+  try {
+    document.getElementById('result').textContent = 'Testing...';
+    const res = await fetch('/api/health');
+    const data = await res.json();
+    document.getElementById('result').textContent = '✅ API Working: ' + data.status;
+  } catch(e) {
+    document.getElementById('result').textContent = '❌ Error: ' + e.message;
+  }
+}
+console.log('✅ Page loaded');
+</script>
+</body>
+</html>

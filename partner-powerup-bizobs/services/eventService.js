@@ -49,6 +49,9 @@ const eventService = {
   async emitEvent(eventType, data) {
     try {
       const { stepName, substeps } = data;
+      const companyName = data.companyName || 'DefaultCompany';
+      const domain = data.domain || 'default.com';
+      const industryType = data.industryType || 'general';
       const correlationId = data.correlationId || uuidv4();
       
       console.log(`📊 Processing ${eventType} for step: ${stepName}`);
@@ -62,7 +65,13 @@ const eventService = {
 
         try {
           for (const s of stepsArr) {
-            ensureServiceRunning(s.stepName);
+            ensureServiceRunning(s.stepName, {
+              companyName,
+              domain,
+              industryType,
+              stepName: s.stepName,
+              serviceName: s.serviceName
+            });
           }
         } catch (e) {
           console.warn('[EventService] ensureServiceRunning error (non-fatal):', e.message);
@@ -79,6 +88,9 @@ const eventService = {
           correlationId,
           parentStep: stepName,
           timestamp: new Date().toISOString(),
+          companyName,
+          domain,
+          industryType,
           // Provide the full sequence for child chaining
           steps: stepsArr
         };
@@ -117,7 +129,9 @@ export async function simulateEvents({ io, journey, customerProfile, traceMetada
   let emitted = 0;
 
   const stepsArr = journey?.steps?.length ? journey.steps : null;
-  const domain = inferDomain(journey);
+  const domain = journey?.domain || inferDomain(journey);
+  const companyName = journey?.companyName || 'DefaultCompany';
+  const industryType = journey?.industryType || 'general';
   const journeyId = journey?.journeyId || journey?.id;
   
   // Use the enhanced event service for processing
@@ -135,7 +149,9 @@ export async function simulateEvents({ io, journey, customerProfile, traceMetada
           }],
           correlationId: correlationId || `sim_${Date.now()}`,
           journeyId,
-          domain
+          domain,
+          companyName,
+          industryType
         });
       } catch (error) {
         console.error(`Error processing step ${step.stepName}:`, error);

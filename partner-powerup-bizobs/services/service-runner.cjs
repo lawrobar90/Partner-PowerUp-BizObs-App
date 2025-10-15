@@ -50,12 +50,11 @@ function createService(serviceName, mountFn) {
     const dynatraceServiceName = process.env.SERVICE_NAME || serviceName;
     const stepName = payload.stepName || process.env.STEP_NAME || serviceName.replace('Service', '').replace('-service', '');
 
-  // Avoid setting tracing-related headers that could conflict with OneAgent's propagation
-  // Keep only non-tracing custom context headers
-  res.setHeader('X-Service-Name', dynatraceServiceName);
-  res.setHeader('x-journey-step', stepName);
+    // Set response headers for OneAgent service detection
+    res.setHeader('X-Service-Name', dynatraceServiceName);
+    res.setHeader('x-journey-step', stepName);
 
-    // Custom journey tracking headers
+    // Custom journey tracking headers for business context
     if (payload.journeyId) {
       res.setHeader('x-journey-id', payload.journeyId);
     }
@@ -65,6 +64,9 @@ function createService(serviceName, mountFn) {
     if (payload.domain) {
       res.setHeader('x-customer-segment', payload.domain);
     }
+    if (payload.companyName) {
+      res.setHeader('x-company', payload.companyName);
+    }
 
     // Add/propagate correlation ID
     req.correlationId = inboundCorrelation || crypto.randomBytes(8).toString('hex');
@@ -73,7 +75,12 @@ function createService(serviceName, mountFn) {
     if (inboundTracestate) req.dynatraceHeaders.tracestate = inboundTracestate;
     req.serviceName = dynatraceServiceName; // Use the actual service name
 
-    // Log service identification for debugging
+  // Add company context headers for visibility
+  res.setHeader('x-company-name', process.env.COMPANY_NAME || 'DefaultCompany');
+  res.setHeader('x-company-domain', process.env.DOMAIN || 'default.com');
+  res.setHeader('x-industry-type', process.env.INDUSTRY_TYPE || 'general');
+
+  // Log service identification for debugging
     console.log(`[${dynatraceServiceName}] Service identified with PID ${process.pid}, handling ${req.method} ${req.path}`);
 
     next();
