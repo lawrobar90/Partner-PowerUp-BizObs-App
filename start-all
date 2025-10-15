@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-# Start both apps
-./project-control.sh start all
