@@ -11,6 +11,18 @@ const __dirname = path.dirname(__filename);
 const childServices = {};
 const childServiceMeta = {};
 const portAllocations = new Map(); // Track port usage to prevent conflicts
+const portRange = { min: 4101, max: 4299 }; // Expanded port range for more services
+const portPool = new Set(); // Available ports pool
+
+// Initialize port pool
+function initializePortPool() {
+  for (let port = portRange.min; port <= portRange.max; port++) {
+    portPool.add(port);
+  }
+}
+
+// Initialize the port pool on startup
+initializePortPool();
 
 // Check if a service port is ready to accept connections
 export async function isServiceReady(port, timeout = 5000) {
@@ -103,7 +115,7 @@ export function getServiceNameFromStep(stepName, context = {}) {
   return serviceName;
 }
 
-// Get port for service using consistent hash-based allocation
+// Get port for service using improved allocation strategy
 export function getServicePort(stepName) {
   const serviceName = getServiceNameFromStep(stepName);
   if (!serviceName) return null;
@@ -115,43 +127,73 @@ export function getServicePort(stepName) {
     return existingPort;
   }
   
-  // Create a consistent hash-based port allocation
-  let hash = 0;
-  for (let i = 0; i < serviceName.length; i++) {
-    const char = serviceName.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
+  // For high availability, use a round-robin approach with fallback
+  let port = null;
+  
+  // First, try to get a port from the available pool
+  if (portPool.size > 0) {
+    // Convert set to array and get first available port
+    const availablePorts = Array.from(portPool);
+    port = availablePorts[0];
+    portPool.delete(port);
+    portAllocations.set(serviceName, port);
+    console.log(`[service-manager] Service "${serviceName}" allocated port ${port} from pool (${portPool.size} remaining)`);
+    return port;
   }
   
-  // Map to port range 4101-4199, but ensure it's not already taken
-  let port = 4101 + (Math.abs(hash) % 99);
-  let attempts = 0;
-  const maxAttempts = 99;
-  
-  // Find an available port
-  while (attempts < maxAttempts) {
-    const portInUse = Array.from(portAllocations.values()).includes(port);
+  // If pool is empty, try to find any unused port in range
+  for (let p = portRange.min; p <= portRange.max; p++) {
+    const portInUse = Array.from(portAllocations.values()).includes(p);
     if (!portInUse) {
-      portAllocations.set(serviceName, port);
-      console.log(`[service-manager] Service "${serviceName}" mapped to port ${port}`);
-      return port;
-    }
-    // Try next port in range
-    port = 4101 + ((Math.abs(hash) + attempts + 1) % 99);
-    attempts++;
-  }
-  
-  // Fallback to any available port in range
-  for (let p = 4101; p <= 4199; p++) {
-    if (!Array.from(portAllocations.values()).includes(p)) {
       portAllocations.set(serviceName, p);
-      console.log(`[service-manager] Service "${serviceName}" mapped to fallback port ${p}`);
+      console.log(`[service-manager] Service "${serviceName}" allocated fallback port ${p}`);
       return p;
     }
   }
   
-  console.error(`[service-manager] No available ports for service "${serviceName}"`);
+  // If all ports are taken, force cleanup of dead services and retry
+  console.warn(`[service-manager] All ports exhausted, attempting cleanup for service "${serviceName}"`);
+  cleanupDeadServices();
+  
+  // Try again after cleanup
+  if (portPool.size > 0) {
+    const availablePorts = Array.from(portPool);
+    port = availablePorts[0];
+    portPool.delete(port);
+    portAllocations.set(serviceName, port);
+    console.log(`[service-manager] Service "${serviceName}" allocated port ${port} after cleanup`);
+    return port;
+  }
+  
+  console.error(`[service-manager] No available ports for service "${serviceName}" even after cleanup`);
   return null;
+}
+
+// Cleanup dead services and free their ports
+function cleanupDeadServices() {
+  const deadServices = [];
+  
+  for (const [serviceName, child] of Object.entries(childServices)) {
+    if (child.killed || child.exitCode !== null) {
+      deadServices.push(serviceName);
+    }
+  }
+  
+  deadServices.forEach(serviceName => {
+    console.log(`[service-manager] Cleaning up dead service: ${serviceName}`);
+    delete childServices[serviceName];
+    delete childServiceMeta[serviceName];
+    
+    // Free the port allocation
+    if (portAllocations.has(serviceName)) {
+      const port = portAllocations.get(serviceName);
+      portAllocations.delete(serviceName);
+      portPool.add(port);
+      console.log(`[service-manager] Freed port ${port} from dead service ${serviceName}`);
+    }
+  });
+  
+  console.log(`[service-manager] Cleanup completed: ${deadServices.length} dead services removed, ${portPool.size} ports available`);
 }
 
 // Start child service process
@@ -214,10 +256,12 @@ export function startChildService(serviceName, scriptPath, env = {}) {
     console.log(`[${serviceName}] exited with code ${code}`);
     delete childServices[serviceName];
     delete childServiceMeta[serviceName];
-    // Free up the port allocation
+    // Free up the port allocation and return to pool
     if (portAllocations.has(serviceName)) {
-      console.log(`[service-manager] Freeing port for service ${serviceName}`);
+      const port = portAllocations.get(serviceName);
       portAllocations.delete(serviceName);
+      portPool.add(port);
+      console.log(`[service-manager] Freed port ${port} for service ${serviceName}, returned to pool (${portPool.size} available)`);
     }
   });
   
@@ -276,9 +320,12 @@ export async function ensureServiceRunning(stepName, companyContext = {}) {
       try { existing.kill('SIGTERM'); } catch {}
       delete childServices[serviceName];
       delete childServiceMeta[serviceName];
-      // Free the port allocation
+      // Free the port allocation and return to pool
       if (portAllocations.has(serviceName)) {
+        const port = portAllocations.get(serviceName);
         portAllocations.delete(serviceName);
+        portPool.add(port);
+        console.log(`[service-manager] Freed port ${port} for restarting service ${serviceName}`);
       }
     }
     console.log(`[service-manager] Service ${serviceName} not running, starting it for company: ${companyName}...`);
@@ -355,8 +402,12 @@ export async function ensureServiceRunning(stepName, companyContext = {}) {
         try { existing.kill('SIGTERM'); } catch {}
         delete childServices[serviceName];
         delete childServiceMeta[serviceName];
+        // Free the port allocation and return to pool
         if (portAllocations.has(serviceName)) {
+          const port = portAllocations.get(serviceName);
           portAllocations.delete(serviceName);
+          portPool.add(port);
+          console.log(`[service-manager] Freed port ${port} for unresponsive service ${serviceName}`);
         }
         // Restart the service
         return ensureServiceRunning(stepName, companyContext);
@@ -376,11 +427,17 @@ export function getChildServiceMeta() {
   return childServiceMeta;
 }
 
-// Stop all services
+// Stop all services and free all ports
 export function stopAllServices() {
   Object.values(childServices).forEach(child => {
     child.kill('SIGTERM');
   });
+  
+  // Clear all allocations and reset port pool
+  portAllocations.clear();
+  portPool.clear();
+  initializePortPool();
+  console.log(`[service-manager] All services stopped, port pool reset (${portPool.size} ports available)`);
 }
 
 // Convenience helper: ensure a service is started and ready (health endpoint responding)
@@ -398,4 +455,85 @@ export async function ensureServiceReadyForStep(stepName, companyContext = {}, t
     // Nudge start in case child crashed
     ensureServiceRunning(stepName, companyContext);
   }
+}
+
+// Health monitoring function to detect and resolve port conflicts
+export async function performHealthCheck() {
+  const healthResults = {
+    totalServices: Object.keys(childServices).length,
+    healthyServices: 0,
+    unhealthyServices: 0,
+    portConflicts: 0,
+    availablePorts: portPool.size,
+    issues: []
+  };
+  
+  for (const [serviceName, child] of Object.entries(childServices)) {
+    const meta = childServiceMeta[serviceName];
+    if (!meta || !meta.port) {
+      healthResults.issues.push(`Service ${serviceName} has no port metadata`);
+      continue;
+    }
+    
+    try {
+      const isHealthy = await isServiceReady(meta.port, 2000);
+      if (isHealthy) {
+        healthResults.healthyServices++;
+      } else {
+        healthResults.unhealthyServices++;
+        healthResults.issues.push(`Service ${serviceName} not responding on port ${meta.port}`);
+        
+        // Try to restart unresponsive service
+        console.log(`[service-manager] Health check: restarting unresponsive service ${serviceName}`);
+        try {
+          child.kill('SIGTERM');
+          delete childServices[serviceName];
+          delete childServiceMeta[serviceName];
+          
+          // Free the port and return to pool
+          if (portAllocations.has(serviceName)) {
+            const port = portAllocations.get(serviceName);
+            portAllocations.delete(serviceName);
+            portPool.add(port);
+          }
+          
+          // Allow some time for cleanup
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+          healthResults.issues.push(`Failed to restart service ${serviceName}: ${error.message}`);
+        }
+      }
+    } catch (error) {
+      healthResults.unhealthyServices++;
+      healthResults.issues.push(`Health check failed for ${serviceName}: ${error.message}`);
+    }
+  }
+  
+  // Check for port conflicts
+  const usedPorts = Array.from(portAllocations.values());
+  const duplicatePorts = usedPorts.filter((port, index) => usedPorts.indexOf(port) !== index);
+  if (duplicatePorts.length > 0) {
+    healthResults.portConflicts = duplicatePorts.length;
+    healthResults.issues.push(`Port conflicts detected: ${duplicatePorts.join(', ')}`);
+  }
+  
+  return healthResults;
+}
+
+// Get comprehensive service status
+export function getServiceStatus() {
+  return {
+    activeServices: Object.keys(childServices).length,
+    availablePorts: portPool.size,
+    allocatedPorts: portAllocations.size,
+    portRange: `${portRange.min}-${portRange.max}`,
+    services: Object.entries(childServices).map(([name, child]) => ({
+      name,
+      pid: child.pid,
+      port: childServiceMeta[name]?.port || 'unknown',
+      company: childServiceMeta[name]?.companyName || 'unknown',
+      startTime: childServiceMeta[name]?.startTime || 'unknown',
+      alive: !child.killed && child.exitCode === null
+    }))
+  };
 }

@@ -9,6 +9,13 @@ echo "NPM version: $(npm --version)"
 # Kill any existing processes
 pkill -f "node server.js" || true
 
+# Disable Dynatrace RUM injection to prevent API calls
+export DT_JAVASCRIPT_INJECTION=false
+export DT_JAVASCRIPT_INLINE_INJECTION=false  
+export DT_RUM_INJECTION=false
+export DT_BOOTSTRAP_INJECTION=false
+export DT_ACTIVEGATE_URL=""
+
 # Wait a moment
 sleep 2
 

@@ -1,14 +1,33 @@
 # Partner PowerUp BizObs App - Deployment Guide
 
-## 🚀 Successfully Deployed
+A comprehensive Business Observability application for customer journey simulation and monitoring with Dynatrace integration.
 
-The Partner PowerUp BizObs App has been successfully uploaded to GitHub:
-**Repository**: https://github.com/lawrobar90/Partner-PowerUp-BizObs-App
+## 🚀 Quick Deployment (New EC2 Instance)
 
-## 📋 Current Features
+### Prerequisites
+- Fresh EC2 instance (Amazon Linux 2, Ubuntu 18.04+, or RHEL 8+)
+- SSH access to the instance
+- Internet connectivity for package downloads
 
-### ✅ Dynamic Service Chaining
-- **Sequential Flow**: Step1Service → Step2Service → Step3Service → Step4Service → Step5Service → Step6Service
+### One-Command Deployment
+
+```bash
+# Clone the repository and run deployment
+git clone https://github.com/lawrobar90/Partner-PowerUp-BizObs-App.git
+cd Partner-PowerUp-BizObs-App
+chmod +x deploy.sh
+./deploy.sh
+```
+
+The deployment script will:
+- ✅ Update system packages
+- ✅ Install Node.js 18.x
+- ✅ Install PM2 process manager
+- ✅ Install application dependencies
+- ✅ Configure environment variables
+- ✅ Set up firewall rules
+- ✅ Create service management scripts
+- ✅ Configure auto-startup
 - **Dynamic Mapping**: Any customer `stepName` automatically maps to appropriate `StepXService`
 - **Proper Dynatrace Visualization**: Shows connected linear flow instead of star pattern
 

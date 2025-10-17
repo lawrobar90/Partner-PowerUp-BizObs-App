@@ -16,7 +16,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import { randomBytes } from 'crypto';
-import { ensureServiceRunning, getServiceNameFromStep, getServicePort, stopAllServices, getChildServices, getChildServiceMeta } from './services/service-manager.js';
+import { ensureServiceRunning, getServiceNameFromStep, getServicePort, stopAllServices, getChildServices, getChildServiceMeta, performHealthCheck, getServiceStatus } from './services/service-manager.js';
 
 import journeyRouter from './routes/journey.js';
 import simulateRouter from './routes/simulate.js';
@@ -291,6 +291,20 @@ app.use('/api/service-proxy', serviceProxyRouter);
 app.use('/api/journey-simulation', journeySimulationRouter);
 app.use('/api/config', configRouter);
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'healthy', 
+        timestamp: new Date().toISOString(),
+        services: 'running'
+    });
+});
+
+// Favicon endpoint
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end();
+});
+
 // Enhanced error testing endpoint
 app.post('/api/test/error-trace', async (req, res) => {
   try {
@@ -521,6 +535,53 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Comprehensive health check endpoint
+app.get('/api/health/detailed', async (req, res) => {
+  try {
+    const healthCheck = await performHealthCheck();
+    const serviceStatus = getServiceStatus();
+    
+    res.json({
+      status: healthCheck.unhealthyServices === 0 ? 'healthy' : 'degraded',
+      timestamp: new Date().toISOString(),
+      healthCheck,
+      serviceStatus,
+      mainProcess: {
+        pid: process.pid,
+        uptime: process.uptime(),
+        port: PORT,
+        memoryUsage: process.memoryUsage()
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Port status endpoint
+app.get('/api/admin/ports', (req, res) => {
+  try {
+    const serviceStatus = getServiceStatus();
+    res.json({
+      ok: true,
+      timestamp: new Date().toISOString(),
+      portStatus: {
+        available: serviceStatus.availablePorts,
+        allocated: serviceStatus.allocatedPorts,
+        total: 199, // 4101-4299 range
+        range: serviceStatus.portRange
+      },
+      services: serviceStatus.services
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
 // Simple metrics endpoint to silence polling 404s
 app.get('/api/metrics', (req, res) => {
   res.setHeader('Content-Type', 'text/plain');
@@ -655,14 +716,37 @@ server.listen(PORT, () => {
         console.error('❌ Error during startup validation:', error.message);
       }
     }, 3000);
-  }).catch(error => {
+    }).catch(error => {
     console.error('❌ Critical error during service startup:', error.message);
   });
+  
+  // Start periodic health monitoring every 30 seconds
+  const healthMonitor = setInterval(async () => {
+    try {
+      const healthCheck = await performHealthCheck();
+      if (healthCheck.unhealthyServices > 0 || healthCheck.portConflicts > 0) {
+        console.warn(`⚠️  Health check issues: ${healthCheck.unhealthyServices} unhealthy services, ${healthCheck.portConflicts} port conflicts, ${healthCheck.availablePorts} ports available`);
+        if (healthCheck.issues.length > 0) {
+          console.warn('Issues:', healthCheck.issues.slice(0, 3).join(', '));
+        }
+      }
+    } catch (error) {
+      console.error('❌ Health monitor error:', error.message);
+    }
+  }, 30000);
+  
+  // Store health monitor for cleanup
+  server.healthMonitor = healthMonitor;
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
+  
+  // Stop health monitor
+  if (server.healthMonitor) {
+    clearInterval(server.healthMonitor);
+  }
   
   // Close child services
   stopAllServices();
@@ -675,6 +759,11 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('🛑 Received SIGINT, shutting down gracefully...');
+  
+  // Stop health monitor
+  if (server.healthMonitor) {
+    clearInterval(server.healthMonitor);
+  }
   
   // Close child services using service manager
   stopAllServices();
