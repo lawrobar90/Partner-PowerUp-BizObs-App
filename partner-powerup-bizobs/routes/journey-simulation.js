@@ -680,173 +680,185 @@ router.post('/simulate-multiple-journeys', async (req, res) => {
       });
     }
 
-    const results = [];
     let totalSuccessful = 0;
     let totalFailed = 0;
 
-    console.log(`[journey-sim] Running ${customers} customer journeys`);
+    console.log(`[journey-sim] Running ${customers} customer journeys in parallel`);
+
+    // Pre-start all required services to avoid startup delays during parallel execution
+    const stepData = journeyObj.steps.slice(0, 6).map(step => {
+      const stepName = step.stepName || step.name || step.step || step.title || 'UnknownStep';
+      const description = step.description || step.action || step.summary || '';
+      const category = step.category || step.type || step.phase || '';
+      
+      return {
+        stepName,
+        serviceName: getServiceNameFromStep(stepName),
+        description,
+        category,
+        // Include Copilot duration fields for OneAgent capture
+        estimatedDuration: step.estimatedDuration,
+        businessRationale: step.businessRationale,
+        substeps: step.substeps,
+        originalStep: step,
+        hasError: false
+      };
+    });
+
+    // Pre-start all services in parallel to avoid startup delays
+    console.log(`[journey-sim] Pre-starting services for better performance...`);
+    await Promise.all(stepData.map(step => 
+      ensureServiceRunning(step.stepName, journeyObj.company || 'DefaultCompany')
+    ));
+    console.log(`[journey-sim] All services pre-started, beginning parallel journey execution`);
+
+    // Process all customer journeys in parallel with controlled concurrency
+    const batchSize = Math.min(customers, 10); // Limit concurrent journeys to avoid overwhelming system
+    const journeyPromises = [];
 
     for (let customerIndex = 0; customerIndex < customers; customerIndex++) {
-      try {
-        // Generate unique IDs for each customer
-        const uniqueId = Date.now() + customerIndex;
-        const journeyId = `journey_${uniqueId}`;
-        const customerId = `customer_${uniqueId}`;
-        const correlationId = crypto.randomUUID();
+      const processCustomerJourney = async () => {
+        try {
+          // Generate unique IDs for each customer
+          const uniqueId = Date.now() + customerIndex + Math.random() * 1000;
+          const journeyId = `journey_${uniqueId}`;
+          const customerId = `customer_${uniqueId}`;
+          const correlationId = crypto.randomUUID();
 
-        console.log(`[journey-sim] Starting journey for customer ${customerIndex + 1}, correlationId: ${correlationId}`);
+          console.log(`[journey-sim] Starting journey for customer ${customerIndex + 1}, correlationId: ${correlationId}`);
 
-        // Prepare step data with duration fields from Copilot response
-        const stepData = journeyObj.steps.slice(0, 6).map(step => {
-          const stepName = step.stepName || step.name || step.step || step.title || 'UnknownStep';
-          const description = step.description || step.action || step.summary || '';
-          const category = step.category || step.type || step.phase || '';
-          
-          return {
-            stepName,
-            serviceName: getServiceNameFromStep(stepName),
-            description,
-            category,
-            // Include Copilot duration fields for OneAgent capture
-            estimatedDuration: step.estimatedDuration,
-            businessRationale: step.businessRationale,
-            substeps: step.substeps,
-            originalStep: step,
-            hasError: false
+          // Simulate the journey
+          const customerJourney = {
+            customerIndex: customerIndex + 1,
+            journeyId,
+            customerId, 
+            correlationId,
+            stepNames: stepData.map(s => s.stepName),
+            serviceNames: stepData.map(s => s.serviceName),
+            steps: [],
+            totalTime: 0,
+            status: 'in_progress'
           };
-        });
 
-        // Simulate the journey
-        const customerJourney = {
-          customerIndex: customerIndex + 1,
-          journeyId,
-          customerId, 
-          correlationId,
-          stepNames: stepData.map(s => s.stepName),
-          serviceNames: stepData.map(s => s.serviceName),
-          steps: [],
-          totalTime: 0,
-          status: 'in_progress'
-        };
+          // Process each step in sequence (steps within a journey must be sequential for proper trace chaining)
+          for (let stepIndex = 0; stepIndex < stepData.length; stepIndex++) {
+            const step = stepData[stepIndex];
+            const stepStartTime = Date.now();
 
-        // Process each step in sequence
-        for (let stepIndex = 0; stepIndex < stepData.length; stepIndex++) {
-          const step = stepData[stepIndex];
-          const stepStartTime = Date.now();
+            try {
+              const port = getServicePort(step.stepName);
 
-          try {
-            // Ensure service is running for this step
-            await ensureServiceRunning(step.stepName, journeyObj.company || 'DefaultCompany');
-            const port = getServicePort(step.stepName);
+              // Build payload with duration fields from Copilot response
+              const payload = {
+                journeyId,
+                customerId,
+                correlationId,
+                startTime: new Date().toISOString(),
+                companyName: journeyObj.company || 'DefaultCompany',
+                domain: journeyObj.domain || 'default.com',
+                industryType: journeyObj.industry || 'general',
+                additionalFields: journeyObj.additionalFields || {},
+                customerProfile: journeyObj.customerProfile || {},
+                traceMetadata: journeyObj.traceMetadata || {},
+                sources: journeyObj.sources || [],
+                provider: journeyObj.provider || 'unknown',
+                steps: stepData,
+                stepName: step.stepName,
+                thinkTimeMs,
+                hasError: false,
+                // Add duration fields from Copilot response for OneAgent capture
+                estimatedDuration: step.estimatedDuration,
+                businessRationale: step.businessRationale,
+                category: step.category,
+                substeps: step.substeps,
+                // Convert estimated duration from minutes to milliseconds for processing simulation
+                estimatedDurationMs: step.estimatedDuration ? step.estimatedDuration * 60 * 1000 : null
+              };
 
-            // Build payload with duration fields from Copilot response
-            const payload = {
-              journeyId,
-              customerId,
-              correlationId,
-              startTime: new Date().toISOString(),
-              companyName: journeyObj.company || 'DefaultCompany',
-              domain: journeyObj.domain || 'default.com',
-              industryType: journeyObj.industry || 'general',
-              additionalFields: journeyObj.additionalFields || {},
-              customerProfile: journeyObj.customerProfile || {},
-              traceMetadata: journeyObj.traceMetadata || {},
-              sources: journeyObj.sources || [],
-              provider: journeyObj.provider || 'unknown',
-              steps: stepData,
-              stepName: step.stepName,
-              thinkTimeMs,
-              hasError: false,
-              // Add duration fields from Copilot response for OneAgent capture
-              estimatedDuration: step.estimatedDuration,
-              businessRationale: step.businessRationale,
-              category: step.category,
-              substeps: step.substeps,
-              // Convert estimated duration from minutes to milliseconds for processing simulation
-              estimatedDurationMs: step.estimatedDuration ? step.estimatedDuration * 60 * 1000 : null
-            };
+              // Call the service
+              const traceHeaders = {
+                'traceparent': `00-${crypto.randomBytes(16).toString('hex')}-${crypto.randomBytes(8).toString('hex')}-01`,
+                'x-correlation-id': correlationId
+              };
 
-            // Call the service
-            const traceHeaders = {
-              'traceparent': `00-${crypto.randomBytes(16).toString('hex')}-${crypto.randomBytes(8).toString('hex')}-01`,
-              'x-correlation-id': correlationId
-            };
+              const response = await callDynamicService(step.stepName, port, payload, traceHeaders);
+              const processingTime = Date.now() - stepStartTime;
 
-            const response = await callDynamicService(step.stepName, port, payload, traceHeaders);
-            const processingTime = Date.now() - stepStartTime;
+              const stepResult = {
+                stepName: step.stepName,
+                serviceName: step.serviceName,
+                processingTime,
+                status: (response && response.httpStatus && response.httpStatus < 400) ? 'completed' : 'failed',
+                httpStatus: response?.httpStatus || 200,
+                // Include duration fields from Copilot response
+                estimatedDuration: step.estimatedDuration,
+                businessRationale: step.businessRationale,
+                category: step.category,
+                substeps: step.substeps
+              };
 
-            const stepResult = {
-              stepName: step.stepName,
-              serviceName: step.serviceName,
-              processingTime,
-              status: (response && response.httpStatus && response.httpStatus < 400) ? 'completed' : 'failed',
-              httpStatus: response?.httpStatus || 200,
-              // Include duration fields from Copilot response
-              estimatedDuration: step.estimatedDuration,
-              businessRationale: step.businessRationale,
-              category: step.category,
-              substeps: step.substeps
-            };
+              customerJourney.steps.push(stepResult);
+              customerJourney.totalTime += processingTime;
 
-            customerJourney.steps.push(stepResult);
-            customerJourney.totalTime += processingTime;
+              // Small delay between steps (reduced for better performance)
+              if (stepIndex < stepData.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, Math.max(50, thinkTimeMs / 2)));
+              }
 
-            // Small delay between steps
-            if (stepIndex < stepData.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, thinkTimeMs));
+            } catch (stepError) {
+              console.error(`[journey-sim] Step ${step.stepName} failed for customer ${customerIndex + 1}:`, stepError.message);
+              const processingTime = Date.now() - stepStartTime;
+              
+              customerJourney.steps.push({
+                stepName: step.stepName,
+                serviceName: step.serviceName,
+                processingTime,
+                status: 'failed',
+                error: stepError.message,
+                // Include duration fields from Copilot response even on failure
+                estimatedDuration: step.estimatedDuration,
+                businessRationale: step.businessRationale,
+                category: step.category,
+                substeps: step.substeps
+              });
+              customerJourney.totalTime += processingTime;
+              break; // Stop processing further steps for this customer
             }
-
-          } catch (stepError) {
-            console.error(`[journey-sim] Step ${step.stepName} failed for customer ${customerIndex + 1}:`, stepError.message);
-            const processingTime = Date.now() - stepStartTime;
-            
-            customerJourney.steps.push({
-              stepName: step.stepName,
-              serviceName: step.serviceName,
-              processingTime,
-              status: 'failed',
-              error: stepError.message,
-              // Include duration fields from Copilot response even on failure
-              estimatedDuration: step.estimatedDuration,
-              businessRationale: step.businessRationale,
-              category: step.category,
-              substeps: step.substeps
-            });
-            customerJourney.totalTime += processingTime;
-            break; // Stop processing further steps for this customer
           }
+
+          // Determine final status
+          const completedSteps = customerJourney.steps.filter(s => s.status === 'completed').length;
+          customerJourney.status = completedSteps === stepData.length ? 'completed' : 'failed';
+          customerJourney.completedSteps = completedSteps;
+          customerJourney.totalSteps = stepData.length;
+
+          return customerJourney;
+
+        } catch (customerError) {
+          console.error(`[journey-sim] Customer ${customerIndex + 1} journey failed:`, customerError.message);
+          return {
+            customerIndex: customerIndex + 1,
+            status: 'failed',
+            error: customerError.message,
+            correlationId: crypto.randomUUID()
+          };
         }
+      };
 
-        // Determine final status
-        const completedSteps = customerJourney.steps.filter(s => s.status === 'completed').length;
-        customerJourney.status = completedSteps === stepData.length ? 'completed' : 'failed';
-        customerJourney.completedSteps = completedSteps;
-        customerJourney.totalSteps = stepData.length;
-
-        if (customerJourney.status === 'completed') {
-          totalSuccessful++;
-        } else {
-          totalFailed++;
-        }
-
-        results.push(customerJourney);
-
-        // Small delay between customers to avoid overwhelming services
-        if (customerIndex < customers - 1) {
-          await new Promise(resolve => setTimeout(resolve, 50));
-        }
-
-      } catch (customerError) {
-        console.error(`[journey-sim] Customer ${customerIndex + 1} journey failed:`, customerError.message);
-        totalFailed++;
-        results.push({
-          customerIndex: customerIndex + 1,
-          status: 'failed',
-          error: customerError.message,
-          correlationId: crypto.randomUUID()
-        });
-      }
+      journeyPromises.push(processCustomerJourney());
     }
+
+    // Execute all journeys in parallel and wait for completion
+    const journeyResults = await Promise.all(journeyPromises);
+
+    // Count successes and failures
+    journeyResults.forEach(journey => {
+      if (journey.status === 'completed') {
+        totalSuccessful++;
+      } else {
+        totalFailed++;
+      }
+    });
 
     // Format the response with cleaner load test summary
     const summary = {
@@ -857,8 +869,8 @@ router.post('/simulate-multiple-journeys', async (req, res) => {
     };
 
     // Create a clean summary for successful journeys
-    const successfulJourneys = results.filter(c => c.status === 'completed');
-    const failedJourneys = results.filter(c => c.status === 'failed');
+    const successfulJourneys = journeyResults.filter(c => c.status === 'completed');
+    const failedJourneys = journeyResults.filter(c => c.status === 'failed');
     
     // Get average metrics from successful journeys
     const avgSteps = successfulJourneys.length > 0 ? 
@@ -886,7 +898,7 @@ router.post('/simulate-multiple-journeys', async (req, res) => {
     }
 
     // Collect all correlation IDs
-    const correlationIds = results.map(c => c.correlationId);
+    const correlationIds = journeyResults.map(c => c.correlationId);
     
     // Collect error summary
     const errorSummary = failedJourneys.length > 0 ? 
@@ -905,7 +917,7 @@ router.post('/simulate-multiple-journeys', async (req, res) => {
       correlationIds: correlationIds,
       errors: errorSummary,
       sampleJourney: journeyExample,
-      detailedResults: results.map(customer => ({
+      detailedResults: journeyResults.map(customer => ({
         customerIndex: customer.customerIndex,
         correlationId: customer.correlationId,
         status: customer.status,

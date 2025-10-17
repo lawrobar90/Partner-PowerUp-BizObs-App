@@ -6,6 +6,24 @@ const express = require('express');
 const http = require('http');
 const crypto = require('crypto');
 
+// Load enhanced error handling if available
+let errorHandlingMiddleware;
+try {
+  const errorHelper = require('./dynatrace-error-helper.cjs');
+  errorHandlingMiddleware = errorHelper.errorHandlingMiddleware;
+} catch (e) {
+  // Fallback if error helper is not available
+  errorHandlingMiddleware = (serviceName) => (error, req, res, next) => {
+    console.error(`[${serviceName}] Unhandled error:`, error.message);
+    res.status(500).json({ 
+      status: 'error', 
+      error: error.message,
+      service: serviceName,
+      traceError: true
+    });
+  };
+}
+
 // Extract company context from environment (exact field names for Dynatrace filtering)
 const companyName = process.env.COMPANY_NAME || 'DefaultCompany';
 const domain = process.env.DOMAIN || 'default.com';
@@ -40,6 +58,9 @@ function createService(serviceName, mountFn) {
   // CRITICAL: Add body parsing middleware for JSON payloads
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  
+  // Add error handling middleware
+  app.use(errorHandlingMiddleware(serviceName));
   app.use((req, res, next) => {
     // Capture inbound W3C Trace Context and custom correlation
     const inboundTraceparent = req.headers['traceparent'];
@@ -86,15 +107,26 @@ function createService(serviceName, mountFn) {
     next();
   });
   
-  // Health check endpoint
+  // Health check endpoint with error status
   app.get('/health', (req, res) => {
-    res.json({ 
-      status: 'ok', 
-      service: serviceName,
-      pid: process.pid,
-      timestamp: new Date().toISOString(),
-      correlationId: req.correlationId
-    });
+    try {
+      res.json({ 
+        status: 'ok', 
+        service: serviceName,
+        pid: process.pid,
+        timestamp: new Date().toISOString(),
+        correlationId: req.correlationId,
+        traceSupport: true,
+        errorHandling: true
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: 'error',
+        service: serviceName,
+        error: error.message,
+        traceError: true
+      });
+    }
   });
 
   // Mount service-specific routes

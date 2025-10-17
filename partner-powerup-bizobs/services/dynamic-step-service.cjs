@@ -4,17 +4,23 @@
  */
 const { createService } = require('./service-runner.cjs');
 const { callService, getServiceNameFromStep, getServicePortFromStep } = require('./child-caller.cjs');
+const { 
+  TracedError, 
+  withErrorTracking, 
+  errorHandlingMiddleware,
+  checkForStepError, 
+  markSpanAsFailed, 
+  reportError,
+  sendErrorEvent,
+  addCustomAttributes 
+} = require('./dynatrace-error-helper.cjs');
 const http = require('http');
 const crypto = require('crypto');
 
-// Fallback Dynatrace helpers - avoid import issues
-const addCustomAttributes = (attributes) => {
-  console.log('[dynatrace] Custom attributes:', attributes);
-};
-
+// Enhanced Dynatrace helpers with error tracking
 const withCustomSpan = (name, callback) => {
   console.log('[dynatrace] Custom span:', name);
-  return callback();
+  return withErrorTracking(name, callback)();
 };
 
 const sendBusinessEvent = (eventType, data) => {
@@ -74,59 +80,73 @@ function createStepService(serviceName, stepName) {
   const properServiceName = getServiceNameFromStep(stepName || serviceName);
   
   createService(properServiceName, (app) => {
+    // Add error handling middleware
+    app.use(errorHandlingMiddleware(properServiceName));
+    
     app.post('/process', async (req, res) => {
       const payload = req.body || {};
       const correlationId = req.correlationId;
       const thinkTimeMs = Number(payload.thinkTimeMs || 200);
       const currentStepName = payload.stepName || stepName;
       
-      // Extract trace context from incoming request headers
-      const incomingTraceParent = req.headers['traceparent'];
-      const incomingTraceState = req.headers['tracestate'];
-      const dynatraceTraceId = req.headers['x-dynatrace-trace-id'];
-      
-      // Generate trace IDs for distributed tracing
-      function generateUUID() {
-        return crypto.randomUUID();
-      }
-      
-      let traceId, parentSpanId;
-      
-      if (incomingTraceParent) {
-        // Parse W3C traceparent: 00-trace_id-parent_id-flags
-        const parts = incomingTraceParent.split('-');
-        if (parts.length === 4) {
-          traceId = parts[1];
-          parentSpanId = parts[2];
-          console.log(`[${properServiceName}] Using incoming trace context: ${traceId.substring(0,8)}...`);
+      try {
+        // Check for step errors first (both explicit and simulated)
+        const stepError = checkForStepError(payload, null); // You can pass error profile here
+        if (stepError) {
+          console.error(`[${properServiceName}] Step error detected:`, stepError.message);
+          throw stepError;
         }
-      } else if (dynatraceTraceId) {
-        traceId = dynatraceTraceId;
-        parentSpanId = req.headers['x-dynatrace-parent-span-id'];
-        console.log(`[${properServiceName}] Using Dynatrace trace context: ${traceId.substring(0,8)}...`);
-      }
-      
-      // Fallback to payload or generate new
-      if (!traceId) {
-        traceId = payload.traceId || generateUUID().replace(/-/g, '');
-        parentSpanId = payload.spanId || null;
-      }
-      
-      const spanId = generateUUID().slice(0, 16).replace(/-/g, '');
-      
-      console.log(`[${properServiceName}] Trace context: traceId=${traceId.substring(0,8)}..., spanId=${spanId.substring(0,8)}..., parentSpanId=${parentSpanId ? parentSpanId.substring(0,8) + '...' : 'none'}`);
-      
-      // --- OneAgent Distributed Tracing Integration ---
-      // Let OneAgent handle trace/span propagation automatically
-      // Store journey context for business observability
-      const journeyTrace = Array.isArray(payload.journeyTrace) ? [...payload.journeyTrace] : [];
-      const stepEntry = {
-        stepName: currentStepName,
-        serviceName: properServiceName,
-        timestamp: new Date().toISOString(),
-        correlationId
-      };
-      journeyTrace.push(stepEntry);
+        
+        // Extract trace context from incoming request headers
+        const incomingTraceParent = req.headers['traceparent'];
+        const incomingTraceState = req.headers['tracestate'];
+        const dynatraceTraceId = req.headers['x-dynatrace-trace-id'];
+        
+        // Generate trace IDs for distributed tracing
+        function generateUUID() {
+          return crypto.randomUUID();
+        }
+        
+        let traceId, parentSpanId;
+        
+        if (incomingTraceParent) {
+          // Parse W3C traceparent: 00-trace_id-parent_id-flags
+          const parts = incomingTraceParent.split('-');
+          if (parts.length === 4) {
+            traceId = parts[1];
+            parentSpanId = parts[2];
+            console.log(`[${properServiceName}] Using incoming trace context: ${traceId.substring(0,8)}...`);
+          }
+        } else if (dynatraceTraceId) {
+          traceId = dynatraceTraceId;
+          parentSpanId = req.headers['x-dynatrace-parent-span-id'];
+          console.log(`[${properServiceName}] Using Dynatrace trace context: ${traceId.substring(0,8)}...`);
+        }
+        
+        // Fallback to payload or generate new
+        if (!traceId) {
+          traceId = payload.traceId || generateUUID().replace(/-/g, '');
+          parentSpanId = payload.spanId || null;
+        }
+        
+        const spanId = generateUUID().slice(0, 16).replace(/-/g, '');
+        
+        console.log(`[${properServiceName}] Trace context: traceId=${traceId.substring(0,8)}..., spanId=${spanId.substring(0,8)}..., parentSpanId=${parentSpanId ? parentSpanId.substring(0,8) + '...' : 'none'}`);
+        
+        // --- OneAgent Distributed Tracing Integration ---
+        // Let OneAgent handle trace/span propagation automatically
+        // Store journey context for business observability
+        const journeyTrace = Array.isArray(payload.journeyTrace) ? [...payload.journeyTrace] : [];
+        const stepEntry = {
+          stepName: currentStepName,
+          serviceName: properServiceName,
+          timestamp: new Date().toISOString(),
+          correlationId,
+          success: true, // Will be updated if error occurs
+          traceId: traceId.substring(0,8) + '...',
+          spanId: spanId.substring(0,8) + '...'
+        };
+        journeyTrace.push(stepEntry);
 
       // Look up current step's data from the journey steps array for chained execution
       let currentStepData = null;
@@ -351,6 +371,61 @@ function createStepService(serviceName, stepName) {
       };
 
       setTimeout(finish, processingTime);
+      
+    } catch (error) {
+      // Handle any errors that occur during step processing
+      console.error(`[${properServiceName}] Step processing error:`, error.message);
+      
+      // Mark trace as failed
+      markSpanAsFailed(error, {
+        'journey.step': currentStepName,
+        'service.name': properServiceName,
+        'correlation.id': correlationId
+      });
+      
+      // Update journey trace to mark this step as failed
+      const journeyTrace = Array.isArray(payload.journeyTrace) ? [...payload.journeyTrace] : [];
+      const failedStepEntry = {
+        stepName: currentStepName,
+        serviceName: properServiceName,
+        timestamp: new Date().toISOString(),
+        correlationId,
+        success: false,
+        error: error.message,
+        errorType: error.constructor.name
+      };
+      journeyTrace.push(failedStepEntry);
+      
+      // Send error business event
+      sendErrorEvent('journey_step_failed', error, {
+        stepName: currentStepName,
+        serviceName: properServiceName,
+        correlationId,
+        company: payload.companyName,
+        domain: payload.domain
+      });
+      
+      // Return error response with trace information
+      const errorResponse = {
+        status: 'error',
+        error: error.message,
+        errorType: error.constructor.name,
+        stepName: currentStepName,
+        service: properServiceName,
+        correlationId,
+        timestamp: new Date().toISOString(),
+        journeyTrace,
+        traceError: true,
+        pid: process.pid
+      };
+      
+      // Set error headers for trace propagation
+      res.setHeader('x-trace-error', 'true');
+      res.setHeader('x-error-type', error.constructor.name);
+      res.setHeader('x-journey-failed', 'true');
+      
+      res.status(error.status || 500).json(errorResponse);
+    }
     });
   });
 }
