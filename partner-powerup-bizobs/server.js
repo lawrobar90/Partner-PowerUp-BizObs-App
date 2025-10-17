@@ -49,7 +49,7 @@ const PORT = process.env.PORT || 4000;
 
 // ensureServiceRunning is now in service-manager.js
 
-// Helper to call child service and get JSON response
+// Helper to call child service and get JSON response with enhanced error handling
 function callChildService(serviceName, payload, port, tracingHeaders = {}) {
   return new Promise((resolve, reject) => {
     const targetPort = port;
@@ -76,14 +76,55 @@ function callChildService(serviceName, payload, port, tracingHeaders = {}) {
       res.on('end', () => {
         try {
           const json = body ? JSON.parse(body) : {};
+          
+          // Check if the response indicates an error
+          if (json.status === 'error' || json.traceError || res.headers['x-trace-error']) {
+            console.error(`[main-server] Service ${serviceName} returned error:`, json.error || 'Unknown error');
+            
+            // Propagate trace error information
+            const error = new Error(json.error || `Service ${serviceName} failed`);
+            error.traceError = true;
+            error.serviceName = serviceName;
+            error.errorType = json.errorType || 'ServiceError';
+            error.httpStatus = res.statusCode;
+            error.correlationId = json.correlationId;
+            error.response = json;
+            
+            reject(error);
+            return;
+          }
+          
+          // Success response
           resolve(json);
         } catch (e) {
-          reject(new Error(`Invalid JSON from ${serviceName}: ${e.message}`));
+          const parseError = new Error(`Invalid JSON from ${serviceName}: ${e.message}`);
+          parseError.traceError = true;
+          parseError.serviceName = serviceName;
+          parseError.errorType = 'JSONParseError';
+          reject(parseError);
         }
       });
     });
     
-    req.on('error', reject);
+    req.on('error', (error) => {
+      console.error(`[main-server] Network error calling ${serviceName}:`, error.message);
+      const networkError = new Error(`Network error calling ${serviceName}: ${error.message}`);
+      networkError.traceError = true;
+      networkError.serviceName = serviceName;
+      networkError.errorType = 'NetworkError';
+      reject(networkError);
+    });
+    
+    // Set timeout for service calls
+    req.setTimeout(30000, () => {
+      req.destroy();
+      const timeoutError = new Error(`Timeout calling service ${serviceName}`);
+      timeoutError.traceError = true;
+      timeoutError.serviceName = serviceName;
+      timeoutError.errorType = 'TimeoutError';
+      reject(timeoutError);
+    });
+    
     req.end(JSON.stringify(payload || {}));
   });
 }
@@ -177,13 +218,37 @@ const eventService = {
             console.log(`✅ ${serviceName} processed successfully`);
           } catch (error) {
             console.error(`❌ Error processing ${serviceName}:`, error.message);
-            results.push({
+            
+            // Create comprehensive error result with trace information
+            const errorResult = {
               stepName: substep.stepName,
               service: serviceName,
               status: 'error',
               error: error.message,
-              correlationId
-            });
+              errorType: error.errorType || error.constructor.name,
+              traceError: error.traceError || true,
+              httpStatus: error.httpStatus || 500,
+              correlationId,
+              timestamp: new Date().toISOString()
+            };
+            
+            // If this is a trace error, add additional context
+            if (error.traceError) {
+              errorResult.traceFailed = true;
+              errorResult.serviceName = error.serviceName;
+              
+              // Emit trace failure event
+              io.emit('trace_failure', {
+                correlationId,
+                stepName: substep.stepName,
+                serviceName,
+                error: error.message,
+                errorType: error.errorType,
+                timestamp: new Date().toISOString()
+              });
+            }
+            
+            results.push(errorResult);
           }
         }
         
@@ -225,6 +290,45 @@ app.use('/api/flow', flowRouter);
 app.use('/api/service-proxy', serviceProxyRouter);
 app.use('/api/journey-simulation', journeySimulationRouter);
 app.use('/api/config', configRouter);
+
+// Enhanced error testing endpoint
+app.post('/api/test/error-trace', async (req, res) => {
+  try {
+    const { stepName = 'TestStep', shouldFail = false, errorType = 'TestError' } = req.body;
+    
+    if (shouldFail) {
+      // Simulate a trace error
+      const error = new Error(`Simulated ${errorType} in ${stepName}`);
+      error.traceError = true;
+      error.errorType = errorType;
+      error.stepName = stepName;
+      
+      console.error('[test-error] Simulating trace failure:', error.message);
+      throw error;
+    }
+    
+    res.json({
+      status: 'success',
+      message: 'Error trace test completed successfully',
+      stepName,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[test-error] Trace error captured:', error.message);
+    
+    res.setHeader('x-trace-error', 'true');
+    res.setHeader('x-error-type', error.errorType || 'TestError');
+    
+    res.status(500).json({
+      status: 'error',
+      error: error.message,
+      errorType: error.errorType || 'TestError',
+      traceError: true,
+      stepName: error.stepName,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 // --- Admin endpoint to reset all dynamic service ports (for UI Reset button) ---
 app.post('/api/admin/reset-ports', (req, res) => {
