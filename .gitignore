@@ -58,10 +58,8 @@ Thumbs.db
 ehthumbs.db
 
 # External projects (not part of BizObs)
-../public/
 ../vegas-casino/
 ../vegas-casino*/
-public/
 vegas-casino/
 
 # Backup directories

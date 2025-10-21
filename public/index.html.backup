@@ -1,0 +1,2220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Partner PowerUp BizObs</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            dtpurple: '#6C2C9C', dtblue: '#00A1C9', dtcyan: '#00D4FF', dtgreen: '#73BE28', dtorange: '#FFA86B', dtyellow: '#FFD23F', dtdark: '#181A20', dtgray: '#23272F', dtcard: '#22242A', dtaccent: '#FFD23F', dtborder: '#2D2D2D'
+          },
+          boxShadow: {
+            glow: '0 0 20px rgba(0, 212, 255, 0.5)',
+            card: '0 4px 24px rgba(0,0,0,0.12), 0 1.5px 4px rgba(0,212,255,0.08)'
+          },
+          fontFamily: {
+            sans: ['Inter', 'Roboto', 'Arial', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    .node { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .node:hover { transform: scale(1.03); box-shadow: 0 0 30px rgba(0,212,255,0.6); }
+    .connector { position:absolute; width:2px; background: linear-gradient(180deg, #00D4FF, transparent); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%{opacity:.5} 50%{opacity:1} 100%{opacity:.5} }
+    
+    /* Sidebar Animations */
+    #mainContent { margin-left: 0 !important; }
+    #mainContent.sidebar-open { margin-left: 320px !important; }
+    .sidebar-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 45; }
+    
+    /* Prompt Cache Styles */
+    .prompt-cache-indicator { 
+      background: linear-gradient(45deg, #6C2C9C, #00A1C9); 
+      animation: shimmer 2s infinite; 
+    }
+    @keyframes shimmer { 0%{background-position: -200px 0;} 100%{background-position: 200px 0;} }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      #mainContent.sidebar-open { margin-left: 0 !important; }
+      #savedPromptsSidebar { width: 100vw !important; }
+    }
+  </style>
+</head>
+<body class="bg-dtdark text-white min-h-screen">
+  <!-- Saved Prompts Sidebar -->
+  <div id="savedPromptsSidebar" class="fixed left-0 top-0 h-full w-80 bg-dtcard border-r border-dtborder shadow-xl z-50 transform -translate-x-full transition-transform duration-300">
+    <div class="flex items-center justify-between p-4 border-b border-dtborder">
+      <h2 class="text-lg font-bold text-dtcyan">💾 Saved Prompts</h2>
+      <button id="closeSidebar" class="text-gray-400 hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="p-4">
+      <!-- Save Current Prompt Section -->
+      <div class="mb-6 p-3 bg-dtgray bg-opacity-40 rounded-lg border border-dtcyan">
+        <h3 class="text-sm font-semibold text-dtcyan mb-2">💾 Save Current Configuration</h3>
+        <input id="savePromptName" placeholder="Give this prompt a name..." class="w-full p-2 mb-2 rounded bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan text-sm" />
+        <button id="saveCurrentPrompt" class="w-full bg-dtgreen text-black px-3 py-2 rounded font-semibold hover:bg-dtcyan transition-all text-sm">💾 Save Current State</button>
+      </div>
+      
+      <!-- Saved Prompts List -->
+      <div class="mb-4">
+        <h3 class="text-sm font-semibold text-dtcyan mb-2">📋 Your Saved Prompts</h3>
+        <div id="savedPromptsList" class="space-y-2 max-h-96 overflow-y-auto">
+          <!-- Saved prompts will be populated here -->
+        </div>
+      </div>
+      
+      <!-- Management Buttons -->
+      <div class="grid grid-cols-2 gap-2 mb-2">
+        <button id="exportPrompts" class="bg-dtpurple text-white px-3 py-2 rounded font-semibold hover:bg-dtcyan transition-all text-sm">� Export</button>
+        <button id="importPrompts" class="bg-dtgreen text-black px-3 py-2 rounded font-semibold hover:bg-green-600 transition-all text-sm">📥 Import</button>
+      </div>
+      <div class="mb-4">
+        <button id="clearAllPrompts" class="w-full bg-red-600 text-white px-3 py-2 rounded font-semibold hover:bg-red-700 transition-all text-sm">�️ Clear All</button>
+      </div>
+      
+      <!-- Quick Help -->
+      <div class="text-xs text-gray-400 bg-dtgray bg-opacity-30 rounded p-2 border border-gray-600">
+        <p class="font-semibold text-gray-300 mb-1">💡 Quick Tips:</p>
+        <p>• <span class="text-dtcyan">Ctrl+S</span>: Quick Save</p>
+        <p>• <span class="text-dtcyan">Ctrl+Shift+S</span>: Named Save</p>
+        <p>• Click any saved prompt to load it</p>
+        <p>• <span class="text-dtcyan">📄</span> button: Duplicate prompt</p>
+        <p>• Auto-saves: Limited to last 5</p>
+        <p>• Export/Import: Share prompts</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar Toggle Button -->
+  <button id="toggleSidebar" class="fixed left-4 top-4 z-40 bg-dtcard border border-dtcyan rounded-lg p-3 shadow-lg hover:bg-dtgray transition-all">
+    <svg class="w-6 h-6 text-dtcyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+
+  <!-- Notification Toast -->
+  <div id="notificationToast" class="fixed top-4 right-4 z-50 bg-dtcard border border-dtcyan rounded-lg p-4 shadow-xl transform translate-x-full transition-transform duration-300">
+    <div id="notificationContent" class="text-sm"></div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="mainContent" class="transition-all duration-300">
+    <div class="max-w-[1800px] mx-auto px-8 py-6 font-sans">
+      <header class="flex items-center justify-between mb-6">
+    <h1 class="text-4xl font-extrabold text-dtcyan tracking-tight drop-shadow mb-2">Partner PowerUp BizObs</h1>
+    <span id="host-label" class="text-base text-dtaccent font-medium">Smartscape UI · Real-time overlays</span>
+      </header>
+
+
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <div class="col-span-3">
+  <div class="flex flex-col lg:flex-row gap-12 w-full items-stretch">
+      <!-- Journey Generator (Left) -->
+  <div class="basis-1/3 min-w-0 p-6 rounded-2xl bg-dtcard border border-dtborder shadow-card flex flex-col h-full">
+        <h2 class="text-3xl mb-6 text-dtcyan font-bold tracking-tight">Journey Generator</h2>
+        <!-- Generation Method Selection -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-dtcyan mb-2">Generation Method</label>
+          <select id="generationMethod" class="w-full p-2 rounded bg-dtgray text-white border border-dtgray focus:border-dtcyan">
+            <option value="copilot">🤖 Copilot (AI-Generated Journey)</option>
+            <option value="template">Quick Template (Retail Example, No AI)</option>
+          </select>
+        </div>
+        <!-- Basic Form -->
+  <form id="journey-form" class="space-y-6 mb-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label for="companyName" class="block text-sm font-medium text-dtcyan mb-2">Company Name</label>
+              <input id="companyName" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="customer" placeholder="e.g., ShopMart, TechCorp, HealthPlus" />
+            </div>
+            <div>
+              <label for="domain" class="block text-sm font-medium text-dtcyan mb-2">Website Domain</label>
+              <input id="domain" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="website" placeholder="e.g., shopmart.com, techcorp.io" />
+            </div>
+          </div>
+          <div>
+            <label for="industryType" class="block text-sm font-medium text-dtcyan mb-2">Industry Type</label>
+            <input id="industryType" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="region" placeholder="e.g., retail, technology, healthcare, finance" />
+          </div>
+          <!-- Journey Requirements & Specific Context (Always Visible) -->
+          <div id="journeyRequirementsContainer" class="mt-6">
+            <label for="journeyRequirements" class="block text-base font-semibold text-dtcyan mb-2">Journey Requirements & Specific Context</label>
+            <textarea id="journeyRequirements" rows="4" class="w-full p-4 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan resize-none transition-all" placeholder="Describe the specific customer journey you want to create. Be detailed about:
+• What type of customer interaction/transaction?
+• Key touchpoints or critical steps?
+• Specific business processes to include?
+• Any particular outcomes or goals?
+• Special requirements or constraints?
+
+Example: 'Create a B2B software trial signup journey including lead qualification, demo scheduling, trial activation, feature exploration, and conversion to paid subscription with technical onboarding steps.'"></textarea>
+            <p class="text-xs text-gray-400 mt-2">💡 The more specific you are, the better the AI can tailor the journey to your exact needs</p>
+          </div>
+            <div id="additionalFieldsContainer" class="mt-6 mb-2">
+              <div class="bg-dtgray bg-opacity-60 rounded-xl p-4 border border-dtcyan shadow-inner mb-2">
+                <label class="block text-base font-semibold text-dtcyan mb-3">Additional Fields (Business Metadata)</label>
+                <div id="additionalFieldsList" class="mb-3"></div>
+                <div class="flex gap-3 mt-2">
+                  <input id="newFieldName" class="flex-1 p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" placeholder="Field name (e.g., cost, price)" />
+                  <select id="newFieldType" class="flex-1 p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all">
+                    <option value="string">String</option>
+                    <option value="number">Number</option>
+                    <option value="currency">Currency</option>
+                    <option value="boolean">Boolean</option>
+                    <option value="date">Date</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                  <button id="addFieldBtn" type="button" class="bg-dtgreen text-black px-5 py-2 rounded-lg font-semibold shadow-card hover:bg-dtcyan transition-all">Add Field</button>
+                </div>
+                <p class="text-xs text-gray-300 mt-3">Add any number of fields (name + type). E.g., cost:number, price:currency, supplier:string.</p>
+              </div>
+            </div>
+          <!-- Custom Steps (Template Mode Only) -->
+          <div id="customStepsContainer" style="display: none;">
+            <label for="customSteps" class="block text-sm font-medium text-dtcyan mb-2">Custom Step Names</label>
+            <input id="customSteps" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="customSteps" placeholder="e.g., Product Discovery, Add to Cart, Checkout, Confirmation" />
+            <p class="text-xs text-gray-400 mt-1">Comma-separated list of journey steps</p>
+          </div>
+          <!-- Optional Fields (Template Mode Only) -->
+          <div id="optionalFieldsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4" style="display: none;">
+            <div>
+              <label for="journeyType" class="block text-sm font-medium text-dtcyan mb-2">Journey Type</label>
+              <input id="journeyType" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="journeyType" placeholder="e.g., E-commerce Purchase, Service Signup" />
+            </div>
+            <div>
+              <label for="details" class="block text-sm font-medium text-dtcyan mb-2">Additional Context</label>
+              <input id="details" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="details" placeholder="Any specific requirements or context" />
+            </div>
+          </div>
+          <!-- Generate Journey Button -->
+          <div class="mt-6">
+            <div class="flex gap-3 mb-3">
+              <button id="quickSavePrompt" type="button" class="bg-dtpurple hover:bg-dtcyan text-white font-semibold rounded-lg px-4 py-2 shadow-card transition-all text-sm prompt-cache-indicator">
+                💾 Quick Save
+              </button>
+              <span id="savedPromptsCount" class="text-xs text-gray-400 flex items-center">📋 0 saved prompts</span>
+            </div>
+            <button id="generateJourney" type="button" class="w-full bg-dtblue hover:bg-dtcyan text-black font-semibold rounded-lg p-4 shadow-card transition-all text-lg">
+              🚀 Generate Journey
+            </button>
+          </div>
+        </form>
+      </div>
+      <!-- Copilot Copy-Paste Workflow (Center) -->
+  <div class="basis-1/3 min-w-0 p-6 rounded-2xl bg-dtcard border border-dtborder shadow-card flex flex-col h-full">
+        <h2 class="text-3xl mb-6 text-dtcyan font-bold tracking-tight">Copilot Copy-Paste Workflow</h2>
+        <div class="bg-dtgray rounded-lg p-4 mb-4 flex-1 flex flex-col">
+          <h3 class="text-2xl font-bold text-dtcyan mb-4">🤖 Copilot Copy-Paste Workflow</h3>
+          <!-- Step 1: Copy Prompt -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-base font-semibold text-white">Step 1: Copy this prompt to your Copilot</h4>
+              <button id="copyPrompt" type="button" class="bg-dtgreen text-black px-4 py-2 rounded-lg text-base font-semibold shadow-card hover:bg-dtcyan transition-all">📋 Copy Prompt</button>
+            </div>
+            <textarea id="promptText" readonly class="w-full h-48 p-4 border border-dtcyan rounded-lg bg-black text-white text-xs font-mono resize-y overflow-y-auto"></textarea>
+          </div>
+          <!-- Step 2: Paste Response -->
+          <div class="mb-4">
+            <h4 class="text-sm font-medium text-white mb-2">Step 2: Paste your Copilot's response here</h4>
+            <textarea id="copilotResponse" placeholder="Paste the JSON response from your Copilot here..." class="w-full h-32 p-4 border border-dtcyan rounded-lg bg-black text-white text-xs font-mono resize-none focus:ring-2 focus:ring-dtcyan transition-all"></textarea>
+          </div>
+          <!-- Step 3: Process Response -->
+          <div class="flex items-center gap-2 mb-2">
+            <button id="processResponse" type="button" class="bg-dtgreen text-black px-4 py-2 rounded font-semibold hover:bg-green-700">🚀 Process Response</button>
+            <button id="resetWorkflow" type="button" class="bg-dtgray text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-600">Reset</button>
+          </div>
+          <button id="useRetailExample" class="mt-2 bg-dtpurple text-white px-4 py-2 rounded-lg font-semibold shadow-card hover:bg-dtcyan transition-all">📱 Use Retail Example</button>
+        </div>
+      </div>
+      <!-- Generate & Simulation (Right) -->
+  <div class="basis-1/3 min-w-0 p-6 rounded-2xl bg-dtcard border border-dtborder shadow-card flex flex-col h-full">
+        <h2 class="text-3xl mb-6 text-dtcyan font-bold tracking-tight">Generate & Simulate</h2>
+        <div class="mt-4">
+          <div class="flex items-center justify-between">
+            <div id="journey-sources" class="text-xs text-dtblue space-y-1"></div>
+            <div id="journey-provider" class="text-xs text-dtyellow"></div>
+          </div>
+          <pre id="journey-output" class="mt-2 text-xs bg-black p-4 rounded-lg overflow-auto max-h-60 border border-dtcyan"></pre>
+          <div class="mt-4 flex flex-wrap gap-3">
+            <button id="run-chained-flow" onclick="runDistributedFlow()" class="bg-dtblue hover:bg-dtcyan text-black font-semibold rounded-lg p-3 shadow-card transition-all">🔗 Run Distributed Flow</button>
+            <button id="run-full-chain" onclick="runFullChain()" class="bg-dtpurple hover:bg-dtcyan text-white font-semibold rounded-lg p-3 shadow-card transition-all">⚡ Run Full Chain</button>
+            <button id="run-true-chain" onclick="runTrueDistributedChain()" class="bg-dtgreen hover:bg-dtcyan text-black font-semibold rounded-lg p-3 shadow-card transition-all">🌊 True Chain Flow</button>
+            <button id="reset-ports" onclick="resetServices()" class="bg-dtgray text-white font-semibold rounded-lg p-3 border border-dtcyan shadow-card hover:bg-dtpurple transition-all">🔄 Reset Services</button>
+          </div>
+          <div id="chain-status" class="mt-2 text-sm text-dtyellow"></div>
+          <pre id="chained-trace-output" class="mt-2 text-xs bg-black p-3 rounded overflow-auto max-h-60"></pre>
+        </div>
+        <div class="p-4 rounded-lg bg-[#1b1b1b] border border-dtgray mt-6">
+          <h2 class="text-2xl mb-4 text-dtcyan font-bold tracking-tight">Journey Simulation Controls</h2>
+          <div class="grid grid-cols-1 gap-4">
+            <div class="bg-dtgray bg-opacity-40 rounded-lg p-4">
+              <label class="block text-sm font-medium text-dtcyan mb-2">Number of Customers</label>
+              <input id="customerCount" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" type="number" min="1" max="50" value="10" placeholder="Number of customers" />
+              <p class="text-xs text-gray-400 mt-1">Run 1-50 customers through the generated journey</p>
+            </div>
+            <div class="flex gap-3">
+              <button id="run-journey-simulation" onclick="runJourneySimulation()" class="flex-1 bg-dtgreen hover:bg-dtcyan text-black font-semibold rounded-lg p-3 shadow-card transition-all" title="Run customers through the journey with OneAgent tracing">🚀 Run Journey Simulation</button>
+            </div>
+          </div>
+          <div id="sim-status" class="mt-4 text-base text-dtyellow font-medium"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+    </section>
+
+    <section class="mt-6 p-4 rounded-lg bg-[#1b1b1b] border border-dtgray relative">
+      <h2 class="text-3xl mb-6 text-dtcyan font-bold tracking-tight">Smartscape</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div class="node p-6 rounded-2xl bg-dtcard shadow-card border border-dtborder">Frontend UI<div class="text-base text-dtblue mt-2">Tailwind, Forms</div></div>
+        <div class="node p-6 rounded-2xl bg-dtcard shadow-card border border-dtborder">Journey Service<div class="text-base text-dtblue mt-2">/generateJourney</div></div>
+        <div class="node p-6 rounded-2xl bg-dtcard shadow-card border border-dtborder">Event Simulator<div class="text-base text-dtblue mt-2">/simulateEvents</div></div>
+        <div class="node p-6 rounded-2xl bg-dtcard shadow-card border border-dtborder">Metrics Service<div class="text-base text-dtblue mt-2">/metrics</div></div>
+        <div class="node p-6 rounded-2xl bg-dtcard shadow-card border border-dtborder">Dynatrace OneAgent<div class="text-base text-dtblue mt-2">Trace/Logs</div></div>
+        <div class="node p-6 rounded-2xl bg-dtcard shadow-card border border-dtborder">Grail<div class="text-base text-dtblue mt-2">Biz Events</div></div>
+      </div>
+      <div class="absolute left-1/4 top-1/2 h-24 connector"></div>
+    </section>
+
+    <section class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="p-6 rounded-2xl bg-dtcard border border-dtborder shadow-card">
+        <h2 class="text-3xl text-dtcyan font-bold mb-4 tracking-tight">Live Biz Events</h2>
+        <ul id="live-feed" class="text-sm space-y-2 max-h-64 overflow-auto"></ul>
+      </div>
+      <div class="p-6 rounded-2xl bg-dtcard border border-dtborder shadow-card">
+        <h2 class="text-3xl text-dtcyan font-bold mb-4 tracking-tight">Metrics</h2>
+        <pre id="metrics" class="text-sm bg-black p-4 rounded-lg max-h-64 overflow-auto border border-dtcyan"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const ioClient = io();
+    const feed = document.getElementById('live-feed');
+    const metricsEl = document.getElementById('metrics');
+    const journeyForm = document.getElementById('journey-form');
+    const journeyOutput = document.getElementById('journey-output');
+    const journeySources = document.getElementById('journey-sources');
+    const journeyProvider = document.getElementById('journey-provider');
+    const simulateForm = document.getElementById('simulate-form');
+
+    let lastJourney = null;
+    let currentJourneyData = null;
+
+    // Console logging for debugging
+    console.log('BizObs App initializing...');
+
+    // Prompt Cache Management
+    class PromptCache {
+      constructor() {
+        this.storageKey = 'bizobs-saved-prompts';
+        this.initializeSidebar();
+        this.loadSavedPrompts();
+      }
+
+      initializeSidebar() {
+        const toggleBtn = document.getElementById('toggleSidebar');
+        const closeBtn = document.getElementById('closeSidebar');
+        const sidebar = document.getElementById('savedPromptsSidebar');
+        const mainContent = document.getElementById('mainContent');
+        const saveBtn = document.getElementById('saveCurrentPrompt');
+        const quickSaveBtn = document.getElementById('quickSavePrompt');
+        const clearBtn = document.getElementById('clearAllPrompts');
+        const exportBtn = document.getElementById('exportPrompts');
+        const importBtn = document.getElementById('importPrompts');
+
+        toggleBtn.addEventListener('click', () => this.toggleSidebar());
+        closeBtn.addEventListener('click', () => this.closeSidebar());
+        saveBtn.addEventListener('click', () => this.saveCurrentPrompt());
+        quickSaveBtn.addEventListener('click', () => this.quickSavePrompt());
+        clearBtn.addEventListener('click', () => this.clearAllPrompts());
+        exportBtn.addEventListener('click', () => this.exportPrompts());
+        importBtn.addEventListener('click', () => this.importPrompts());
+
+        // Close sidebar when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!sidebar.contains(e.target) && !toggleBtn.contains(e.target) && sidebar.classList.contains('translate-x-0')) {
+            this.closeSidebar();
+          }
+        });
+
+        // Update counter on page load
+        this.updatePromptsCounter();
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+          // Ctrl+S or Cmd+S for quick save
+          if ((e.ctrlKey || e.metaKey) && e.key === 's' && !e.shiftKey) {
+            e.preventDefault();
+            this.quickSavePrompt();
+          }
+          // Ctrl+Shift+S for named save
+          if ((e.ctrlKey || e.metaKey) && e.key === 'S' && e.shiftKey) {
+            e.preventDefault();
+            this.toggleSidebar();
+            setTimeout(() => {
+              document.getElementById('savePromptName').focus();
+            }, 300);
+          }
+          // Escape to close sidebar
+          if (e.key === 'Escape') {
+            this.closeSidebar();
+          }
+        });
+      }
+
+      toggleSidebar() {
+        const sidebar = document.getElementById('savedPromptsSidebar');
+        const mainContent = document.getElementById('mainContent');
+        const isOpen = sidebar.classList.contains('translate-x-0');
+        
+        if (isOpen) {
+          this.closeSidebar();
+        } else {
+          sidebar.classList.remove('-translate-x-full');
+          sidebar.classList.add('translate-x-0');
+          mainContent.classList.add('sidebar-open');
+        }
+      }
+
+      closeSidebar() {
+        const sidebar = document.getElementById('savedPromptsSidebar');
+        const mainContent = document.getElementById('mainContent');
+        sidebar.classList.remove('translate-x-0');
+        sidebar.classList.add('-translate-x-full');
+        mainContent.classList.remove('sidebar-open');
+      }
+
+      getCurrentPromptState() {
+        return {
+          timestamp: new Date().toISOString(),
+          formData: {
+            companyName: document.getElementById('companyName').value,
+            domain: document.getElementById('domain').value,
+            industryType: document.getElementById('industryType').value,
+            journeyRequirements: document.getElementById('journeyRequirements').value,
+            customSteps: document.getElementById('customSteps').value,
+            journeyType: document.getElementById('journeyType').value,
+            details: document.getElementById('details').value,
+            generationMethod: document.getElementById('generationMethod').value
+          },
+          additionalFields: [...additionalFields],
+          generatedPrompt: document.getElementById('promptText').value,
+          lastJourney: lastJourney ? { ...lastJourney } : null,
+          currentJourneyData: currentJourneyData ? { ...currentJourneyData } : null
+        };
+      }
+
+      saveCurrentPrompt() {
+        const nameInput = document.getElementById('savePromptName');
+        const name = nameInput.value.trim();
+        
+        if (!name) {
+          alert('Please enter a name for this prompt configuration');
+          return;
+        }
+
+        const promptState = this.getCurrentPromptState();
+        promptState.name = name;
+        promptState.id = Date.now().toString();
+
+        const savedPrompts = this.getSavedPrompts();
+        savedPrompts.push(promptState);
+        
+        localStorage.setItem(this.storageKey, JSON.stringify(savedPrompts));
+        nameInput.value = '';
+        
+        this.renderSavedPrompts();
+        this.updatePromptsCounter();
+        
+        // Show success message
+        const originalText = document.getElementById('saveCurrentPrompt').textContent;
+        document.getElementById('saveCurrentPrompt').textContent = '✅ Saved!';
+        setTimeout(() => {
+          document.getElementById('saveCurrentPrompt').textContent = originalText;
+        }, 2000);
+
+        this.showNotification(`Saved "${name}" successfully!`);
+      }
+
+      getSavedPrompts() {
+        try {
+          return JSON.parse(localStorage.getItem(this.storageKey) || '[]');
+        } catch (error) {
+          console.error('Error loading saved prompts:', error);
+          return [];
+        }
+      }
+
+      loadSavedPrompts() {
+        this.renderSavedPrompts();
+        this.updatePromptsCounter();
+      }
+
+      quickSavePrompt() {
+        const companyName = document.getElementById('companyName').value.trim();
+        const industryType = document.getElementById('industryType').value.trim();
+        // Prevent multiple flickers by disabling button during animation
+        const btn = document.getElementById('quickSavePrompt');
+        if (btn.disabled) return;
+        btn.disabled = true;
+        // Generate an automatic name based on form content
+        const autoName = companyName 
+          ? `${companyName} - ${industryType || 'General'} (${new Date().toLocaleDateString()})`
+          : `Quick Save - ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+        const promptState = this.getCurrentPromptState();
+        promptState.name = autoName;
+        promptState.id = Date.now().toString();
+        promptState.isQuickSave = true;
+
+        const savedPrompts = this.getSavedPrompts();
+        savedPrompts.push(promptState);
+        localStorage.setItem(this.storageKey, JSON.stringify(savedPrompts));
+
+        this.renderSavedPrompts();
+        this.updatePromptsCounter();
+
+        // Show success animation only once
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Saved!';
+        btn.classList.add('bg-green-600');
+        btn.classList.remove('bg-dtpurple');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.remove('bg-green-600');
+          btn.classList.add('bg-dtpurple');
+          btn.disabled = false;
+        }, 1200);
+
+        this.showNotification(`Quick saved "${autoName}"!`);
+      }
+
+      updatePromptsCounter() {
+        const count = this.getSavedPrompts().length;
+        const counter = document.getElementById('savedPromptsCount');
+        if (counter) {
+          counter.textContent = `📋 ${count} saved prompt${count !== 1 ? 's' : ''}`;
+        }
+      }
+
+      showNotification(message, type = 'success') {
+        const toast = document.getElementById('notificationToast');
+        const content = document.getElementById('notificationContent');
+        
+        const icons = {
+          success: '✅',
+          error: '❌',
+          info: 'ℹ️',
+          warning: '⚠️'
+        };
+        
+        content.innerHTML = `${icons[type]} ${message}`;
+        toast.classList.remove('translate-x-full');
+        
+        setTimeout(() => {
+          toast.classList.add('translate-x-full');
+        }, 3000);
+      }
+
+      loadPromptState(promptState) {
+        // Restore form data
+        const formData = promptState.formData;
+        document.getElementById('companyName').value = formData.companyName || '';
+        document.getElementById('domain').value = formData.domain || '';
+        document.getElementById('industryType').value = formData.industryType || '';
+        document.getElementById('journeyRequirements').value = formData.journeyRequirements || '';
+        document.getElementById('customSteps').value = formData.customSteps || '';
+        document.getElementById('journeyType').value = formData.journeyType || '';
+        document.getElementById('details').value = formData.details || '';
+        document.getElementById('generationMethod').value = formData.generationMethod || 'copilot';
+
+        // Restore additional fields
+        additionalFields.length = 0;
+        if (promptState.additionalFields) {
+          additionalFields.push(...promptState.additionalFields);
+          renderAdditionalFields();
+        }
+
+        // Restore journey data
+        if (promptState.lastJourney) {
+          lastJourney = promptState.lastJourney;
+        }
+        if (promptState.currentJourneyData) {
+          currentJourneyData = promptState.currentJourneyData;
+          journeyOutput.textContent = JSON.stringify(currentJourneyData, null, 2);
+        }
+
+        // Trigger the appropriate UI mode
+        const generationMethod = formData.generationMethod || 'copilot';
+        document.getElementById('generationMethod').dispatchEvent(new Event('change'));
+        
+        // If copilot mode, regenerate the prompt with restored data
+        if (generationMethod === 'copilot') {
+          setTimeout(() => generateCopilotPrompt(), 100);
+        }
+
+        this.closeSidebar();
+        this.showNotification(`Loaded "${promptState.name}" successfully!`);
+      }
+
+      deletePrompt(promptId) {
+        if (!confirm('Are you sure you want to delete this saved prompt?')) {
+          return;
+        }
+
+        const savedPrompts = this.getSavedPrompts();
+        const filteredPrompts = savedPrompts.filter(p => p.id !== promptId);
+        localStorage.setItem(this.storageKey, JSON.stringify(filteredPrompts));
+        this.renderSavedPrompts();
+        this.updatePromptsCounter();
+      }
+
+      clearAllPrompts() {
+        if (!confirm('Are you sure you want to delete ALL saved prompts? This cannot be undone.')) {
+          return;
+        }
+
+        localStorage.removeItem(this.storageKey);
+        this.renderSavedPrompts();
+        this.updatePromptsCounter();
+        this.showNotification('All saved prompts cleared', 'warning');
+      }
+
+      exportPrompts() {
+        const savedPrompts = this.getSavedPrompts();
+        if (savedPrompts.length === 0) {
+          this.showNotification('No saved prompts to export', 'warning');
+          return;
+        }
+
+        const dataStr = JSON.stringify(savedPrompts, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `bizobs-prompts-${new Date().toISOString().split('T')[0]}.json`;
+        link.click();
+        
+        URL.revokeObjectURL(url);
+        this.showNotification(`Exported ${savedPrompts.length} prompts to file`);
+      }
+
+      importPrompts() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const importedPrompts = JSON.parse(e.target.result);
+              if (!Array.isArray(importedPrompts)) {
+                throw new Error('Invalid file format');
+              }
+
+              const existingPrompts = this.getSavedPrompts();
+              const mergedPrompts = [...existingPrompts, ...importedPrompts];
+              
+              localStorage.setItem(this.storageKey, JSON.stringify(mergedPrompts));
+              this.renderSavedPrompts();
+              this.updatePromptsCounter();
+              
+              this.showNotification(`Imported ${importedPrompts.length} prompts successfully!`);
+            } catch (error) {
+              this.showNotification('Error importing prompts: Invalid file format', 'error');
+            }
+          };
+          reader.readAsText(file);
+        };
+        input.click();
+      }
+
+      autoSaveCurrentState(reason = 'auto') {
+        // Only auto-save if there's meaningful content
+        const companyName = document.getElementById('companyName').value.trim();
+        const industryType = document.getElementById('industryType').value.trim();
+        const journeyRequirements = document.getElementById('journeyRequirements').value.trim();
+        
+        if (!companyName && !industryType && !journeyRequirements) {
+          return; // Don't auto-save empty forms
+        }
+
+        const autoName = `Auto: ${companyName || 'Unnamed'} - ${reason} (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+        
+        const promptState = this.getCurrentPromptState();
+        promptState.name = autoName;
+        promptState.id = Date.now().toString();
+        promptState.isAutoSave = true;
+
+        const savedPrompts = this.getSavedPrompts();
+        
+        // Limit auto-saves to prevent clutter (keep only last 5 auto-saves)
+        const manualSaves = savedPrompts.filter(p => !p.isAutoSave);
+        const autoSaves = savedPrompts.filter(p => p.isAutoSave).slice(-4); // Keep last 4, plus this new one = 5
+        
+        const updatedPrompts = [...manualSaves, ...autoSaves, promptState];
+        localStorage.setItem(this.storageKey, JSON.stringify(updatedPrompts));
+        
+        this.updatePromptsCounter();
+      }
+
+      renderSavedPrompts() {
+        const container = document.getElementById('savedPromptsList');
+        const savedPrompts = this.getSavedPrompts();
+
+        if (savedPrompts.length === 0) {
+          container.innerHTML = '<div class="text-gray-400 text-sm text-center py-4">No saved prompts yet.<br>Save your current configuration to get started!</div>';
+          return;
+        }
+
+        // Sort by timestamp (newest first)
+        savedPrompts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        container.innerHTML = savedPrompts.map(prompt => {
+          const date = new Date(prompt.timestamp).toLocaleDateString();
+          const time = new Date(prompt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const company = prompt.formData.companyName || 'Unnamed';
+          const industry = prompt.formData.industryType || 'general';
+          const method = prompt.formData.generationMethod || 'copilot';
+          const hasJourney = prompt.lastJourney ? '✅ Journey' : '📝 Config';
+          
+          let icon = '📌';
+          if (prompt.isQuickSave) icon = '⚡';
+          if (prompt.isAutoSave) icon = '🤖';
+          
+          return `
+            <div class="bg-dtgray bg-opacity-60 rounded-lg p-3 border border-gray-600 hover:border-dtcyan transition-all cursor-pointer group ${prompt.isAutoSave ? 'opacity-75' : ''}">
+              <div class="flex items-start justify-between">
+                <div class="flex-1 min-w-0" onclick="promptCache.loadPromptState(${JSON.stringify(prompt).replace(/"/g, '&quot;')})">
+                  <div class="flex items-center gap-2 mb-1">
+                    <h4 class="font-semibold text-white text-sm truncate">${icon} ${prompt.name}</h4>
+                    <span class="text-xs bg-dtblue text-white px-2 py-0.5 rounded">${method}</span>
+                  </div>
+                  <p class="text-xs text-gray-300 mt-1">${company} • ${industry}</p>
+                  <div class="flex items-center gap-2 mt-1">
+                    <span class="text-xs text-gray-400">${date} ${time}</span>
+                    <span class="text-xs ${prompt.lastJourney ? 'text-green-400' : 'text-yellow-400'}">${hasJourney}</span>
+                  </div>
+                </div>
+                <div class="flex gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onclick="event.stopPropagation(); promptCache.loadPromptState(${JSON.stringify(prompt).replace(/"/g, '&quot;')})" 
+                          class="bg-dtblue text-white px-2 py-1 rounded text-xs hover:bg-dtcyan transition-all" 
+                          title="Load this configuration">📋</button>
+                  <button onclick="event.stopPropagation(); promptCache.duplicatePrompt('${prompt.id}')" 
+                          class="bg-dtgreen text-black px-2 py-1 rounded text-xs hover:bg-green-600 transition-all"
+                          title="Duplicate this prompt">📄</button>
+                  <button onclick="event.stopPropagation(); promptCache.deletePrompt('${prompt.id}')" 
+                          class="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 transition-all"
+                          title="Delete this prompt">🗑️</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      duplicatePrompt(promptId) {
+        const savedPrompts = this.getSavedPrompts();
+        const originalPrompt = savedPrompts.find(p => p.id === promptId);
+        
+        if (!originalPrompt) return;
+
+        const duplicatedPrompt = { ...originalPrompt };
+        duplicatedPrompt.id = Date.now().toString();
+        duplicatedPrompt.name = `Copy of ${originalPrompt.name}`;
+        duplicatedPrompt.timestamp = new Date().toISOString();
+        duplicatedPrompt.isQuickSave = false;
+
+        savedPrompts.push(duplicatedPrompt);
+        localStorage.setItem(this.storageKey, JSON.stringify(savedPrompts));
+        
+        this.renderSavedPrompts();
+        this.updatePromptsCounter();
+        
+        // Brief success indication
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '✅';
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 1000);
+      }
+    }
+
+    // Initialize prompt cache
+    const promptCache = new PromptCache();
+
+    // Global functions for onclick handlers
+    window.runDistributedFlow = async function() {
+      console.log('🔥 BLUE BUTTON CLICKED! 🔥');
+      const runChainedBtn = document.getElementById('run-chained-flow');
+      const chainStatus = document.getElementById('chain-status');
+      const chainedTraceOutput = document.getElementById('chained-trace-output');
+      
+      try {
+        runChainedBtn.disabled = true;
+        runChainedBtn.textContent = '🔄 Running...';
+        chainStatus.textContent = '🚀 Starting distributed flow...';
+        chainedTraceOutput.textContent = '';
+
+        // Create test journey if none exists
+        if (!lastJourney || !lastJourney.steps || !lastJourney.steps.length) {
+          chainStatus.textContent = '⚠️ No journey data available. Creating test journey...';
+          
+          lastJourney = {
+            companyName: 'TestCorp',
+            domain: 'testcorp.com',
+            industryType: 'retail',
+            steps: [
+              { stepName: 'Discovery', description: 'Customer discovery' },
+              { stepName: 'Selection', description: 'Product selection' },
+              { stepName: 'Purchase', description: 'Purchase process' }
+            ]
+          };
+          
+          chainStatus.textContent = '✅ Test journey created! Running distributed flow...';
+        }
+
+        // Build steps from the journey
+        let stepNames = lastJourney.steps.slice(0, 6).map(s => s.stepName || s.name || String(s));
+        while (stepNames.length < 6) stepNames.push(`Step${stepNames.length + 1}`);
+        stepNames = stepNames.slice(0, 6);
+
+        const body = { 
+          steps: stepNames.map(n => ({ stepName: n })),
+          thinkTimeMs: 200,
+          companyName: lastJourney?.companyName || 'DefaultCompany',
+          domain: lastJourney?.domain || 'default.com',
+          industryType: lastJourney?.industryType || 'general'
+        };
+        
+        chainStatus.textContent = '🔗 Running distributed flow with OneAgent tracing...';
+        
+        const res = await fetch('/api/steps/step1-chained', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+
+        if (!json.ok) {
+          chainStatus.textContent = `❌ Chained flow failed: ${json.error || 'Unknown error'}`;
+          chainedTraceOutput.textContent = `Error Details:\n${JSON.stringify(json, null, 2)}`;
+          return;
+        }
+
+        const trace = json.result?.journeyTrace || [];
+        const plannedSteps = Array.isArray(json.result?.steps) ? json.result.steps.length : 0;
+        const stepsStr = trace.map(t => t.stepName).join(' → ') || (json.result?.stepName || 'N/A');
+        const totalDuration = json.result?.processingTime || 0;
+
+        // If journeyTrace length is less than planned steps, indicate partial execution
+        if (trace.length >= plannedSteps && plannedSteps > 0) {
+          chainStatus.textContent = `✅ Distributed flow completed! ${trace.length} spans traced (${totalDuration}ms total) • ${stepsStr}`;
+        } else if (trace.length > 0) {
+          chainStatus.textContent = `⚠️ Partial distributed flow: ${trace.length}/${plannedSteps} spans traced (${totalDuration}ms). Click Run Distributed Flow again to continue the chain.`;
+        } else {
+          chainStatus.textContent = `⚠️ Distributed flow returned no spans. (${totalDuration}ms)`;
+        }
+
+        chainedTraceOutput.textContent = JSON.stringify(trace, null, 2);
+      } catch (e) {
+        chainStatus.textContent = `❌ Error: ${e.message}`;
+        chainedTraceOutput.textContent = `Error Details:\n${e.stack}`;
+      } finally {
+        // Re-query the button to avoid outer-scope ReferenceErrors
+        const runChainedBtnLocal = document.getElementById('run-chained-flow');
+        if (runChainedBtnLocal) {
+          runChainedBtnLocal.disabled = false;
+          runChainedBtnLocal.textContent = '🔗 Run Distributed Flow';
+        }
+      }
+    };
+
+    window.runFullChain = async function() {
+      console.log('🔥 PURPLE BUTTON CLICKED! Full Chain Execution! 🔥');
+      const runFullChainBtn = document.getElementById('run-full-chain');
+      const chainStatus = document.getElementById('chain-status');
+      const chainedTraceOutput = document.getElementById('chained-trace-output');
+      
+      try {
+        runFullChainBtn.disabled = true;
+        runFullChainBtn.textContent = '🔄 Running Full Chain...';
+        chainStatus.textContent = '🚀 Starting full chain execution...';
+        chainedTraceOutput.textContent = '';
+
+        // Create test journey if none exists
+        if (!lastJourney || !lastJourney.steps || !lastJourney.steps.length) {
+          chainStatus.textContent = '⚠️ No journey data available. Creating test journey...';
+          
+          lastJourney = {
+            companyName: 'TestCorp',
+            domain: 'testcorp.com',
+            industryType: 'retail',
+            steps: [
+              { stepName: 'Discovery', description: 'Customer discovery' },
+              { stepName: 'Selection', description: 'Product selection' },
+              { stepName: 'Purchase', description: 'Purchase process' }
+            ]
+          };
+          
+          chainStatus.textContent = '✅ Test journey created! Running full chain...';
+        }
+
+        // Build steps from the journey
+        let stepNames = lastJourney.steps.slice(0, 6).map(s => s.stepName || s.name || String(s));
+        while (stepNames.length < 6) stepNames.push(`Step${stepNames.length + 1}`);
+        stepNames = stepNames.slice(0, 6);
+
+        const body = { 
+          steps: stepNames.map(n => ({ stepName: n })),
+          thinkTimeMs: 200,
+          companyName: lastJourney?.companyName || 'DefaultCompany',
+          domain: lastJourney?.domain || 'default.com',
+          industryType: lastJourney?.industryType || 'general'
+        };
+        
+        chainStatus.textContent = '⚡ Executing full chain with all steps...';
+        
+        const res = await fetch('/api/steps/full-chain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+
+        if (!json.ok) {
+          chainStatus.textContent = `❌ Full chain failed: ${json.error || 'Unknown error'}`;
+          chainedTraceOutput.textContent = `Error Details:\n${JSON.stringify(json, null, 2)}`;
+          return;
+        }
+
+        const trace = json.result?.journeyTrace || [];
+        const totalSteps = json.result?.totalSteps || 0;
+        const completedSteps = json.result?.completedSteps || 0;
+        const totalDuration = json.result?.totalDuration || 0;
+        const stepsStr = trace.map(t => t.stepName).join(' → ');
+        
+        chainStatus.textContent = `✅ Full chain completed! ${completedSteps}/${totalSteps} steps executed (${totalDuration}ms total) • ${stepsStr}`;
+        chainedTraceOutput.textContent = JSON.stringify(trace, null, 2);
+      } catch (e) {
+        chainStatus.textContent = `❌ Full chain error: ${e.message}`;
+        chainedTraceOutput.textContent = `Error Details:\n${e.stack}`;
+      } finally {
+        const runFullChainBtnLocal = document.getElementById('run-full-chain');
+        if (runFullChainBtnLocal) {
+          runFullChainBtnLocal.disabled = false;
+          runFullChainBtnLocal.textContent = '⚡ Run Full Chain';
+        }
+      }
+    };
+
+    window.runTrueDistributedChain = async function() {
+      console.log('🔥 GREEN BUTTON CLICKED! True Distributed Chain! 🔥');
+      const runTrueChainBtn = document.getElementById('run-true-chain');
+      const chainStatus = document.getElementById('chain-status');
+      const chainedTraceOutput = document.getElementById('chained-trace-output');
+      
+      try {
+        runTrueChainBtn.disabled = true;
+        runTrueChainBtn.textContent = '🔄 Running True Chain...';
+        chainStatus.textContent = '🌊 Starting true distributed chain (service → service → service)...';
+        chainedTraceOutput.textContent = '';
+
+        // Create test journey if none exists
+        if (!lastJourney || !lastJourney.steps || !lastJourney.steps.length) {
+          chainStatus.textContent = '⚠️ No journey data available. Creating test journey...';
+          
+          lastJourney = {
+            companyName: 'TestCorp',
+            domain: 'testcorp.com',
+            industryType: 'retail',
+            steps: [
+              { stepName: 'Discovery', description: 'Customer discovery' },
+              { stepName: 'Selection', description: 'Product selection' },
+              { stepName: 'Purchase', description: 'Purchase process' },
+              { stepName: 'Fulfillment', description: 'Order fulfillment' },
+              { stepName: 'Support', description: 'Customer support' },
+              { stepName: 'Retention', description: 'Customer retention' }
+            ]
+          };
+          
+          chainStatus.textContent = '✅ Test journey created! Running true distributed chain...';
+        }
+
+        // Build steps from the journey - this will create the full pipeline
+        let stepNames = lastJourney.steps.slice(0, 6).map(s => s.stepName || s.name || String(s));
+        while (stepNames.length < 6) stepNames.push(`Step${stepNames.length + 1}`);
+        stepNames = stepNames.slice(0, 6);
+
+        const body = { 
+          steps: stepNames.map(n => ({ stepName: n })),
+          thinkTimeMs: 300, // Longer think time to see the chain flow
+          companyName: lastJourney?.companyName || 'DefaultCompany',
+          domain: lastJourney?.domain || 'default.com',
+          industryType: lastJourney?.industryType || 'general'
+        };
+        
+        chainStatus.textContent = '🌊 Triggering first service - chain will flow naturally through services...';
+        
+        // Use step1-chained which will trigger the natural service-to-service flow
+        const res = await fetch('/api/steps/step1-chained', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+
+        if (!json.ok) {
+          chainStatus.textContent = `❌ True chain failed: ${json.error || 'Unknown error'}`;
+          chainedTraceOutput.textContent = `Error Details:\n${JSON.stringify(json, null, 2)}`;
+          return;
+        }
+
+        // Extract chain results - look for nested results from service-to-service calls
+        const result = json.result;
+        let allTraces = [];
+        let totalDuration = 0;
+        
+        // Collect traces from the nested chain
+        function collectTraces(obj, depth = 0) {
+          if (!obj) return;
+          
+          if (obj.journeyTrace && Array.isArray(obj.journeyTrace)) {
+            allTraces.push(...obj.journeyTrace);
+          }
+          
+          if (obj.processingTime) {
+            totalDuration += obj.processingTime;
+          }
+          
+          // Follow the chain through 'next' properties
+          if (obj.next && depth < 10) { // Prevent infinite recursion
+            collectTraces(obj.next, depth + 1);
+          }
+        }
+        
+        collectTraces(result);
+        
+        // Remove duplicates based on stepName
+        const uniqueTraces = allTraces.filter((trace, index, arr) => 
+          arr.findIndex(t => t.stepName === trace.stepName) === index
+        );
+        
+        const totalSteps = stepNames.length;
+        const completedSteps = uniqueTraces.length;
+        const stepsStr = uniqueTraces.map(t => t.stepName).join(' → ');
+        
+        if (completedSteps >= totalSteps) {
+          chainStatus.textContent = `✅ True distributed chain completed! ${completedSteps}/${totalSteps} services in chain (${totalDuration}ms) • ${stepsStr}`;
+        } else {
+          chainStatus.textContent = `🔄 True chain in progress: ${completedSteps}/${totalSteps} services traced (${totalDuration}ms) • ${stepsStr}`;
+        }
+        
+        chainedTraceOutput.textContent = JSON.stringify({
+          chainSummary: `${completedSteps}/${totalSteps} services`,
+          totalDuration: `${totalDuration}ms`,
+          serviceFlow: stepsStr,
+          traces: uniqueTraces
+        }, null, 2);
+        
+      } catch (e) {
+        chainStatus.textContent = `❌ True chain error: ${e.message}`;
+        chainedTraceOutput.textContent = `Error Details:\n${e.stack}`;
+      } finally {
+        const runTrueChainBtnLocal = document.getElementById('run-true-chain');
+        if (runTrueChainBtnLocal) {
+          runTrueChainBtnLocal.disabled = false;
+          runTrueChainBtnLocal.textContent = '🌊 True Chain Flow';
+        }
+      }
+    };
+
+    window.runJourneySimulation = async function() {
+      console.log('🔥 GREEN BUTTON CLICKED! 🔥');
+      const runJourneySimBtn = document.getElementById('run-journey-simulation');
+      const simStatus = document.getElementById('sim-status');
+      let flowResultsEl = document.getElementById('flow-results');
+      
+      if (!flowResultsEl) {
+        flowResultsEl = document.createElement('pre');
+        flowResultsEl.id = 'flow-results';
+        flowResultsEl.className = 'mt-2 text-xs bg-black p-3 rounded max-h-64 overflow-auto';
+        if (simStatus && simStatus.parentElement) {
+          simStatus.parentElement.appendChild(flowResultsEl);
+        }
+      }
+      
+      try {
+        runJourneySimBtn.disabled = true;
+        runJourneySimBtn.textContent = '🔄 Simulating Journey...';
+        simStatus.textContent = 'Starting customer journey simulation...';
+        
+        // Create test journey if none exists
+        if (!lastJourney) {
+          simStatus.textContent = '⚠️ No journey data available. Creating test journey for simulation...';
+          
+          lastJourney = {
+            companyName: 'SimTestCorp',
+            domain: 'simtestcorp.com',
+            industryType: 'retail',
+            steps: [
+              { stepName: 'Discovery', description: 'Customer discovery phase' },
+              { stepName: 'Evaluation', description: 'Product evaluation' },
+              { stepName: 'Decision', description: 'Purchase decision' },
+              { stepName: 'Transaction', description: 'Complete transaction' }
+            ]
+          };
+          
+          simStatus.textContent = '✅ Test journey created! Starting simulation...';
+        }
+        
+        const customerId = `customer_${Date.now()}`;
+        const journeyId = `journey_${Date.now()}`;
+        
+        const journeyData = {
+          steps: lastJourney.steps || [],
+          journeyId: lastJourney.id || journeyId,
+          companyName: lastJourney.companyName || 'DefaultCompany',
+          domain: lastJourney.domain || 'default.com',
+          industryType: lastJourney.industryType || 'general'
+        };
+        
+        simStatus.textContent = '🚀 Running customer journey simulation...';
+        
+        const res = await fetch('/api/journey-simulation/simulate-journey', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ 
+            journeyId,
+            customerId,
+            aiJourney: journeyData,
+            companyName: journeyData.companyName,
+            domain: journeyData.domain,
+            industryType: journeyData.industryType,
+            chained: false
+          }) 
+        });
+        
+        const json = await res.json();
+        
+        if (json.success) {
+          const journey = json.journey;
+          simStatus.textContent = `✅ Customer Journey complete! ${journey.completedSteps}/${journey.totalSteps} steps successful. Correlation: ${journey.correlationId}`;
+          
+          const stepSummary = journey.steps.map((step, idx) => {
+            const status = step.status === 'completed' ? '✅' : '❌';
+            const serviceName = step.serviceName || (step.stepName + 'Service');
+            return `${status} Step ${idx + 1}: ${serviceName} (${step.processingTime || 0}ms)`;
+          }).join('\n');
+          
+          flowResultsEl.textContent = `Customer Journey Execution:\n${stepSummary}\n\nServices Used: ${journey.stepNames ? journey.stepNames.join(' → ') : 'N/A'}\n\nCorrelation ID: ${journey.correlationId}`;
+          
+        } else {
+          simStatus.textContent = `❌ Journey simulation failed: ${json.error}`;
+          flowResultsEl.textContent = `Journey Error Details:\n${JSON.stringify(json, null, 2)}`;
+        }
+        
+      } catch (error) {
+        console.error('Journey Simulation error:', error);
+        simStatus.textContent = `❌ Journey simulation error: ${error.message}`;
+        flowResultsEl.textContent = `Error Details:\n${error.stack}`;
+      } finally {
+        runJourneySimBtn.disabled = false;
+        runJourneySimBtn.textContent = '🚀 Run Journey Simulation';
+      }
+    };
+
+    window.resetServices = async function() {
+      console.log('Reset button clicked');
+      const chainStatus = document.getElementById('chain-status');
+      try {
+        chainStatus.textContent = 'Resetting dynamic services...';
+        const res = await fetch('/api/admin/reset-ports', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: '{}' 
+        });
+        const json = await res.json();
+        chainStatus.textContent = json.ok ? '✅ Dynamic services reset.' : `❌ Reset failed: ${json.error || 'Unknown error'}`;
+      } catch (e) {
+        chainStatus.textContent = `❌ Reset error: ${e.message}`;
+      }
+    };
+
+    // Handle generation method change
+    document.getElementById('generationMethod').addEventListener('change', (e) => {
+      const copilotWorkflow = document.getElementById('copilotWorkflow');
+      const templateExample = document.getElementById('templateExample');
+      const customStepsContainer = document.getElementById('customStepsContainer');
+      const optionalFieldsContainer = document.getElementById('optionalFieldsContainer');
+      const journeyRequirementsContainer = document.getElementById('journeyRequirementsContainer');
+      const journeyForm = document.getElementById('journey-form');
+      
+      if (e.target.value === 'copilot') {
+        copilotWorkflow.classList.remove('hidden');
+        templateExample.classList.add('hidden');
+        // In Copilot mode: show basic form fields + journey requirements, hide template-specific fields
+        journeyForm.classList.remove('hidden');
+        customStepsContainer.style.display = 'none';
+        optionalFieldsContainer.style.display = 'none';
+        journeyRequirementsContainer.style.display = 'block';
+        generateCopilotPrompt();
+      } else {
+        copilotWorkflow.classList.add('hidden');
+        templateExample.classList.remove('hidden');
+        // In Template mode: show all form fields except journey requirements
+        journeyForm.classList.remove('hidden');
+        customStepsContainer.style.display = 'block';
+        optionalFieldsContainer.style.display = 'block';
+        journeyRequirementsContainer.style.display = 'none';
+        
+        // Pre-fill form fields with retail example values
+        document.getElementById('companyName').value = 'ShopMart';
+        document.getElementById('domain').value = 'shopmart.com';
+        document.getElementById('industryType').value = 'retail';
+        document.getElementById('customSteps').value = 'Product Discovery, Product Selection, Cart Addition, Checkout Process, Order Confirmation, Post Purchase';
+        document.getElementById('journeyType').value = 'E-commerce Purchase';
+        document.getElementById('details').value = 'Customer journey for online retail shopping experience';
+      }
+    });
+
+    // Add event listeners to form inputs to auto-update prompt
+    document.getElementById('companyName').addEventListener('input', () => {
+      if (document.getElementById('generationMethod').value === 'copilot') {
+        generateCopilotPrompt();
+      }
+    });
+    
+    document.getElementById('domain').addEventListener('input', () => {
+      if (document.getElementById('generationMethod').value === 'copilot') {
+        generateCopilotPrompt();
+      }
+    });
+    // Additional Fields listeners
+    let additionalFields = [];
+
+    // Helper functions for industry-specific data (moved up to be available early)
+    function getIndustryDemographic(industry) {
+      const demographics = {
+        'telecommunications': 'mobile users aged 25-45',
+        'banking': 'working professionals aged 30-55',
+        'retail': 'consumers aged 18-65',
+        'travel': 'leisure travelers aged 25-60',
+        'insurance': 'policy holders aged 25-50',
+        'healthcare': 'patients aged 20-70',
+        'education': 'learners aged 18-40',
+        'technology': 'tech professionals aged 25-45'
+      };
+      return demographics[industry.toLowerCase()] || 'general consumers';
+    }
+
+    function getIndustryPainPoints(industry) {
+      const painPoints = {
+        'telecommunications': ['poor network coverage', 'expensive bills'],
+        'banking': ['complex fees', 'poor customer service'],
+        'retail': ['high prices', 'limited selection'],
+        'travel': ['complicated booking', 'hidden fees'],
+        'insurance': ['confusing policies', 'high premiums'],
+        'healthcare': ['long wait times', 'complex scheduling'],
+        'education': ['course complexity', 'time constraints'],
+        'technology': ['learning curve', 'integration challenges']
+      };
+      return painPoints[industry.toLowerCase()] || ['complexity', 'cost'];
+    }
+
+    function getIndustryGoals(industry, company) {
+      const goals = {
+        'telecommunications': ['reliable connectivity', 'value for money'],
+        'banking': ['financial security', 'easy banking'],
+        'retail': ['quality products', 'good prices'],
+        'travel': ['smooth booking', 'great experience'],
+        'insurance': ['comprehensive coverage', 'fair pricing'],
+        'healthcare': ['quality care', 'convenient access'],
+        'education': ['skill development', 'career advancement'],
+        'technology': ['improved efficiency', 'seamless integration']
+      };
+      return goals[industry.toLowerCase()] || ['good service', 'value for money'];
+    }
+
+    function getIndustryValue(industry) {
+      const values = {
+        'telecommunications': 2000,
+        'banking': 5000,
+        'retail': 1500,
+        'travel': 3000,
+        'insurance': 4000,
+        'healthcare': 2500,
+        'education': 1800,
+        'technology': 3500
+      };
+      return values[industry.toLowerCase()] || 2000;
+    }
+
+    function getIndustryLocation(industry) {
+      const locations = {
+        'telecommunications': 'London, UK',
+        'banking': 'London, UK',
+        'retail': 'Manchester, UK',
+        'travel': 'Edinburgh, UK',
+        'insurance': 'Birmingham, UK',
+        'healthcare': 'Leeds, UK',
+        'education': 'Oxford, UK',
+        'technology': 'Cambridge, UK'
+      };
+      return locations[industry.toLowerCase()] || 'London, UK';
+    }
+
+    function getIndustryConversion(industry) {
+      const conversions = {
+        'telecommunications': 0.65,
+        'banking': 0.45,
+        'retail': 0.75,
+        'travel': 0.55,
+        'insurance': 0.35,
+        'healthcare': 0.60,
+        'education': 0.50,
+        'technology': 0.40
+      };
+      return conversions[industry.toLowerCase()] || 0.50;
+    }
+
+    function getIndustryTags(industry) {
+      const tags = {
+        'telecommunications': ['mobile', 'connectivity'],
+        'banking': ['finance', 'security'],
+        'retail': ['shopping', 'products'],
+        'travel': ['booking', 'leisure'],
+        'insurance': ['protection', 'coverage'],
+        'healthcare': ['wellness', 'care'],
+        'education': ['learning', 'skills'],
+        'technology': ['innovation', 'efficiency']
+      };
+      return tags[industry.toLowerCase()] || ['service', 'quality'];
+    }
+    function renderAdditionalFields() {
+      const list = document.getElementById('additionalFieldsList');
+      list.innerHTML = '';
+      additionalFields.forEach((field, idx) => {
+        const div = document.createElement('div');
+        div.className = 'flex gap-2 items-center mb-1';
+        div.innerHTML = `<span class="text-xs text-dtcyan">${field.name}</span><span class="text-xs text-gray-400">(${field.type})</span><button type="button" class="bg-dtpurple text-white px-2 py-0 rounded text-xs" data-remove="${idx}">Remove</button>`;
+        list.appendChild(div);
+      });
+      Array.from(list.querySelectorAll('button[data-remove]')).forEach(btn => {
+        btn.onclick = () => {
+          const idx = Number(btn.getAttribute('data-remove'));
+          additionalFields.splice(idx, 1);
+          renderAdditionalFields();
+          generateCopilotPrompt();
+        };
+      });
+    }
+    document.getElementById('addFieldBtn').onclick = () => {
+      const name = document.getElementById('newFieldName').value.trim();
+      const type = document.getElementById('newFieldType').value;
+      if (!name) return;
+      additionalFields.push({ name, type });
+      document.getElementById('newFieldName').value = '';
+      document.getElementById('newFieldType').value = 'string';
+      renderAdditionalFields();
+      generateCopilotPrompt();
+    };
+    
+    document.getElementById('industryType').addEventListener('input', () => {
+      if (document.getElementById('generationMethod').value === 'copilot') {
+        generateCopilotPrompt();
+      }
+    });
+
+    document.getElementById('journeyRequirements').addEventListener('input', () => {
+      if (document.getElementById('generationMethod').value === 'copilot') {
+        generateCopilotPrompt();
+      }
+    });
+
+    document.getElementById('customSteps').addEventListener('input', () => {
+      if (document.getElementById('generationMethod').value === 'copilot') {
+        generateCopilotPrompt();
+      }
+    });
+
+    // Generate Copilot Prompt
+    function generateCopilotPrompt() {
+      console.log('generateCopilotPrompt called');
+      
+      try {
+        const companyName = document.getElementById('companyName')?.value || '[Your Company Name]';
+        const domain = document.getElementById('domain')?.value || '[your-domain.com]';
+        const industryType = document.getElementById('industryType')?.value || '[Your Industry]';
+        const journeyRequirements = document.getElementById('journeyRequirements')?.value?.trim() || '';
+        
+        // Dynamic Additional Fields
+        const additionalFieldsText = additionalFields && additionalFields.length ? ` - Additional Fields: ${additionalFields.map(f => `${f.name} (${f.type})`).join(', ')}` : '';
+
+        // Create industry-specific context
+        const industryContext = industryType ? `for a ${industryType} company` : 'for a business';
+        const specificRequirements = journeyRequirements || `Create a comprehensive customer journey ${industryContext} that includes key touchpoints from initial awareness to customer retention.`;
+
+        const additionalFieldsInstruction = additionalFields && additionalFields.length
+          ? `\n\nFor each field listed below, generate 2-3 realistic example values based on its type and the business context. Do not omit any field.\nPopulate every field with a plausible, context-aware value.\nFor example:\n- Handset: ["Samsung Galaxy S23 Ultra", "iPhone 15 Pro Max", "Google Pixel 8 Pro"]\n- HandsetPrice: ["£1,199.00", "£999.00", "£849.00"]\n- PlanType: ["Unlimited Data + Roaming", "20GB Data + Calls", "SIM-Only"]\n- PaymentModel: ["24-month contract with monthly installments", "Pay-as-you-go", "12-month upfront"]\n- List of fields:\n${additionalFields.map(f => `  - ${f.name} (${f.type})`).join('\n')}`
+          : '';
+
+        const prompt = `Create a realistic customer journey for ${companyName} (${domain}) in ${industryType}. Generate step names that reflect the actual customer experience for this industry.${additionalFieldsText}
+${additionalFieldsInstruction}
+
+${journeyRequirements ? `SPECIFIC REQUIREMENTS:\n${journeyRequirements}\n\n` : ''}CONTEXT:\n- Company: ${companyName}\n- Domain: ${domain}\n- Industry: ${industryType}\n- Target Steps: [AI-Generated Step 1], [AI-Generated Step 2], [AI-Generated Step 3], [AI-Generated Step 4], [AI-Generated Step 5], [AI-Generated Step 6]${additionalFieldsText}
+
+Respond with this EXACT JSON structure:\n{\n  "journey": {\n    "companyName": "${companyName}",\n    "domain": "${domain}",\n    "industryType": "${industryType}",\n    "journeyId": "journey_${Date.now()}",\n    "steps": [\n      // 6 steps, each with 2-3 realistic substeps for this industry\n    ]\n  },\n  "customerProfile": {\n    "userId": "user_${Math.random().toString(36).substr(2, 9)}",\n    "email": "customer@example.com",\n    "demographic": "${getIndustryDemographic ? getIndustryDemographic(industryType) : 'general consumers'}",\n    "painPoints": ${JSON.stringify(getIndustryPainPoints ? getIndustryPainPoints(industryType) : ['complexity', 'cost'])},\n    "goals": ${JSON.stringify(getIndustryGoals ? getIndustryGoals(industryType, companyName) : ['good service', 'value'])}\n  },\n  "traceMetadata": {\n    "correlationId": "trace_${Date.now()}",\n    "sessionId": "session_${Math.random().toString(36).substr(2, 9)}",\n    "businessContext": {"campaignSource": "organic", "customerSegment": "consumer", "businessValue": ${getIndustryValue ? getIndustryValue(industryType) : 2000}}\n  },\n  "additionalFields": {\n    "deviceType": "mobile", "browser": "Chrome", "location": "${getIndustryLocation ? getIndustryLocation(industryType) : 'London, UK'}", "entryChannel": "organic",\n    "customerIntent": "purchase", "loyaltyStatus": "new", "abandonmentRisk": "medium",\n    "conversionProbability": ${getIndustryConversion ? getIndustryConversion(industryType) : 0.65}, "personalizationTags": ${JSON.stringify(getIndustryTags ? getIndustryTags(industryType) : ['service', 'quality'])},\n    ${additionalFields && additionalFields.length ? additionalFields.map(f => `"${f.name}": "" // type: ${f.type}`).join(', ') : ''}\n  }\n}\n\nREQUIREMENTS:\n- Create exactly 6 steps using your knowledge of the ${industryType} industry to generate appropriate, professional step names (e.g., for retail: Product Discovery, Product Selection, Cart Addition, Checkout Process, Order Confirmation, Post Purchase).\n- Each step must use its stepName as the serviceName (in PascalCase, ending with 'Service').\n- Each step must have 2-3 realistic substeps for ${industryType}.\n\nIMPORTANT:\n- For serviceName, use PascalCase format ending with 'Service' (e.g., "ProductDiscoveryService", "CheckoutProcessService", "OrderConfirmationService").\n- The system dynamically creates these services using the step names you provide. Each service will be automatically instantiated on dedicated ports and traced with Dynatrace.\n- Use industry-specific service names, endpoints, and metadata.\n- Keep descriptions brief but specific to ${companyName}'s ${industryType} business.\n- Do NOT use any legacy service names (like advocacy, retention, etc).\n- All service names must match the step names in PascalCase + 'Service'.\n\nERROR SIMULATION (Important):\n- The system automatically simulates realistic step-level failures based on the companyName (customer). Different companies have different failure patterns (e.g., payment issues for checkout, database issues for selection/verification).\n- Optional: To guide or force specific failures for demo purposes, you MAY add an error hint per step. If omitted, the system will infer errors from the company profile.\n- If you provide hints, add one of the following to each step object:\n  // Example 1 (probabilistic)\n  "errorHint": { "type": "payment_gateway_timeout", "httpStatus": 503, "likelihood": 0.4 }\n  // Example 2 (deterministic)\n  "errorPlan": { "errorType": "database_connection_lost", "status": 500, "force": true }\n- Supported error types include: payment_gateway_timeout, inventory_service_down, authentication_failure, database_connection_lost, third_party_api_failure, rate_limit_exceeded, session_timeout, validation_error.\n- Supported statuses include HTTP 500, 503, 502, 429, 422, 408. Likelihood is 0..1, force overrides randomness.\n`;
+
+      console.log('Setting prompt text:', prompt.substring(0, 100) + '...');
+      const promptTextElement = document.getElementById('promptText');
+      console.log('promptText element:', promptTextElement);
+      if (promptTextElement) {
+        promptTextElement.value = prompt;
+        console.log('Prompt set successfully, length:', prompt.length);
+        // Force a visual refresh
+        promptTextElement.style.display = 'none';
+        promptTextElement.offsetHeight; // trigger reflow
+        promptTextElement.style.display = '';
+      } else {
+        console.error('promptText element not found!');
+      }
+      } catch (error) {
+        console.error('Error generating prompt:', error);
+        const promptTextElement = document.getElementById('promptText');
+        if (promptTextElement) {
+          promptTextElement.value = 'Error generating prompt. Please refresh the page.';
+        }
+      }
+    }
+
+    // Add event listeners to update prompt when fields change
+    ['companyName', 'domain', 'industryType', 'journeyRequirements'].forEach(fieldId => {
+      document.getElementById(fieldId).addEventListener('input', () => {
+        if (document.getElementById('generationMethod').value === 'copilot') {
+          generateCopilotPrompt();
+        }
+      });
+    });
+
+    // Industry-specific step name generation
+    function getIndustrySpecificSteps(industry, company) {
+      const steps = {
+        'telecommunications': ['Discovery', 'PlanExploration', 'ServiceSelection', 'AccountSetup', 'ServiceActivation', 'PostActivation'],
+        'banking': ['Discovery', 'ProductExploration', 'ApplicationStart', 'IdentityVerification', 'AccountOpening', 'FirstTransaction'],
+        'retail': ['Discovery', 'ProductBrowsing', 'ItemSelection', 'Checkout', 'OrderConfirmation', 'PostPurchase'],
+        'travel': ['Discovery', 'DestinationExploration', 'BookingSelection', 'ReservationProcess', 'BookingConfirmation', 'TripManagement'],
+        'insurance': ['Discovery', 'QuoteExploration', 'PolicySelection', 'ApplicationProcess', 'PolicyIssuance', 'PolicyManagement'],
+        'healthcare': ['Discovery', 'ServiceExploration', 'AppointmentScheduling', 'Registration', 'ServiceDelivery', 'FollowUp'],
+        'education': ['Discovery', 'CourseExploration', 'EnrollmentProcess', 'Registration', 'LearningStart', 'ProgressTracking'],
+        'technology': ['Discovery', 'FeatureExploration', 'TrialSignup', 'Implementation', 'GoLive', 'Optimization']
+      };
+      return steps[industry.toLowerCase()] || ['Discovery', 'Exploration', 'Selection', 'ProcessStart', 'Completion', 'PostProcess'];
+    }
+
+    function getIndustryExample(industry, company, domain) {
+      const examples = {
+        'telecommunications': '{"searchTerm": "' + company + ' mobile plans", "referrer": "google", "device": "mobile"}',
+        'banking': '{"searchTerm": "' + company + ' savings account", "referrer": "google", "device": "desktop"}',
+        'retail': '{"searchTerm": "' + company + ' products", "referrer": "social", "device": "mobile"}',
+        'travel': '{"searchTerm": "' + company + ' flights", "referrer": "google", "device": "tablet"}',
+        'insurance': '{"searchTerm": "' + company + ' car insurance", "referrer": "comparison", "device": "desktop"}',
+        'healthcare': '{"searchTerm": "' + company + ' appointments", "referrer": "direct", "device": "mobile"}',
+        'education': '{"searchTerm": "' + company + ' courses", "referrer": "google", "device": "desktop"}',
+        'technology': '{"searchTerm": "' + company + ' software", "referrer": "google", "device": "desktop"}'
+      };
+      return examples[industry.toLowerCase()] || '{"searchTerm": "' + company + '", "referrer": "google", "device": "mobile"}';
+    }
+
+    // Copy prompt to clipboard
+    document.getElementById('copyPrompt').addEventListener('click', async () => {
+      const promptText = document.getElementById('promptText').value;
+      try {
+        await navigator.clipboard.writeText(promptText);
+        const btn = document.getElementById('copyPrompt');
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        btn.classList.remove('bg-dtgreen', 'hover:bg-green-700');
+        btn.classList.add('bg-green-800');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.remove('bg-green-800');
+          btn.classList.add('bg-dtgreen', 'hover:bg-green-700');
+        }, 2000);
+      } catch (err) {
+        alert('Failed to copy to clipboard');
+      }
+    });
+
+    // Process Copilot Response
+    document.getElementById('processResponse').addEventListener('click', () => {
+      const responseText = document.getElementById('copilotResponse').value.trim();
+      if (!responseText) {
+        alert('Please paste your Copilot response first');
+        return;
+      }
+
+      try {
+        const parsedResponse = JSON.parse(responseText);
+        if (parsedResponse.journey && parsedResponse.journey.steps) {
+          lastJourney = parsedResponse.journey;
+          currentJourneyData = parsedResponse;
+
+          // Display journey with additional fields info
+          const displayData = {
+            journey: parsedResponse.journey,
+            customerProfile: parsedResponse.customerProfile,
+            traceMetadata: parsedResponse.traceMetadata,
+            additionalFields: parsedResponse.additionalFields
+          };
+
+          journeyOutput.textContent = JSON.stringify(displayData, null, 2);
+          journeyProvider.textContent = 'Provider: Enhanced Copilot Copy-Paste (Web Search)';
+          journeySources.innerHTML = '<div>Source: AI-powered web research and real behavior data</div>';
+
+          // Enable flow buttons safely
+          try {
+            setupFlowButtons();
+          } catch (btnErr) {
+            console.warn('setupFlowButtons failed:', btnErr);
+            // Don't treat this as a JSON error; just notify in console and continue
+          }
+
+          // Auto-save when journey is processed
+          promptCache.autoSaveCurrentState('journey processed');
+
+          const fieldsCount = parsedResponse.additionalFields ? Object.keys(parsedResponse.additionalFields).length : 0;
+          alert(`Journey processed successfully! Includes ${fieldsCount} additional tracking fields. You can now simulate enriched events.`);
+        } else {
+          alert('Invalid response format. Please ensure your Copilot returned the correct JSON structure with journey.steps.');
+        }
+      } catch (error) {
+        console.error('JSON Parse Error:', error);
+        console.log('Raw input:', responseText);
+        alert(`Invalid JSON format. Error: ${error.message}\n\nPlease check your Copilot response and try again. Check the browser console for details.`);
+      }
+    });
+
+    // Reset Workflow
+    document.getElementById('resetWorkflow').addEventListener('click', () => {
+      document.getElementById('copilotResponse').value = '';
+      journeyOutput.textContent = '';
+      journeyProvider.textContent = '';
+      journeySources.innerHTML = '';
+      generateCopilotPrompt();
+    });
+
+    // Generate Journey (Both Template and Copilot Mode)
+    document.getElementById('generateJourney').addEventListener('click', async () => {
+      const generationMethod = document.getElementById('generationMethod').value;
+      
+      if (generationMethod === 'copilot') {
+        // For Copilot mode, create a basic journey structure with the provided requirements
+        const companyName = document.getElementById('companyName').value || 'YourCompany';
+        const domain = document.getElementById('domain').value || 'yourcompany.com';
+        const industryType = document.getElementById('industryType').value || 'general';
+        const journeyRequirements = document.getElementById('journeyRequirements').value || 'Standard customer journey';
+        
+        // Create a simple journey structure for simulation
+        const basicJourney = {
+          companyName,
+          domain,
+          industryType,
+          steps: [
+            { stepName: 'Discovery', description: 'Initial customer discovery' },
+            { stepName: 'Awareness', description: 'Customer becomes aware' },
+            { stepName: 'Consideration', description: 'Customer considers options' },
+            { stepName: 'Purchase', description: 'Customer makes purchase' },
+            { stepName: 'Retention', description: 'Customer retention activities' },
+            { stepName: 'Advocacy', description: 'Customer becomes advocate' }
+          ],
+          requirements: journeyRequirements
+        };
+        
+        lastJourney = basicJourney;
+        currentJourneyData = { journey: basicJourney };
+        journeyOutput.textContent = JSON.stringify({ journey: basicJourney }, null, 2);
+        setupFlowButtons();
+        alert('Basic journey structure created! You can now simulate this journey or use the Copilot workflow above for AI-generated journeys.');
+        return;
+      }
+
+      // Template mode logic - Generate ShopMart retail example locally
+      const companyName = document.getElementById('companyName').value || 'ShopMart';
+      const domain = document.getElementById('domain').value || 'shopmart.com';
+      const industryType = document.getElementById('industryType').value || 'retail';
+      const customStepsInput = document.getElementById('customSteps').value.trim();
+      
+      // Use custom steps if provided, otherwise use default retail steps
+      const steps = customStepsInput ? 
+        customStepsInput.split(',').map(step => step.trim()).filter(step => step) :
+        ['Product Discovery', 'Product Selection', 'Add to Cart', 'Checkout Process', 'Payment Processing', 'Order Confirmation'];
+      
+      const retailJourney = {
+        companyName,
+        domain,
+        industryType,
+        journeyId: `journey_${Date.now()}`,
+        steps: steps.map((stepName, index) => ({
+          stepName,
+          serviceName: stepName.replace(/\\s+/g, '') + 'Service',
+          description: `Customer ${stepName.toLowerCase()} step`,
+          order: index + 1,
+          endpoints: [`/${stepName.toLowerCase().replace(/\\s+/g, '-')}`],
+          metadata: {
+            stepType: 'retail',
+            processingTime: Math.floor(Math.random() * 200) + 100,
+            businessValue: Math.floor(Math.random() * 500) + 100
+          }
+        })),
+        provider: 'Quick Template (Retail Example)',
+        generated: new Date().toISOString()
+      };
+      
+      lastJourney = retailJourney;
+      currentJourneyData = { journey: retailJourney };
+      
+      journeyOutput.textContent = JSON.stringify({ journey: retailJourney }, null, 2);
+      journeySources.innerHTML = '<div>Source: Built-in retail template</div>';
+      journeyProvider.textContent = 'Provider: Quick Template (Retail Example)';
+      
+      setupFlowButtons();
+      
+      // Auto-save when journey is generated
+      promptCache.autoSaveCurrentState('journey generated');
+      
+      alert(`${companyName} retail journey created! Ready for simulation with ${steps.length} steps.`);
+    });
+
+    // Simulate Events (batch 6-step chained)
+    simulateForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentJourneyData || !currentJourneyData.journey) {
+        alert('Please generate or load a journey first');
+        return;
+      }
+      const customers = Number(new FormData(simulateForm).get('duration')) || 10;
+      const thinkTimeMs = 100;
+      simStatus.textContent = `Starting ${customers} customer(s) 6-step chained flow...`;
+      const journeyPayload = {
+        companyName: currentJourneyData.journey.companyName || 'DefaultCompany',
+        domain: currentJourneyData.journey.domain || 'default.com',
+        industryType: currentJourneyData.journey.industryType || 'general',
+        steps: currentJourneyData.journey.steps || []
+      };
+      const res = await fetch('/api/journey-simulation/simulate-batch-chained', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customers, thinkTimeMs, journey: journeyPayload })
+      });
+      const json = await res.json();
+      if (json.ok) {
+        simStatus.textContent = `✅ Batch complete: ${json.summary.completed}/${json.summary.customers} succeeded, ${json.summary.failed} failed`;
+        flowResultsEl.textContent = `Sample (first 5):\n${JSON.stringify(json.sample, null, 2)}`;
+      } else {
+        simStatus.textContent = `❌ Batch failed: ${json.error || 'Unknown error'}`;
+        flowResultsEl.textContent = '';
+      }
+    });
+
+    // Add a details area for flow results
+    let flowResultsEl = document.getElementById('flow-results');
+    if (!flowResultsEl) {
+      flowResultsEl = document.createElement('pre');
+      flowResultsEl.id = 'flow-results';
+      flowResultsEl.className = 'mt-2 text-xs bg-black p-3 rounded max-h-64 overflow-auto';
+      simStatus.parentElement.appendChild(flowResultsEl);
+    }
+
+    async function refreshMetrics() {
+      const res = await fetch('/api/metrics');
+      const json = await res.json();
+      metricsEl.textContent = JSON.stringify(json, null, 2);
+    }
+    setInterval(refreshMetrics, 2000);
+    refreshMetrics();
+
+    // Use Retail Example functionality
+    document.getElementById('useRetailExample').addEventListener('click', () => {
+      const retailJourney = {
+        "journey": {
+          "companyName": "ShopMart",
+          "domain": "shopmart.com", 
+          "industryType": "retail",
+          "journeyId": "journey_retail_example",
+          "steps": [
+            {
+              "stepIndex": 1,
+              "stepName": "Product Discovery",
+              "description": "Customer exploring product catalog",
+              "duration": "3-8 minutes",
+              "substeps": [
+                {
+                  "substepIndex": 1,
+                  "substepName": "Browse_Catalog",
+                  "description": "Customer browsing main catalog",
+                  "serviceName": "ProductDiscoveryService",
+                  "endpoint": "/api/product-discovery",
+                  "duration": 1200,
+                  "eventType": "browse_initiated",
+                  "metadata": {"searchTerm": "winter jackets", "category": "clothing", "device": "mobile"}
+                },
+                {
+                  "substepIndex": 2,
+                  "substepName": "Filter_Results", 
+                  "description": "Customer applying search filters",
+                  "serviceName": "ProductDiscoveryService",
+                  "endpoint": "/api/filter",
+                  "duration": 800,
+                  "eventType": "filter_applied",
+                  "metadata": {"filters": ["size:M", "color:black"], "resultsCount": 24}
+                }
+              ]
+            },
+            {
+              "stepIndex": 2,
+              "stepName": "Product Selection",
+              "description": "Customer evaluating specific items", 
+              "duration": "2-5 minutes",
+              "substeps": [
+                {
+                  "substepIndex": 1,
+                  "substepName": "View_Details",
+                  "description": "Customer viewing product details",
+                  "serviceName": "ProductSelectionService",
+                  "endpoint": "/api/product-selection",
+                  "duration": 900,
+                  "eventType": "product_viewed",
+                  "metadata": {"productId": "jacket_123", "price": 89.99}
+                },
+                {
+                  "substepIndex": 2,
+                  "substepName": "Check_Reviews",
+                  "description": "Customer reading reviews and ratings",
+                  "serviceName": "ProductSelectionService", 
+                  "endpoint": "/api/reviews",
+                  "duration": 600,
+                  "eventType": "reviews_viewed",
+                  "metadata": {"rating": 4.5, "reviewCount": 127}
+                }
+              ]
+            },
+            {
+              "stepIndex": 3,
+              "stepName": "Cart Addition",
+              "description": "Customer adding items to cart",
+              "duration": "1-3 minutes", 
+              "substeps": [
+                {
+                  "substepIndex": 1,
+                  "substepName": "Add_To_Cart",
+                  "description": "Customer adding product to shopping cart",
+                  "serviceName": "CartAdditionService",
+                  "endpoint": "/api/cart-addition", 
+                  "duration": 500,
+                  "eventType": "cart_add",
+                  "metadata": {"quantity": 1, "cartValue": 89.99}
+                },
+                {
+                  "substepIndex": 2,
+                  "substepName": "View_Cart",
+                  "description": "Customer reviewing cart contents",
+                  "serviceName": "CartAdditionService",
+                  "endpoint": "/api/cart",
+                  "duration": 400,
+                  "eventType": "cart_viewed", 
+                  "metadata": {"itemCount": 1, "totalValue": 89.99}
+                }
+              ]
+            },
+            {
+              "stepIndex": 4,
+              "stepName": "Checkout Process",
+              "description": "Customer proceeding through checkout",
+              "duration": "3-7 minutes",
+              "substeps": [
+                {
+                  "substepIndex": 1,
+                  "substepName": "Enter_Details",
+                  "description": "Customer entering shipping and payment info",
+                  "serviceName": "CheckoutProcessService",
+                  "endpoint": "/api/checkout-process",
+                  "duration": 1800,
+                  "eventType": "checkout_started",
+                  "metadata": {"paymentMethod": "credit_card", "shippingMethod": "standard"}
+                },
+                {
+                  "substepIndex": 2,
+                  "substepName": "Apply_Promotion",
+                  "description": "Customer applying discount code",
+                  "serviceName": "CheckoutProcessService",
+                  "endpoint": "/api/promotions",
+                  "duration": 300,
+                  "eventType": "promotion_applied",
+                  "metadata": {"promoCode": "SAVE10", "discount": 9.00}
+                }
+              ]
+            },
+            {
+              "stepIndex": 5,
+              "stepName": "Order Confirmation",
+              "description": "Customer completing purchase",
+              "duration": "1-2 minutes",
+              "substeps": [
+                {
+                  "substepIndex": 1,
+                  "substepName": "Process_Payment",
+                  "description": "Payment processing and order completion",
+                  "serviceName": "OrderConfirmationService",
+                  "endpoint": "/api/order-confirmation",
+                  "duration": 1000,
+                  "eventType": "order_completed",
+                  "metadata": {"orderId": "ORD_789", "finalAmount": 80.99}
+                },
+                {
+                  "substepIndex": 2,
+                  "substepName": "Send_Confirmation",
+                  "description": "Sending order confirmation email",
+                  "serviceName": "OrderConfirmationService",
+                  "endpoint": "/api/confirmation-email",
+                  "duration": 200,
+                  "eventType": "confirmation_sent",
+                  "metadata": {"email": "customer@example.com", "estimatedDelivery": "3-5 days"}
+                }
+              ]
+            },
+            {
+              "stepIndex": 6,
+              "stepName": "Post Purchase",
+              "description": "Customer post-purchase activities",
+              "duration": "varies",
+              "substeps": [
+                {
+                  "substepIndex": 1,
+                  "substepName": "Track_Order",
+                  "description": "Customer tracking order status",
+                  "serviceName": "PostPurchaseService",
+                  "endpoint": "/api/post-purchase",
+                  "duration": 400,
+                  "eventType": "order_tracked",
+                  "metadata": {"trackingNumber": "TRK123456", "status": "shipped"}
+                },
+                {
+                  "substepIndex": 2,
+                  "substepName": "Leave_Review",
+                  "description": "Customer leaving product review",
+                  "serviceName": "PostPurchaseService",
+                  "endpoint": "/api/reviews/create",
+                  "duration": 600,
+                  "eventType": "review_submitted",
+                  "metadata": {"rating": 5, "reviewText": "Great quality jacket!"}
+                }
+              ]
+            }
+          ]
+        },
+        "customerProfile": {
+          "userId": "user_retail_demo",
+          "email": "customer@example.com",
+          "demographic": "consumers aged 18-65",
+          "painPoints": ["high prices", "limited selection"],
+          "goals": ["quality products", "good prices"]
+        },
+        "traceMetadata": {
+          "correlationId": "trace_retail_example",
+          "sessionId": "session_retail_demo",
+          "businessContext": {"campaignSource": "organic", "customerSegment": "consumer", "businessValue": 500}
+        },
+        "additionalFields": {
+          "deviceType": "mobile", "browser": "Chrome", "location": "London, UK", "entryChannel": "organic",
+          "customerIntent": "purchase", "loyaltyStatus": "new", "abandonmentRisk": "medium",
+          "conversionProbability": 0.85, "personalizationTags": ["shopping", "products"]
+        }
+      };
+      
+      lastJourney = retailJourney.journey;
+      currentJourneyData = retailJourney;
+      
+      journeyOutput.textContent = JSON.stringify(retailJourney, null, 2);
+      journeyProvider.textContent = 'Provider: Retail Template Example';
+      journeySources.innerHTML = '<div>Source: Built-in retail journey template</div>';
+      
+      setupFlowButtons();
+      alert('Retail journey example loaded! You can now use this for simulation or modify the form to create your own.');
+    });
+
+    // Setup button handlers function - ensures buttons work properly
+    function setupFlowButtons() {
+      console.log('Setting up flow buttons (safe mode)...');
+
+      // Query DOM elements locally to avoid referencing undefined globals
+      const runChainedBtnLocal = document.getElementById('run-chained-flow');
+      const runJourneySimBtnLocal = document.getElementById('run-journey-simulation');
+      const chainStatusLocal = document.getElementById('chain-status');
+
+      if (!runChainedBtnLocal || !runJourneySimBtnLocal) {
+        console.error('Button elements not found during setupFlowButtons');
+        return;
+      }
+
+      // Enable buttons
+      runChainedBtnLocal.disabled = false;
+      runJourneySimBtnLocal.disabled = false;
+
+      // Update button text to show they're ready
+      runChainedBtnLocal.innerHTML = '🔗 Run Distributed Flow (Ready)';
+      runJourneySimBtnLocal.innerHTML = '🚀 Run Journey Simulation (Ready)';
+
+      console.log('Flow buttons are now enabled and ready! (safe mode)');
+
+      // Show status
+      if (chainStatusLocal) {
+        chainStatusLocal.textContent = '✅ Buttons enabled! Journey loaded and ready for simulation.';
+      }
+    }
+
+    // Initialize the page with Copilot method selected by default
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('DOM Content Loaded - Starting button setup...');
+      
+      // Get all required elements and verify they exist
+      const runChainedBtn = document.getElementById('run-chained-flow');
+      const resetPortsBtn = document.getElementById('reset-ports');
+      const chainStatus = document.getElementById('chain-status');
+      const chainedTraceOutput = document.getElementById('chained-trace-output');
+      const runJourneySimBtn = document.getElementById('run-journey-simulation');
+      const simStatus = document.getElementById('sim-status');
+      
+      console.log('Button elements found:');
+      console.log('- runChainedBtn:', !!runChainedBtn, runChainedBtn);
+      console.log('- runJourneySimBtn:', !!runJourneySimBtn, runJourneySimBtn);
+      console.log('- chainStatus:', !!chainStatus);
+      console.log('- simStatus:', !!simStatus);
+      
+      if (!runChainedBtn) {
+        console.error('❌ Blue button (run-chained-flow) not found!');
+        return;
+      }
+      
+      if (!runJourneySimBtn) {
+        console.error('❌ Green button (run-journey-simulation) not found!');
+        return;
+      }
+      
+      // Add a details area for flow results
+      let flowResultsEl = document.getElementById('flow-results');
+      if (!flowResultsEl) {
+        flowResultsEl = document.createElement('pre');
+        flowResultsEl.id = 'flow-results';
+        flowResultsEl.className = 'mt-2 text-xs bg-black p-3 rounded max-h-64 overflow-auto';
+        if (simStatus && simStatus.parentElement) {
+          simStatus.parentElement.appendChild(flowResultsEl);
+        }
+      }
+      const generationMethod = document.getElementById('generationMethod');
+      const copilotWorkflow = document.getElementById('copilotWorkflow');
+      const templateExample = document.getElementById('templateExample');
+      const customStepsContainer = document.getElementById('customStepsContainer');
+      const optionalFieldsContainer = document.getElementById('optionalFieldsContainer');
+      const journeyRequirementsContainer = document.getElementById('journeyRequirementsContainer');
+
+      // Always set Copilot as default and show Copilot workflow
+      generationMethod.value = 'copilot';
+      copilotWorkflow.classList.remove('hidden');
+      if (templateExample) templateExample.classList.add('hidden');
+      customStepsContainer.style.display = 'none';
+      optionalFieldsContainer.style.display = 'none';
+      journeyRequirementsContainer.style.display = 'block';
+
+      // Clear form fields for Copilot mode
+      document.getElementById('companyName').value = '';
+      document.getElementById('domain').value = '';
+      document.getElementById('industryType').value = '';
+      document.getElementById('journeyRequirements').value = '';
+
+      // Always generate the Copilot prompt and show it
+      generateCopilotPrompt();
+      
+      // Ensure it's populated even if there was an initial delay
+      setTimeout(generateCopilotPrompt, 100);
+
+      // Also regenerate prompt when switching to Copilot mode
+      generationMethod.addEventListener('change', (e) => {
+        if (e.target.value === 'copilot') {
+          generateCopilotPrompt();
+          copilotWorkflow.classList.remove('hidden');
+          customStepsContainer.style.display = 'none';
+          optionalFieldsContainer.style.display = 'none';
+          journeyRequirementsContainer.style.display = 'block';
+        } else if (e.target.value === 'template') {
+          // Quick Template mode - populate with ShopMart retail example
+          copilotWorkflow.classList.add('hidden');
+          customStepsContainer.style.display = 'block';
+          optionalFieldsContainer.style.display = 'block';
+          journeyRequirementsContainer.style.display = 'none';
+          
+          // Populate form with ShopMart retail example
+          document.getElementById('companyName').value = 'ShopMart';
+          document.getElementById('domain').value = 'shopmart.com';
+          document.getElementById('industryType').value = 'retail';
+          document.getElementById('customSteps').value = 'Product Discovery, Product Selection, Add to Cart, Checkout Process, Payment Processing, Order Confirmation';
+          document.getElementById('journeyType').value = 'E-commerce Purchase Journey';
+          document.getElementById('details').value = 'Complete retail customer journey from product discovery to order confirmation';
+          
+          // Clear additional fields for template mode
+          additionalFields.length = 0;
+          renderAdditionalFields();
+          
+          // Auto-generate the retail journey
+          setTimeout(() => {
+            document.getElementById('generateJourney').click();
+          }, 500);
+        }
+      });
+
+      // Force initial prompt generation after a short delay to ensure helper functions are loaded
+      setTimeout(() => {
+        generateCopilotPrompt();
+      }, 100);
+
+      // Set initial status messages to show buttons are ready
+      setTimeout(() => {
+        console.log('Setting initial button status...');
+        console.log('runChainedBtn found:', !!runChainedBtn);
+        console.log('runJourneySimBtn found:', !!runJourneySimBtn);
+        console.log('chainStatus found:', !!chainStatus);
+        console.log('simStatus found:', !!simStatus);
+        
+        if (chainStatus) {
+          chainStatus.textContent = '🎯 Ready to test! Blue button will work even without a generated journey.';
+        }
+        if (simStatus) {
+          simStatus.textContent = '🎯 Ready to simulate! Green button will work even without a generated journey.';
+        }
+        
+        // Add simple test handlers to verify buttons work
+        if (runChainedBtn) {
+          console.log('Blue button found and handler will be attached');
+        } else {
+          console.error('Blue button (run-chained-flow) not found!');
+        }
+        
+        if (runJourneySimBtn) {
+          console.log('Green button found and handler will be attached');
+        } else {
+          console.error('Green button (run-journey-simulation) not found!');
+        }
+      }, 500);
+
+      // Setup button event handlers
+      // Enhanced chained flow with automatic seeding and better error handling
+      runChainedBtn.onclick = async () => {
+        console.log('🔥 BLUE BUTTON CLICKED! 🔥');
+        alert('Blue button clicked! Distributed Flow starting...');
+        try {
+          chainStatus.textContent = '🚀 Starting distributed flow... Seeding journey and starting services...';
+          chainedTraceOutput.textContent = '';
+          runChainedBtn.disabled = true;
+          runChainedBtn.textContent = '🔄 Running...';
+
+          // First, ensure we have a journey to work with
+          if (!lastJourney || !lastJourney.steps || !lastJourney.steps.length) {
+            chainStatus.textContent = '⚠️ No journey data available. Creating test journey...';
+            
+            // Create a simple test journey
+            lastJourney = {
+              companyName: 'TestCorp',
+              domain: 'testcorp.com',
+              industryType: 'retail',
+              steps: [
+                { stepName: 'Discovery', description: 'Customer discovery' },
+                { stepName: 'Selection', description: 'Product selection' },
+                { stepName: 'Purchase', description: 'Purchase process' }
+              ]
+            };
+            
+            chainStatus.textContent = '✅ Test journey created! Running distributed flow...';
+          }
+
+          // Build steps from the journey
+          let stepNames = lastJourney.steps.slice(0, 6).map(s => s.stepName || s.name || String(s));
+          
+          // Normalize to exactly 6
+          while (stepNames.length < 6) stepNames.push(`Step${stepNames.length + 1}`);
+          stepNames = stepNames.slice(0, 6);
+
+          const body = { 
+            steps: stepNames.map(n => ({ stepName: n })),
+            thinkTimeMs: 200, // Increased think time for better service startup
+            companyName: lastJourney?.companyName || 'DefaultCompany',
+            domain: lastJourney?.domain || 'default.com',
+            industryType: lastJourney?.industryType || 'general'
+          };
+          
+          chainStatus.textContent = '🔗 Running distributed flow with OneAgent tracing...';
+          
+          const res = await fetch('/api/steps/step1-chained', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          const json = await res.json();
+
+          if (!json.ok) {
+            chainStatus.textContent = `❌ Chained flow failed: ${json.error || 'Unknown error'}`;
+            chainedTraceOutput.textContent = `Error Details:\n${JSON.stringify(json, null, 2)}`;
+            return;
+          }
+
+          const trace = json.result?.trace || [];
+          const stepsStr = trace.map(t => t.stepName).join(' → ');
+          const totalDuration = trace.reduce((sum, t) => sum + (t.duration || 0), 0);
+          chainStatus.textContent = `✅ Distributed flow completed! ${trace.length} spans traced (${totalDuration}ms total) • ${stepsStr}`;
+          chainedTraceOutput.textContent = JSON.stringify(trace, null, 2);
+        } catch (e) {
+          chainStatus.textContent = `❌ Error: ${e.message}`;
+          chainedTraceOutput.textContent = `Error Details:\n${e.stack}`;
+        } finally {
+          runChainedBtn.disabled = false;
+          runChainedBtn.textContent = '🔗 Run Distributed Flow';
+        }
+      };
+
+      // Reset dynamic services to free ports
+      resetPortsBtn.onclick = async () => {
+        try {
+          chainStatus.textContent = 'Resetting dynamic services...';
+          const res = await fetch('/api/admin/reset-ports', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+          const json = await res.json();
+          chainStatus.textContent = json.ok ? '✅ Dynamic services reset.' : `❌ Reset failed: ${json.error || 'Unknown error'}`;
+        } catch (e) {
+          chainStatus.textContent = `❌ Reset error: ${e.message}`;
+        }
+      };
+
+      // Journey Simulation button handler
+      runJourneySimBtn.onclick = async () => {
+        console.log('🔥 GREEN BUTTON CLICKED! 🔥');
+        alert('Green button clicked! Journey Simulation starting...');
+        try {
+          console.log('Journey Simulation button clicked!');
+          runJourneySimBtn.disabled = true;
+          runJourneySimBtn.textContent = '🔄 Simulating Journey...';
+          simStatus.textContent = 'Starting customer journey simulation...';
+          
+          if (!lastJourney) {
+            simStatus.textContent = '⚠️ No journey data available. Creating test journey for simulation...';
+            
+            // Create a simple test journey
+            lastJourney = {
+              companyName: 'SimTestCorp',
+              domain: 'simtestcorp.com',
+              industryType: 'retail',
+              steps: [
+                { stepName: 'Discovery', description: 'Customer discovery phase' },
+                { stepName: 'Evaluation', description: 'Product evaluation' },
+                { stepName: 'Decision', description: 'Purchase decision' },
+                { stepName: 'Transaction', description: 'Complete transaction' }
+              ]
+            };
+            
+            simStatus.textContent = '✅ Test journey created! Starting simulation...';
+          }
+          
+          const customerId = `customer_${Date.now()}`;
+          const journeyId = `journey_${Date.now()}`;
+          
+          // Use the same journey simulation logic as the working 6-step flow button
+          const journeyData = {
+            steps: lastJourney.steps || [],
+            journeyId: lastJourney.id || journeyId,
+            companyName: lastJourney.companyName || 'DefaultCompany',
+            domain: lastJourney.domain || 'default.com',
+            industryType: lastJourney.industryType || 'general'
+          };
+          
+          simStatus.textContent = '🚀 Running customer journey simulation...';
+          
+          const res = await fetch('/api/journey-simulation/simulate-journey', { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ 
+              journeyId,
+              customerId,
+              aiJourney: journeyData,
+              companyName: journeyData.companyName,
+              domain: journeyData.domain,
+              industryType: journeyData.industryType,
+              chained: false // Use step-by-step execution for consistency
+            }) 
+          });
+          
+          const json = await res.json();
+          
+          if (json.success) {
+            const journey = json.journey;
+            simStatus.textContent = `✅ Customer Journey complete! ${journey.completedSteps}/${journey.totalSteps} steps successful. Correlation: ${journey.correlationId}`;
+            
+            // Show detailed results with service names (same as 6-step flow)
+            const stepSummary = journey.steps.map((step, idx) => {
+              const status = step.status === 'completed' ? '✅' : '❌';
+              const serviceName = step.serviceName || (step.stepName + 'Service');
+              return `${status} Step ${idx + 1}: ${serviceName} (${step.processingTime || 0}ms)`;
+            }).join('\n');
+            
+            flowResultsEl.textContent = `Customer Journey Execution:\n${stepSummary}\n\nServices Used: ${journey.stepNames ? journey.stepNames.join(' → ') : 'N/A'}\n\nCorrelation ID: ${journey.correlationId}`;
+            
+          } else {
+            simStatus.textContent = `❌ Journey simulation failed: ${json.error}`;
+            flowResultsEl.textContent = `Journey Error Details:\n${JSON.stringify(json, null, 2)}`;
+          }
+          
+        } catch (error) {
+          console.error('Journey Simulation error:', error);
+          simStatus.textContent = `❌ Journey simulation error: ${error.message}`;
+          flowResultsEl.textContent = `Error Details:\n${error.stack}`;
+        } finally {
+          runJourneySimBtn.disabled = false;
+          runJourneySimBtn.textContent = '🚀 Run Journey Simulation';
+        }
+      };
+    });
+
+    // Fetch domain label from response header
+    (async () => {
+      try {
+        const res = await fetch('/api/health');
+        const label = res.headers.get('X-App-Domain-Label');
+        if (label) document.getElementById('host-label').textContent = `Domain: ${label}`;
+      } catch {}
+    })();
+
+    ioClient.on('bizEvent', (evt) => {
+      const li = document.createElement('li');
+      li.textContent = `${evt.timestamp} - [${evt.domain}] ${evt.journeyStep} - ${evt.email} - $${evt.cost} - NPS:${evt.npsScore ?? ''} - corr:${evt.metadata?.correlationId ?? ''}`;
+      feed.prepend(li);
+      while (feed.children.length > 200) feed.removeChild(feed.lastChild);
+    });
+  </script>
+</body>
+</html>

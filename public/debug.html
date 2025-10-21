@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BizObs No-Agent Test</title>
+    <meta name="robots" content="noindex">
+</head>
+<body style="background:#181A20;color:white;padding:20px;font-family:Arial;font-size:16px;">
+    <div style="border:2px solid #00D4FF;padding:20px;border-radius:8px;margin-bottom:20px;">
+        <h1 style="color:#00D4FF;margin:0 0 10px 0;">🚀 BizObs Debug Version</h1>
+        <p style="color:#73BE28;margin:0;">✅ If you can see this text, the page is loading correctly</p>
+    </div>
+    
+    <div style="background:#22242A;padding:15px;border-radius:8px;margin-bottom:20px;">
+        <h2 style="color:#00D4FF;margin:0 0 10px 0;">Debug Information</h2>
+        <p>Current time: <span id="time" style="color:#73BE28;"></span></p>
+        <p>User agent: <span id="ua" style="color:#73BE28;font-size:12px;"></span></p>
+        <p>Page loaded: <span id="loaded" style="color:#73BE28;">Loading...</span></p>
+    </div>
+    
+    <div style="background:#22242A;padding:15px;border-radius:8px;">
+        <h2 style="color:#00D4FF;margin:0 0 10px 0;">Test Functions</h2>
+        <button onclick="testServer()" style="background:#73BE28;color:black;border:none;padding:10px 15px;margin:5px;border-radius:4px;cursor:pointer;">Test Server</button>
+        <button onclick="testAPI()" style="background:#00A1C9;color:white;border:none;padding:10px 15px;margin:5px;border-radius:4px;cursor:pointer;">Test API</button>
+        <div id="testResult" style="background:#000;border:1px solid #00D4FF;padding:10px;margin-top:10px;min-height:60px;border-radius:4px;font-family:monospace;font-size:12px;">
+            Test results will appear here...
+        </div>
+    </div>
+
+    <script>
+        console.log('🚀 Debug page starting...');
+        
+        // Set basic info
+        document.getElementById('time').textContent = new Date().toLocaleString();
+        document.getElementById('ua').textContent = navigator.userAgent;
+        document.getElementById('loaded').textContent = '✅ JavaScript Executed Successfully';
+        
+        console.log('✅ Basic JavaScript working');
+        
+        function testServer() {
+            console.log('Testing server...');
+            document.getElementById('testResult').textContent = '🔄 Testing server response...';
+            
+            fetch('/')
+                .then(response => {
+                    console.log('Server response:', response);
+                    document.getElementById('testResult').textContent = 
+                        '✅ Server Response: ' + response.status + ' ' + response.statusText +
+                        '\\nContent-Type: ' + response.headers.get('content-type') +
+                        '\\nContent-Length: ' + response.headers.get('content-length');
+                })
+                .catch(error => {
+                    console.error('Server test failed:', error);
+                    document.getElementById('testResult').textContent = '❌ Server test failed: ' + error.message;
+                });
+        }
+        
+        function testAPI() {
+            console.log('Testing API...');
+            document.getElementById('testResult').textContent = '🔄 Testing health API...';
+            
+            fetch('/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('API response:', data);
+                    document.getElementById('testResult').textContent = 
+                        '✅ API Working!\\n' + 
+                        'Status: ' + data.status + '\\n' +
+                        'PID: ' + data.mainProcess.pid + '\\n' +
+                        'Port: ' + data.mainProcess.port + '\\n' +
+                        'Services: ' + data.childServices.length;
+                })
+                .catch(error => {
+                    console.error('API test failed:', error);
+                    document.getElementById('testResult').textContent = '❌ API test failed: ' + error.message;
+                });
+        }
+        
+        console.log('✅ Debug page fully loaded and ready');
+    </script>
+</body>
+</html>
