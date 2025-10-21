@@ -30,6 +30,15 @@ import configRouter from './routes/config.js';
 
 dotenv.config();
 
+// Set Dynatrace environment variables for main server process
+process.env.DT_SERVICE_NAME = 'BizObs-MainServer';
+process.env.DYNATRACE_SERVICE_NAME = 'BizObs-MainServer';
+process.env.DT_LOGICAL_SERVICE_NAME = 'BizObs-MainServer';
+process.env.DT_APPLICATION_NAME = 'BizObs-CustomerJourney';
+process.env.DT_PROCESS_GROUP_NAME = 'BizObs-MainServer';
+process.env.DT_TAGS = 'app=BizObs-CustomerJourney service=MainServer component=orchestrator';
+process.env.DT_CUSTOM_PROP = 'app=BizObs-CustomerJourney;service=MainServer;component=orchestrator;service_type=main_server';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -291,6 +300,37 @@ app.use('/api/service-proxy', serviceProxyRouter);
 app.use('/api/journey-simulation', journeySimulationRouter);
 app.use('/api/config', configRouter);
 
+// Internal business event endpoint for OneAgent capture
+app.post('/api/internal/bizevent', (req, res) => {
+  // This endpoint exists solely for OneAgent to capture HTTP requests with flattened headers
+  // The real business event data is in the headers and request body
+  const flattenedFields = {};
+  
+  // Extract flattened fields from headers
+  Object.keys(req.headers).forEach(key => {
+    if (key.startsWith('x-biz-')) {
+      const fieldName = key.replace('x-biz-', '').replace(/-/g, '.');
+      flattenedFields[fieldName] = req.headers[key];
+    }
+  });
+  
+  console.log('[server] Internal business event captured:', {
+    eventType: req.headers['x-biz-event-type'],
+    correlationId: req.headers['x-biz-correlation-id'],
+    stepName: req.headers['x-biz-step-name'],
+    company: req.headers['x-biz-company'],
+    flattenedFieldCount: Object.keys(flattenedFields).length,
+    flattenedFields: flattenedFields
+  });
+  
+  // Return success - OneAgent will capture this HTTP request/response
+  res.status(200).json({ 
+    success: true, 
+    message: 'Business event captured',
+    flattenedFieldCount: Object.keys(flattenedFields).length
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.status(200).json({ 
@@ -349,6 +389,56 @@ app.post('/api/admin/reset-ports', (req, res) => {
   try {
     stopAllServices();
     res.json({ ok: true, message: 'All dynamic services stopped and ports freed.' });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// New endpoint for reset and restart
+app.post('/api/admin/reset-and-restart', async (req, res) => {
+  try {
+    // First stop all services and free ports
+    stopAllServices();
+    console.log('🔄 All dynamic services stopped and ports freed.');
+    
+    // Wait a moment for cleanup to complete
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Restart essential services for UI functionality
+    const coreServices = [
+      'Discovery',      // Most common first step in journeys
+      'Purchase',       // Most common transaction step
+      'DataPersistence' // Always needed for data storage
+    ];
+    
+    const companyContext = {
+      companyName: process.env.DEFAULT_COMPANY || 'DefaultCompany',
+      domain: process.env.DEFAULT_DOMAIN || 'default.com',
+      industryType: process.env.DEFAULT_INDUSTRY || 'general'
+    };
+    
+    console.log(`🚀 Restarting ${coreServices.length} essential services after reset...`);
+    
+    // Start services with proper error handling
+    const serviceResults = [];
+    for (const stepName of coreServices) {
+      try {
+        ensureServiceRunning(stepName, companyContext);
+        console.log(`✅ Essential service "${stepName}" restarted successfully.`);
+        serviceResults.push({ stepName, status: 'restarted' });
+      } catch (err) {
+        console.error(`❌ Failed to restart essential service "${stepName}":`, err.message);
+        serviceResults.push({ stepName, status: 'failed', error: err.message });
+      }
+    }
+    
+    const successCount = serviceResults.filter(r => r.status === 'restarted').length;
+    
+    res.json({ 
+      ok: true, 
+      message: `Services reset complete. ${successCount}/${coreServices.length} essential services restarted.`,
+      serviceResults
+    });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
@@ -515,8 +605,15 @@ app.post('/api/admin/services/restart-all', async (req, res) => {
   }
 });
 
+// Simple test endpoint
+app.get('/api/test', (req, res) => {
+  console.log('[server] Test endpoint called');
+  res.json({ status: 'working', timestamp: new Date().toISOString() });
+});
+
 // Health check with service status
 app.get('/api/health', (req, res) => {
+  console.log('[server] Health check endpoint called');
   const runningServices = getChildServices();
   const serviceStatuses = Object.keys(runningServices).map(serviceName => ({
     service: serviceName,

@@ -25,9 +25,80 @@ const withCustomSpan = (name, callback) => {
 
 const sendBusinessEvent = (eventType, data) => {
   console.log('[dynatrace] Business event:', eventType, data);
+  
+  // Business events not needed - OneAgent captures flattened rqBody automatically
+  console.log('[dynatrace] OneAgent will capture flattened request structure for:', eventType);
+  
+  // Log flattened fields separately so they appear in logs as individual entries
+  Object.keys(flattenedData).forEach(key => {
+    if (key.startsWith('additional.') || key.startsWith('customer.') || key.startsWith('business.') || key.startsWith('trace.')) {
+      console.log(`[bizevent-field] ${key}=${flattenedData[key]}`);
+    }
+  });
+  
+  // Make a lightweight HTTP call to an internal endpoint with flattened data as headers
+  // This will be captured by OneAgent as a separate HTTP request with flattened fields
+  try {
+    const mainServerPort = process.env.MAIN_SERVER_PORT || '4000';
+    const flattenedHeaders = {};
+    
+    // Add flattened fields as HTTP headers (OneAgent will capture these)
+    Object.keys(flattenedData).forEach(key => {
+      if (key.startsWith('additional.') || key.startsWith('customer.') || key.startsWith('business.') || key.startsWith('trace.')) {
+        // HTTP headers can't have dots, so replace with dashes
+        const headerKey = `x-biz-${key.replace(/\./g, '-')}`;
+        const headerValue = String(flattenedData[key]).substring(0, 100); // Limit header length
+        flattenedHeaders[headerKey] = headerValue;
+      }
+    });
+    
+    // Add core business event metadata
+    flattenedHeaders['x-biz-event-type'] = eventType;
+    flattenedHeaders['x-biz-correlation-id'] = flattenedData.correlationId || '';
+    flattenedHeaders['x-biz-step-name'] = flattenedData.stepName || '';
+    flattenedHeaders['x-biz-company'] = flattenedData.company || '';
+    
+    const postData = JSON.stringify(flattenedData);
+    const options = {
+      hostname: '127.0.0.1',
+      port: mainServerPort,
+      path: '/api/internal/bizevent',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData),
+        ...flattenedHeaders
+      },
+      timeout: 1000
+    };
+    
+    const req = http.request(options, (res) => {
+      // Consume response to complete the request
+      res.on('data', () => {});
+      res.on('end', () => {
+        console.log(`[dynatrace] Business event HTTP call completed: ${res.statusCode}`);
+      });
+    });
+    
+    req.on('error', (err) => {
+      // Ignore errors - this is just for OneAgent capture
+      console.log(`[dynatrace] Business event HTTP call failed (expected): ${err.message}`);
+    });
+    
+    req.on('timeout', () => {
+      req.destroy();
+    });
+    
+    req.write(postData);
+    req.end();
+    
+  } catch (err) {
+    // Ignore errors in business event HTTP call
+    console.log(`[dynatrace] Business event HTTP call error (expected): ${err.message}`);
+  }
 };
 
-// Wait for a service health endpoint to respond on the given port
+// Old flattening function removed - using ultra-simple flattening in request processing instead// Wait for a service health endpoint to respond on the given port
 function waitForServiceReady(port, timeout = 5000) {
   return new Promise((resolve) => {
     const start = Date.now();
@@ -88,6 +159,78 @@ function createStepService(serviceName, stepName) {
       const correlationId = req.correlationId;
       const thinkTimeMs = Number(payload.thinkTimeMs || 200);
       const currentStepName = payload.stepName || stepName;
+      
+      // Create ultra-simplified payload - ONLY single primitive values, NO nested objects, NO arrays
+      const flattenedPayload = {};
+      
+      // Copy basic/primitive fields first (non-objects, non-arrays)
+      Object.keys(payload).forEach(key => {
+        const value = payload[key];
+        if (value !== null && value !== undefined && 
+            typeof value !== 'object' && 
+            !Array.isArray(value)) {
+          flattenedPayload[key] = value;
+        }
+      });
+      
+      console.log(`[${properServiceName}] Starting with basic fields:`, Object.keys(flattenedPayload).length);
+      
+      // Process additionalFields: flatten to single values, remove original object completely
+      if (payload.additionalFields && typeof payload.additionalFields === 'object') {
+        Object.keys(payload.additionalFields).forEach(key => {
+          const value = payload.additionalFields[key];
+          if (Array.isArray(value) && value.length > 0) {
+            // Always pick ONE random item from any array
+            const randomIndex = Math.floor(Math.random() * value.length);
+            flattenedPayload[`additional_${key}`] = value[randomIndex];
+          } else {
+            flattenedPayload[`additional_${key}`] = value;
+          }
+        });
+        console.log(`[${properServiceName}] Flattened additionalFields, original object will be removed`);
+      }
+      
+      // Process customerProfile: flatten to single values, remove original object completely
+      if (payload.customerProfile && typeof payload.customerProfile === 'object') {
+        Object.keys(payload.customerProfile).forEach(key => {
+          const value = payload.customerProfile[key];
+          if (Array.isArray(value) && value.length > 0) {
+            // Always pick ONE item from arrays
+            const randomIndex = Math.floor(Math.random() * value.length);
+            flattenedPayload[`customer_${key}`] = value[randomIndex];
+          } else {
+            flattenedPayload[`customer_${key}`] = value;
+          }
+        });
+        console.log(`[${properServiceName}] Flattened customerProfile, original object will be removed`);
+      }
+      
+      // Process traceMetadata: flatten to single values, remove original object completely
+      if (payload.traceMetadata && typeof payload.traceMetadata === 'object') {
+        Object.keys(payload.traceMetadata).forEach(key => {
+          const value = payload.traceMetadata[key];
+          if (key === 'businessContext' && typeof value === 'object') {
+            // Flatten businessContext
+            Object.keys(value).forEach(bcKey => {
+              flattenedPayload[`business_${bcKey}`] = value[bcKey];
+            });
+          } else if (Array.isArray(value) && value.length > 0) {
+            // Pick ONE value from arrays
+            const randomIndex = Math.floor(Math.random() * value.length);
+            flattenedPayload[`trace_${key}`] = value[randomIndex];
+          } else {
+            flattenedPayload[`trace_${key}`] = value;
+          }
+        });
+        console.log(`[${properServiceName}] Flattened traceMetadata, original object will be removed`);
+      }
+      
+      console.log(`[${properServiceName}] Final flattened payload has ${Object.keys(flattenedPayload).length} fields`);
+      console.log(`[${properServiceName}] Flattened field sample:`, Object.keys(flattenedPayload).filter(k => k.startsWith('additional_')).slice(0, 3));
+      
+      // Replace the original payload with flattened version for processing
+      req.body = flattenedPayload;
+      const processedPayload = flattenedPayload;
       
       try {
         // Check for step errors first (both explicit and simulated)
@@ -204,32 +347,25 @@ function createStepService(serviceName, stepName) {
         // Generate dynamic metadata based on step name
         const metadata = generateStepMetadata(currentStepName);
 
-        // Add custom attributes to OneAgent span
+        // Add custom attributes to OneAgent span (simplified)
         const customAttributes = {
           'journey.step': currentStepName,
           'journey.service': properServiceName,
           'journey.correlationId': correlationId,
-          'journey.company': payload.companyName || 'unknown',
-          'journey.domain': payload.domain || 'unknown',
-          'journey.industryType': payload.industryType || 'unknown',
+          'journey.company': processedPayload.companyName || 'unknown',
+          'journey.domain': processedPayload.domain || 'unknown',
+          'journey.industryType': processedPayload.industryType || 'unknown',
           'journey.processingTime': processingTime
         };
         
         addCustomAttributes(customAttributes);
 
-        // Send business event for this step completion
-        sendBusinessEvent('journey_step_completed', {
-          stepName: currentStepName,
-          serviceName: properServiceName,
-          correlationId,
-          processingTime,
-          company: payload.companyName,
-          domain: payload.domain
-        });
+        // No complex business event API calls needed - OneAgent captures the flattened rqBody automatically
+        console.log(`[${properServiceName}] Step completed - OneAgent will capture flattened request body`);
 
         let response = {
-          // Spread payload first so our computed fields below take precedence
-          ...payload,
+          // Spread processedPayload which contains the flattened fields
+          ...processedPayload,
           stepName: currentStepName,
           service: properServiceName,
           status: 'completed',
@@ -242,11 +378,14 @@ function createStepService(serviceName, stepName) {
           stepCategory: stepCategory,
           estimatedDuration: estimatedDuration,
           businessRationale: businessRationale,
-          duration: payload.duration,
+          duration: processedPayload.duration,
           substeps: substeps,
           metadata,
           journeyTrace
         };
+
+        // Flattened fields are already included in processedPayload spread above
+        // No additional flattening needed - ultra-simple structure is complete
 
         // Include incoming trace headers in the response for validation (non-invasive)
         try {
@@ -308,7 +447,7 @@ function createStepService(serviceName, stepName) {
             }
 
             const nextPayload = {
-              ...payload,
+              ...processedPayload,  // Use flattened payload instead of original
               stepName: nextStepName,
               serviceName: nextServiceName,
               // Add step-specific fields for the next step
@@ -376,11 +515,27 @@ function createStepService(serviceName, stepName) {
       // Handle any errors that occur during step processing
       console.error(`[${properServiceName}] Step processing error:`, error.message);
       
-      // Mark trace as failed
+      // Ensure proper HTTP status code is set
+      const httpStatus = error.status || error.httpStatus || 500;
+      
+      // Report the error to Dynatrace as a trace exception
+      reportError(error, {
+        'journey.step': currentStepName,
+        'service.name': properServiceName,
+        'correlation.id': correlationId,
+        'http.status': httpStatus,
+        'error.category': 'journey_step_failure'
+      });
+      
+      // Mark trace as failed with comprehensive context
       markSpanAsFailed(error, {
         'journey.step': currentStepName,
         'service.name': properServiceName,
-        'correlation.id': correlationId
+        'correlation.id': correlationId,
+        'http.status': httpStatus,
+        'error.category': 'journey_step_failure',
+        'journey.company': processedPayload.companyName || 'unknown',
+        'journey.domain': processedPayload.domain || 'unknown'
       });
       
       // Update journey trace to mark this step as failed
@@ -392,21 +547,24 @@ function createStepService(serviceName, stepName) {
         correlationId,
         success: false,
         error: error.message,
-        errorType: error.constructor.name
+        errorType: error.constructor.name,
+        httpStatus: httpStatus
       };
       journeyTrace.push(failedStepEntry);
       
-      // Send error business event
+      // Send error business event with enhanced context
       sendErrorEvent('journey_step_failed', error, {
         stepName: currentStepName,
         serviceName: properServiceName,
         correlationId,
-        company: payload.companyName,
-        domain: payload.domain
+        httpStatus: httpStatus,
+        company: processedPayload.companyName || 'unknown',
+        domain: processedPayload.domain || 'unknown'
       });
       
-      // Return error response with trace information
+      // Build comprehensive error response
       const errorResponse = {
+        ...processedPayload,  // Include flattened fields for consistency
         status: 'error',
         error: error.message,
         errorType: error.constructor.name,
@@ -416,15 +574,28 @@ function createStepService(serviceName, stepName) {
         timestamp: new Date().toISOString(),
         journeyTrace,
         traceError: true,
-        pid: process.pid
+        pid: process.pid,
+        httpStatus: httpStatus,
+        // Add OneAgent-friendly trace failure markers
+        _traceInfo: {
+          failed: true,
+          errorMessage: error.message,
+          errorType: error.constructor.name,
+          httpStatus: httpStatus,
+          requestCorrelationId: correlationId
+        }
       };
       
-      // Set error headers for trace propagation
+      // Set comprehensive error headers for trace propagation
       res.setHeader('x-trace-error', 'true');
       res.setHeader('x-error-type', error.constructor.name);
       res.setHeader('x-journey-failed', 'true');
+      res.setHeader('x-http-status', httpStatus.toString());
+      res.setHeader('x-correlation-id', correlationId);
       
-      res.status(error.status || 500).json(errorResponse);
+      // Return with appropriate HTTP status code
+      console.log(`[${properServiceName}] Returning error response with HTTP ${httpStatus}`);
+      res.status(httpStatus).json(errorResponse);
     }
     });
   });

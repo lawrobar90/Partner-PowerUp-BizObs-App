@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BizObs - Working App</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #181A20;
+            color: white;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background: #22242A;
+            border: 2px solid #00D4FF;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .title {
+            color: #00D4FF;
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+        }
+        .subtitle {
+            color: #6C2C9C;
+            font-size: 1.2rem;
+            margin: 0;
+        }
+        .status {
+            background: #73BE28;
+            color: black;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-weight: bold;
+            text-align: center;
+        }
+        .section {
+            background: #22242A;
+            border: 1px solid #2D2D2D;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            color: #00D4FF;
+            margin: 0 0 15px 0;
+            border-bottom: 2px solid #00D4FF;
+            padding-bottom: 10px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+        .btn {
+            background: #73BE28;
+            color: black;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: #00D4FF;
+            transform: translateY(-2px);
+        }
+        .btn-blue { background: #00A1C9; color: white; }
+        .btn-purple { background: #6C2C9C; color: white; }
+        .output {
+            background: #000;
+            border: 1px solid #00D4FF;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            min-height: 100px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            color: #00D4FF;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            background: #23272F;
+            border: 1px solid #00D4FF;
+            border-radius: 4px;
+            color: white;
+            font-size: 14px;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #6C2C9C;
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">🚀 BizObs</div>
+            <div class="subtitle">Business Observability & Customer Journey Simulation</div>
+            <div class="status" id="connectionStatus">🔄 Connecting...</div>
+        </div>
+
+        <div class="grid">
+            <div class="section">
+                <h2>🎯 Journey Creation</h2>
+                <div class="form-group">
+                    <label>Company Name:</label>
+                    <input type="text" class="form-control" id="companyName" value="TechCorp" placeholder="Enter company name">
+                </div>
+                <div class="form-group">
+                    <label>Journey Steps (comma separated):</label>
+                    <input type="text" class="form-control" id="journeySteps" value="Discovery,Evaluation,Purchase,Onboarding" placeholder="Enter step names">
+                </div>
+                <button class="btn" onclick="createJourney()">🚀 Create Journey</button>
+                <button class="btn btn-blue" onclick="useTemplate()">📋 Use Template</button>
+            </div>
+
+            <div class="section">
+                <h2>🔧 System Testing</h2>
+                <button class="btn btn-purple" onclick="testHealth()">🏥 Health Check</button>
+                <button class="btn btn-blue" onclick="testJourney()">🧪 Test Journey</button>
+                <button class="btn" onclick="loadExample()">📄 Load Example</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Journey Output</h2>
+            <div id="journeyOutput" class="output">Create a journey to see the output here...</div>
+        </div>
+
+        <div class="section">
+            <h2>🔍 Test Results</h2>
+            <div id="testResults" class="output">Run tests to see results here...</div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🚀 BizObs App Loading...');
+
+        // Update connection status
+        document.getElementById('connectionStatus').textContent = '✅ Connected & Ready';
+        document.getElementById('connectionStatus').style.background = '#73BE28';
+
+        let currentJourney = null;
+
+        function createJourney() {
+            const companyName = document.getElementById('companyName').value.trim() || 'TechCorp';
+            const stepsText = document.getElementById('journeySteps').value.trim() || 'Discovery,Purchase';
+            const steps = stepsText.split(',').map(s => s.trim()).filter(s => s);
+
+            const journey = {
+                companyName,
+                domain: companyName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com',
+                industryType: 'technology',
+                steps: steps.map((stepName, index) => ({
+                    stepName,
+                    description: `Customer ${stepName.toLowerCase()} phase`,
+                    order: index + 1
+                })),
+                created: new Date().toISOString()
+            };
+
+            currentJourney = journey;
+            document.getElementById('journeyOutput').textContent = JSON.stringify(journey, null, 2);
+            
+            updateStatus('✅ Journey created successfully!');
+            console.log('Journey created:', journey);
+        }
+
+        function useTemplate() {
+            document.getElementById('companyName').value = 'ShopMart';
+            document.getElementById('journeySteps').value = 'Product Discovery,Product Selection,Add to Cart,Checkout,Order Confirmation';
+            createJourney();
+        }
+
+        function loadExample() {
+            const example = {
+                companyName: 'RetailCorp',
+                domain: 'retailcorp.com',
+                industryType: 'retail',
+                steps: [
+                    { stepName: 'Browse Catalog', description: 'Customer browsing product catalog' },
+                    { stepName: 'View Product', description: 'Customer viewing specific product' },
+                    { stepName: 'Add to Cart', description: 'Customer adding item to shopping cart' },
+                    { stepName: 'Checkout', description: 'Customer proceeding to checkout' },
+                    { stepName: 'Payment', description: 'Customer completing payment' },
+                    { stepName: 'Confirmation', description: 'Order confirmation and receipt' }
+                ],
+                metadata: {
+                    totalValue: 299.99,
+                    conversionRate: 0.78,
+                    customerSegment: 'premium'
+                }
+            };
+
+            currentJourney = example;
+            document.getElementById('journeyOutput').textContent = JSON.stringify(example, null, 2);
+            updateStatus('✅ Example journey loaded!');
+        }
+
+        async function testHealth() {
+            try {
+                updateTestResults('🔄 Testing health endpoint...');
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                updateTestResults('✅ Health Check Success!\\n' + JSON.stringify(data, null, 2));
+            } catch (error) {
+                updateTestResults('❌ Health check failed: ' + error.message);
+            }
+        }
+
+        async function testJourney() {
+            try {
+                if (!currentJourney) {
+                    updateTestResults('⚠️ Please create a journey first');
+                    return;
+                }
+
+                updateTestResults('🔄 Testing journey simulation...');
+                const response = await fetch('/api/journey', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        companyName: currentJourney.companyName,
+                        steps: currentJourney.steps
+                    })
+                });
+
+                const data = await response.json();
+                updateTestResults(data.success ? 
+                    '✅ Journey Test Success!\\n' + JSON.stringify(data, null, 2) :
+                    '❌ Journey test failed: ' + (data.error || 'Unknown error')
+                );
+            } catch (error) {
+                updateTestResults('❌ Journey test failed: ' + error.message);
+            }
+        }
+
+        function updateStatus(message) {
+            const status = document.getElementById('connectionStatus');
+            status.textContent = message;
+            status.style.background = message.includes('✅') ? '#73BE28' : '#FF6B6B';
+        }
+
+        function updateTestResults(message) {
+            document.getElementById('testResults').textContent = message;
+        }
+
+        // Initialize
+        console.log('✅ BizObs App Loaded Successfully!');
+        setTimeout(() => {
+            testHealth(); // Auto-test health on load
+        }, 1000);
+    </script>
+</body>
+</html>
