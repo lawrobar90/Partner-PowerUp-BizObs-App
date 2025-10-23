@@ -4,6 +4,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import http from 'http';
 import portManager from './port-manager.js';
+import { propagateMetadata } from '../middleware/dynatrace-metadata.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -175,7 +176,7 @@ export async function startChildService(serviceName, scriptPath, env = {}) {
         ...process.env, 
         SERVICE_NAME: serviceName, 
         PORT: port,
-        MAIN_SERVER_PORT: process.env.PORT || '4000',
+        MAIN_SERVER_PORT: process.env.PORT || '8080',
         // Core company context for Dynatrace filtering
         COMPANY_NAME: companyName,
         DOMAIN: domain, 
@@ -521,7 +522,7 @@ export function getServiceStatus() {
     activeServices: Object.keys(childServices).length,
     availablePorts: portStatus.availablePorts,
     allocatedPorts: portStatus.allocatedPorts,
-    portRange: `4101-4299`,
+    portRange: `${portManager.minPort || 8081}-${portManager.maxPort || 8094}`,
     services: Object.entries(childServices).map(([name, child]) => ({
       name,
       pid: child.pid,

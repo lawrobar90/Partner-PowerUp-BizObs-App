@@ -1,23 +1,83 @@
-# Dynatrace Partner Power-Up: Business Observability App
+# 🚀 Partner PowerUp BizObs - Business Observability Engine
 
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![Dynatrace](https://img.shields.io/badge/Dynatrace-OneAgent-blue.svg)](https://www.dynatrace.com/)
-[![Express](https://img.shields.io/badge/Express-4.x-lightgrey.svg)](https://expressjs.com/)
+A comprehensive business observability application optimized for Dynatrace ACE-Box demo environments.
 
-A comprehensive business observability application demonstrating advanced distributed tracing, customer journey simulation, and business event generation for Dynatrace monitoring.
+## ⚡ Quick Start
 
-## 🚀 Features
+Run the complete BizObs application with a single command:
 
-- **Customer Journey Simulation**: Realistic multi-step customer journeys with proper trace propagation
-- **Distributed Tracing**: W3C Trace Context headers with Dynatrace OneAgent integration
-- **Business Context**: Rich business metadata in traces including company, domain, and customer data
-- **Microservice Architecture**: Dynamic service spawning with proper service isolation
-- **Business Events**: Structured business event generation for Dynatrace BizEvents
-- **Multiple Simulation Types**: Single journey, multiple customers, batch processing
-- **Realistic Data Generation**: Authentic customer profiles, additional fields, and trace metadata
-- **Health Monitoring**: Comprehensive service health checks and status monitoring
+```bash
+./start-server.sh
+```
+
+## 🌐 Access URLs
+
+- **External**: http://bizobs.c469ba93-51c8-40eb-979d-1c9075a148a0.dynatrace.training/
+- **Local**: http://localhost:8080/
+
+## 🎯 Key Features
+
+- **Customer Journey Simulation**: Multi-step business process simulation
+- **Multi-persona Load Generation**: Realistic customer behavior patterns  
+- **Dynatrace Integration**: Full metadata injection and observability
+- **Real-time Monitoring**: Live metrics and health endpoints
+- **Error Simulation**: Configurable failure scenarios for demos
 
 ## 🏗️ Architecture
+
+- **Main Server**: Port 8080 with full web interface
+- **Child Services**: Dynamic service creation on ports 8081-8094
+- **Kubernetes Ingress**: External routing via ingress controller
+- **Health Monitoring**: Comprehensive service health tracking
+
+## 🔧 Management Commands
+
+```bash
+./start-server.sh    # Complete startup with ingress deployment
+./status.sh          # Detailed status report
+./stop.sh            # Stop all services
+./restart.sh         # Restart application
+```
+
+## 📊 Demo Scenarios
+
+### Insurance Journey Example
+PolicyDiscovery → QuoteGeneration → PolicySelection → PaymentProcessing → PolicyActivation → OngoingEngagement
+
+### Customer Personas
+- **Karen (Retail)**: Price-conscious shopper
+- **Raj (Insurance)**: Risk-aware professional  
+- **Alex (Tech)**: Innovation-focused buyer
+- **Sophia (Enterprise)**: Process-oriented decision maker
+
+## 🛠️ Technical Stack
+
+- **Runtime**: Node.js v22+ with Express.js
+- **Observability**: Dynatrace metadata injection (13 headers)
+- **Load Balancing**: NGINX with upstream configuration
+- **Process Management**: Native Node.js with health checks
+- **Ingress**: Kubernetes ingress for external access
+
+## 📁 Project Structure
+
+```
+├── server.js              # Main application server
+├── start-server.sh        # Complete startup script
+├── routes/                # API route handlers
+├── services/              # Business logic services
+├── middleware/            # Dynatrace and observability middleware
+├── scripts/               # Utility and simulation scripts
+├── k8s/                   # Kubernetes ingress configuration
+├── nginx/                 # NGINX load balancer configuration
+└── logs/                  # Application logs
+```
+
+## 🎭 Ready for Demos
+
+This application is specifically designed for Dynatrace customer journey demonstrations with full observability integration and realistic business scenarios.
+
+For detailed usage instructions, see [START-SERVER-GUIDE.md](START-SERVER-GUIDE.md).
+For deployment details, see [DEPLOYMENT-SUMMARY.md](DEPLOYMENT-SUMMARY.md).
 
 - **Main Server** (`server.js`): Express.js application serving frontend and coordinating services
 - **Journey Simulation** (`routes/journey-simulation.js`): Core business logic for customer journey processing

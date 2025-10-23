@@ -6,10 +6,12 @@ import { EventEmitter } from 'events';
  * This system ensures no two services try to use the same port simultaneously
  */
 class PortManager extends EventEmitter {
-  constructor(minPort = 4101, maxPort = 4299) {
+  constructor(minPort = null, maxPort = null) {
     super();
-    this.minPort = minPort;
-    this.maxPort = maxPort;
+    // Use EasyTravel-style ports with environment variable support
+    const portOffset = parseInt(process.env.PORT_OFFSET || '0');
+    this.minPort = minPort || parseInt(process.env.SERVICE_PORT_MIN || '8081') + portOffset;
+    this.maxPort = maxPort || parseInt(process.env.SERVICE_PORT_MAX || '8094') + portOffset;
     this.allocatedPorts = new Map(); // port -> { service, company, timestamp }
     this.pendingAllocations = new Set(); // ports currently being allocated
     this.allocationLock = new Map(); // service key -> allocation promise

@@ -26,6 +26,8 @@ import flowRouter from './routes/flow.js';
 import serviceProxyRouter from './routes/serviceProxy.js';
 import journeySimulationRouter from './routes/journey-simulation.js';
 import configRouter from './routes/config.js';
+import { injectDynatraceMetadata, injectErrorMetadata, propagateMetadata, validateMetadata } from './middleware/dynatrace-metadata.js';
+import { performComprehensiveHealthCheck } from './middleware/observability-hygiene.js';
 // MongoDB integration removed
 
 dotenv.config();
@@ -48,8 +50,9 @@ const io = new SocketIOServer(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
-// Configuration
-const PORT = process.env.PORT || 4000;
+// Configuration with EasyTravel-style ports
+const portOffset = parseInt(process.env.PORT_OFFSET || '0');
+const PORT = parseInt(process.env.PORT || '8080') + portOffset;
 
 // Child service management now handled by service-manager.js
 // Services are created dynamically based on journey steps
@@ -62,7 +65,13 @@ const PORT = process.env.PORT || 4000;
 function callChildService(serviceName, payload, port, tracingHeaders = {}) {
   return new Promise((resolve, reject) => {
     const targetPort = port;
-    // Do NOT set custom trace headers; let OneAgent handle distributed tracing
+    
+    // Propagate Dynatrace metadata from original headers
+    const propagatedHeaders = propagateMetadata(tracingHeaders, {
+      'dt.service-call': 'child-service',
+      'dt.target-service': serviceName
+    });
+    
     const options = {
       hostname: '127.0.0.1',
       port: targetPort,
@@ -70,11 +79,8 @@ function callChildService(serviceName, payload, port, tracingHeaders = {}) {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        // Only forward correlation and business context headers
         'x-correlation-id': (tracingHeaders['x-correlation-id'] || payload?.correlationId) || uuidv4(),
-        // Forward W3C Trace Context if present (OneAgent will handle this)
-        ...(tracingHeaders.traceparent && { 'traceparent': tracingHeaders.traceparent }),
-        ...(tracingHeaders.tracestate && { 'tracestate': tracingHeaders.tracestate })
+        ...propagatedHeaders
       }
     };
     
@@ -146,6 +152,9 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' })); // Increase JSON payload limit
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Inject Dynatrace metadata for ACE-Box compatibility
+app.use(injectDynatraceMetadata);
 
 // Frontend host label (avoid showing raw 'localhost')
 function hostToLabel(host) {
@@ -331,12 +340,19 @@ app.post('/api/internal/bizevent', (req, res) => {
   });
 });
 
-// Health check endpoint
+// Health check endpoint with metadata validation
 app.get('/health', (req, res) => {
+    const metadata = req.dynatraceMetadata || {};
+    const validation = validateMetadata(res.getHeaders());
+    
     res.status(200).json({ 
         status: 'healthy', 
         timestamp: new Date().toISOString(),
-        services: 'running'
+        services: 'running',
+        metadata: {
+            injected: Object.keys(metadata).length,
+            validation: validation
+        }
     });
 });
 
@@ -632,6 +648,24 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Comprehensive health check endpoint with observability hygiene
+app.get('/api/health/comprehensive', async (req, res) => {
+  try {
+    const healthReport = await performComprehensiveHealthCheck();
+    const statusCode = healthReport.overallStatus === 'healthy' ? 200 : 
+                      healthReport.overallStatus === 'critical' ? 503 : 202;
+    
+    res.status(statusCode).json(healthReport);
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Comprehensive health check failed',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Comprehensive health check endpoint
 app.get('/api/health/detailed', async (req, res) => {
   try {
@@ -669,7 +703,7 @@ app.get('/api/admin/ports', (req, res) => {
       portStatus: {
         available: serviceStatus.availablePorts,
         allocated: serviceStatus.allocatedPorts,
-        total: 199, // 4101-4299 range
+        total: (parseInt(process.env.SERVICE_PORT_MAX || '8094') - parseInt(process.env.SERVICE_PORT_MIN || '8081') + 1), // Dynamic range
         range: serviceStatus.portRange
       },
       services: serviceStatus.services
@@ -691,13 +725,19 @@ app.get('/api/metrics', (req, res) => {
 // Expose event service for routes
 app.locals.eventService = eventService;
 
-// Error handling
+// Error handling with metadata injection
 app.use((err, req, res, next) => {
   console.error('Server error:', err);
+  
+  // Inject error metadata for Dynatrace
+  const errorMetadata = injectErrorMetadata(err, req, res);
+  
   res.status(500).json({
     error: 'Internal Server Error',
     message: err.message,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    correlationId: req.correlationId,
+    metadata: errorMetadata
   });
 });
 
