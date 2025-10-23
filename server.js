@@ -54,6 +54,18 @@ const io = new SocketIOServer(server, {
 const portOffset = parseInt(process.env.PORT_OFFSET || '0');
 const PORT = parseInt(process.env.PORT || '8080') + portOffset;
 
+// OneAgent Environment Configuration for Host Monitoring
+process.env.DT_RELEASE_PRODUCT = process.env.DT_RELEASE_PRODUCT || 'BizObs-Engine';
+process.env.DT_RELEASE_STAGE = process.env.DT_RELEASE_STAGE || 'production';
+process.env.DT_CLUSTER_ID = process.env.DT_CLUSTER_ID || 'ace-box-host';
+process.env.DT_NODE_ID = process.env.DT_NODE_ID || 'ec2-bizobs-host';
+
+// Main Server Dynatrace Configuration
+process.env.DT_SERVICE_NAME = 'BizObs-MainServer';
+process.env.DT_APPLICATION_NAME = 'Partner-PowerUp-BizObs';
+process.env.DT_TAGS = 'Environment=ACE-Box,Project=Partner-PowerUp-BizObs,Service=MainServer';
+process.env.DT_CUSTOM_PROP = 'role=main-server;type=api-gateway';
+
 // Child service management now handled by service-manager.js
 // Services are created dynamically based on journey steps
 

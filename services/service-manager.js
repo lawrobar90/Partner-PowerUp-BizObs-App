@@ -188,7 +188,7 @@ export async function startChildService(serviceName, scriptPath, env = {}) {
         APP: 'BizObs-CustomerJourney',
         service: serviceName,
         SERVICE: serviceName,
-        // Dynatrace service identification
+        // Dynatrace service identification (OneAgent recognizes these)
         DT_SERVICE_NAME: serviceName,
         DYNATRACE_SERVICE_NAME: serviceName,
         DT_LOGICAL_SERVICE_NAME: serviceName,
@@ -196,8 +196,15 @@ export async function startChildService(serviceName, scriptPath, env = {}) {
         DT_PROCESS_GROUP_NAME: serviceName,
         DT_PROCESS_GROUP_INSTANCE: `${serviceName}-${port}`,
         // Application context
-        DT_APPLICATION_NAME: 'BizObs-CustomerJourney',
-        DT_CLUSTER_ID: serviceName,
+        DT_APPLICATION_NAME: `BizObs-${industryType}`,
+        DT_CLUSTER_ID: 'ace-box-bizobs',
+        DT_NODE_ID: `${serviceName}-node`,
+        // Dynatrace tags and custom properties
+        DT_TAGS: `Environment=ACE-Box,Project=Partner-PowerUp-BizObs,Company=${companyName},Industry=${industryType},Service=${serviceName}`,
+        DT_CUSTOM_PROP: `company=${companyName};domain=${domain};industry=${industryType};port=${port}`,
+        // Release information
+        DT_RELEASE_PRODUCT: 'BizObs-Engine',
+        DT_RELEASE_STAGE: 'production',
         DT_NODE_ID: `${serviceName}-node`,
         // Dynatrace tags - space separated for proper tag parsing
         DT_TAGS: `company=${companyName} app=BizObs-CustomerJourney service=${serviceName}`,

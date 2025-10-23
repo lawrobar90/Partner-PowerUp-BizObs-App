@@ -30,6 +30,15 @@ const domain = process.env.DOMAIN || 'default.com';
 const industryType = process.env.INDUSTRY_TYPE || 'general';
 const stepNameEnv = process.env.STEP_NAME || 'UnknownStep';
 
+// Set Dynatrace environment variables for OneAgent
+const serviceName = process.argv[2] || 'UnknownService';
+process.env.DT_CUSTOM_PROP = `company=${companyName};domain=${domain};industry=${industryType}`;
+process.env.DT_TAGS = `Environment=ACE-Box,Project=Partner-PowerUp-BizObs,Company=${companyName},Industry=${industryType}`;
+process.env.DT_SERVICE_NAME = serviceName;
+process.env.DT_APPLICATION_NAME = `BizObs-${industryType}`;
+process.env.DT_CLUSTER_ID = 'ace-box-bizobs';
+process.env.DT_NODE_ID = `${serviceName}-node`;
+
 function createService(serviceName, mountFn) {
   // CRITICAL: Set process identity for Dynatrace detection immediately
   try { 
