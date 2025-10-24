@@ -16,7 +16,8 @@ BASE_DIR="/home/dt_training"
 PROJECT_DIR="$BASE_DIR/$PROJECT_NAME"
 FORCE_CLONE=false
 DRY_RUN=false
-EXTERNAL_URL="http://bizobs.c469ba93-51c8-40eb-979d-1c9075a148a0.dynatrace.training"
+# EXTERNAL_URL will be auto-detected based on ACE-Box environment
+EXTERNAL_URL=""
 
 # Check for command line arguments
 for arg in "$@"; do
@@ -33,9 +34,24 @@ for arg in "$@"; do
             FOLLOW_LOGS=true
             shift
             ;;
+        --ace-box-id=*)
+            ACE_BOX_ID_OVERRIDE="${arg#*=}"
+            shift
+            ;;
+        --external-url=*)
+            EXTERNAL_URL_OVERRIDE="${arg#*=}"
+            shift
+            ;;
         *)
             echo "Unknown argument: $arg"
-            echo "Usage: $0 [--force-clone] [--dry-run] [--follow-logs]"
+            echo "Usage: $0 [--force-clone] [--dry-run] [--follow-logs] [--ace-box-id=ID] [--external-url=URL]"
+            echo ""
+            echo "Options:"
+            echo "  --force-clone     Force fresh clone of repository"
+            echo "  --dry-run         Check dependencies without starting server"
+            echo "  --follow-logs     Show logs in real-time after startup"
+            echo "  --ace-box-id=ID   Manually specify ACE-Box ID (e.g., c469ba93-51c8-40eb-979d-1c9075a148a0)"
+            echo "  --external-url=URL Manually specify external URL (e.g., http://bizobs.myacebox.dynatrace.training)"
             exit 1
             ;;
     esac
@@ -266,28 +282,81 @@ fi
 
 # Detect ace-box environment
 echo "🔍 Detecting ace-box environment..."
-ACE_BOX_ID=""
-if [[ -f "/etc/machine-id" ]]; then
-    ACE_BOX_ID=$(cat /etc/machine-id | head -c 8)
+
+# Use override if provided
+if [[ -n "${ACE_BOX_ID_OVERRIDE:-}" ]]; then
+    ACE_BOX_ID="$ACE_BOX_ID_OVERRIDE"
+    echo "📋 Using manually specified ACE-Box ID: ${ACE_BOX_ID}"
+elif [[ -n "${EXTERNAL_URL_OVERRIDE:-}" ]]; then
+    EXTERNAL_URL="$EXTERNAL_URL_OVERRIDE"
+    echo "🔗 Using manually specified external URL: ${EXTERNAL_URL}"
+else
+    ACE_BOX_ID=""
+    
+    # Method 1: Try to get ACE-Box ID from machine-id (first 8 characters)
+    if [[ -f "/etc/machine-id" ]]; then
+        ACE_BOX_ID=$(cat /etc/machine-id | head -c 8)
+        echo "📋 Machine ID detected: ${ACE_BOX_ID}"
+    fi
+    
+    # Method 2: Try to get ACE-Box ID from hostname pattern
+    if [[ -z "$ACE_BOX_ID" ]]; then
+        HOSTNAME=$(hostname)
+        if [[ "$HOSTNAME" =~ ace-box-([a-f0-9-]+) ]]; then
+            ACE_BOX_ID="${BASH_REMATCH[1]}"
+            echo "📋 ACE-Box ID from hostname: ${ACE_BOX_ID}"
+        fi
+    fi
+    
+    # Method 3: Try to extract from existing dynatrace.training domains
+    if [[ -z "$ACE_BOX_ID" ]] && command -v curl &> /dev/null; then
+        # Check if we can resolve any existing dynatrace.training patterns
+        for potential_id in $(ps aux | grep -o '[a-f0-9]\{8\}-[a-f0-9]\{4\}-[a-f0-9]\{4\}-[a-f0-9]\{4\}-[a-f0-9]\{12\}' | head -5); do
+            if [[ -n "$potential_id" ]]; then
+                ACE_BOX_ID="$potential_id"
+                echo "📋 ACE-Box ID from process: ${ACE_BOX_ID}"
+                break
+            fi
+        done
+    fi
 fi
 
 # Try to get the public hostname for ace-box
 if command -v curl &> /dev/null; then
     PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "")
     INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null || echo "unknown")
+    
+    # Try to get instance metadata that might contain ACE-Box info
+    if [[ -z "$ACE_BOX_ID" ]]; then
+        INSTANCE_TAGS=$(curl -s http://169.254.169.254/latest/meta-data/tags/instance 2>/dev/null || echo "")
+        if [[ "$INSTANCE_TAGS" =~ ace-box-([a-f0-9-]+) ]]; then
+            ACE_BOX_ID="${BASH_REMATCH[1]}"
+            echo "📋 ACE-Box ID from instance metadata: ${ACE_BOX_ID}"
+        fi
+    fi
 else
     PUBLIC_IP=""
     INSTANCE_ID="unknown"
 fi
 
-# Set dynamic external URL if we can detect ace-box environment
-if [[ -n "$PUBLIC_IP" && "$PUBLIC_IP" != "" ]]; then
-    # Try to detect the ace-box domain pattern
-    if [[ -n "$ACE_BOX_ID" ]]; then
-        DYNAMIC_DOMAIN="${ACE_BOX_ID}.dynatrace.training"
-        EXTERNAL_URL="http://bizobs.${DYNAMIC_DOMAIN}"
-        echo "🌐 Detected ace-box environment: $DYNAMIC_DOMAIN"
-    fi
+# Set dynamic external URL based on detection
+if [[ -n "${EXTERNAL_URL_OVERRIDE:-}" ]]; then
+    # External URL was manually specified
+    echo "🔗 Using manually specified external URL: $EXTERNAL_URL"
+elif [[ -n "$ACE_BOX_ID" && "$ACE_BOX_ID" != "" ]]; then
+    DYNAMIC_DOMAIN="${ACE_BOX_ID}.dynatrace.training"
+    EXTERNAL_URL="http://bizobs.${DYNAMIC_DOMAIN}"
+    echo "🌐 Detected ace-box environment: $DYNAMIC_DOMAIN"
+    echo "🔗 External URL will be: $EXTERNAL_URL"
+elif [[ -n "$PUBLIC_IP" && "$PUBLIC_IP" != "" ]]; then
+    # Fallback to public IP if no ACE-Box ID detected
+    EXTERNAL_URL="http://$PUBLIC_IP:8080"
+    echo "🌐 Using public IP fallback: $EXTERNAL_URL"
+else
+    # Final fallback to localhost
+    EXTERNAL_URL="http://localhost:8080"
+    echo "🌐 Using localhost fallback: $EXTERNAL_URL"
+    echo "⚠️  Warning: Could not detect ACE-Box environment. External access may not work."
 fi
 
 # Deploy Kubernetes ingress for external access (if kubectl available)
