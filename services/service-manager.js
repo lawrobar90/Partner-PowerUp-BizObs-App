@@ -106,24 +106,29 @@ export function getServiceNameFromStep(stepName, context = {}) {
 
 // Get port for service using robust port manager
 export async function getServicePort(stepName, companyName = 'DefaultCompany') {
-  const serviceName = getServiceNameFromStep(stepName);
-  if (!serviceName) return null;
+  const baseServiceName = getServiceNameFromStep(stepName);
+  if (!baseServiceName) return null;
+  
+  // Create compound service name for internal tracking and port allocation
+  const internalServiceName = `${baseServiceName}-${companyName.replace(/[^a-zA-Z0-9]/g, '')}`;
+  // Use clean service name for Dynatrace service identification (per user request)
+  const dynatraceServiceName = baseServiceName;
   
   try {
-    // Check if service already has a port allocated
-    const existingPort = portManager.getServicePort(serviceName, companyName);
+    // Check if service already has a port allocated using the compound name
+    const existingPort = portManager.getServicePort(internalServiceName, companyName);
     if (existingPort) {
-      console.log(`[service-manager] Service "${serviceName}" for ${companyName} already allocated to port ${existingPort}`);
+      console.log(`[service-manager] Service "${baseServiceName}" for ${companyName} already allocated to port ${existingPort}`);
       return existingPort;
     }
     
-    // Allocate new port using robust port manager
-    const port = await portManager.allocatePort(serviceName, companyName);
-    console.log(`[service-manager] Service "${serviceName}" for ${companyName} allocated port ${port}`);
+    // Allocate new port using robust port manager with compound name
+    const port = await portManager.allocatePort(internalServiceName, companyName);
+    console.log(`[service-manager] Service "${baseServiceName}" for ${companyName} allocated port ${port}`);
     return port;
     
   } catch (error) {
-    console.error(`[service-manager] Failed to allocate port for ${serviceName}: ${error.message}`);
+    console.error(`[service-manager] Failed to allocate port for ${baseServiceName}: ${error.message}`);
     throw error;
   }
 }
@@ -154,11 +159,11 @@ function cleanupDeadServices() {
 }
 
 // Start child service process
-export async function startChildService(serviceName, scriptPath, env = {}) {
+export async function startChildService(internalServiceName, scriptPath, env = {}) {
   // Use the original step name from env, not derived from service name
   const stepName = env.STEP_NAME;
   if (!stepName) {
-    console.error(`[service-manager] No STEP_NAME provided for service ${serviceName}`);
+    console.error(`[service-manager] No STEP_NAME provided for service ${internalServiceName}`);
     return null;
   }
   
@@ -167,69 +172,77 @@ export async function startChildService(serviceName, scriptPath, env = {}) {
   const domain = env.DOMAIN || 'default.com';
   const industryType = env.INDUSTRY_TYPE || 'general';
   
+  // Get Dynatrace service name (clean name without company suffix)
+  const dynatraceServiceName = env.DYNATRACE_SERVICE_NAME || env.BASE_SERVICE_NAME || internalServiceName.replace(/-[^-]*$/, '');
+  
+  let port; // Declare port outside try block for error handling
   try {
-    const port = await getServicePort(stepName, companyName);
-    console.log(`🚀 Starting child service: ${serviceName} on port ${port} for company: ${companyName} (domain: ${domain}, industry: ${industryType})`);
+    port = await getServicePort(stepName, companyName);
+    console.log(`🚀 Starting child service: ${dynatraceServiceName} (${internalServiceName}) on port ${port} for company: ${companyName} (domain: ${domain}, industry: ${industryType})`);
     
-    const child = spawn('node', [scriptPath, '--service-name', serviceName], {
+    const child = spawn('node', [`--title=${dynatraceServiceName}`, scriptPath, dynatraceServiceName], {
       env: { 
         ...process.env, 
-        SERVICE_NAME: serviceName, 
+        SERVICE_NAME: dynatraceServiceName, 
+        FULL_SERVICE_NAME: internalServiceName,
         PORT: port,
         MAIN_SERVER_PORT: process.env.PORT || '8080',
-        // Core company context for Dynatrace filtering
+        // Company context for business observability
         COMPANY_NAME: companyName,
-        DOMAIN: domain, 
+        DOMAIN: domain,
         INDUSTRY_TYPE: industryType,
-        // Plain env vars often captured by Dynatrace as [Environment] tags
-        company: companyName,
-        COMPANY: companyName,
-        app: 'BizObs-CustomerJourney',
-        APP: 'BizObs-CustomerJourney',
-        service: serviceName,
-        SERVICE: serviceName,
-        // Dynatrace service identification (OneAgent recognizes these)
-        DT_SERVICE_NAME: serviceName,
-        DYNATRACE_SERVICE_NAME: serviceName,
-        DT_LOGICAL_SERVICE_NAME: serviceName,
+        CATEGORY: env.CATEGORY || 'general',
+        // Dynatrace service identification (OneAgent recognizes these) - use clean service name
+        DT_SERVICE_NAME: dynatraceServiceName,
+        DYNATRACE_SERVICE_NAME: dynatraceServiceName,
+        DT_LOGICAL_SERVICE_NAME: dynatraceServiceName,
+        // Node.js specific environment variables that OneAgent reads
+        NODEJS_APP_NAME: dynatraceServiceName,
         // Process group identification
-        DT_PROCESS_GROUP_NAME: serviceName,
-        DT_PROCESS_GROUP_INSTANCE: `${serviceName}-${port}`,
-        // Application context
-        DT_APPLICATION_NAME: `BizObs-${industryType}`,
-        DT_CLUSTER_ID: 'ace-box-bizobs',
-        DT_NODE_ID: `${serviceName}-node`,
-        // Dynatrace tags and custom properties
-        DT_TAGS: `Environment=ACE-Box,Project=Partner-PowerUp-BizObs,Company=${companyName},Industry=${industryType},Service=${serviceName}`,
-        DT_CUSTOM_PROP: `company=${companyName};domain=${domain};industry=${industryType};port=${port}`,
+        DT_PROCESS_GROUP_NAME: dynatraceServiceName,
+        DT_PROCESS_GROUP_INSTANCE: `${dynatraceServiceName}-${port}`,
+        // Application context - use consistent app name like old working version
+        DT_APPLICATION_NAME: 'BizObs-CustomerJourney',
+        DT_CLUSTER_ID: dynatraceServiceName,
+        DT_NODE_ID: `${dynatraceServiceName}-node`,
+        // Dynatrace tags - space separated format like old working version
+        DT_TAGS: `company=${companyName.replace(/ /g, '_')} app=BizObs-CustomerJourney service=${dynatraceServiceName}`,
         // Release information
         DT_RELEASE_PRODUCT: 'BizObs-Engine',
         DT_RELEASE_STAGE: 'production',
-        DT_NODE_ID: `${serviceName}-node`,
-        // Dynatrace tags - space separated for proper tag parsing
-        DT_TAGS: `company=${companyName} app=BizObs-CustomerJourney service=${serviceName}`,
-        // Optional custom props (many environments ignore these; kept for completeness)
-        DT_CUSTOM_PROP: `company=${companyName};app=BizObs-CustomerJourney;service=${serviceName};domain=${domain};industryType=${industryType};service_type=customer_journey_step`,
+        // Override OneAgent service naming (critical for service detection) - use clean service name
+        RUXIT_APPLICATION_ID: dynatraceServiceName,
+        RUXIT_APPLICATIONID: dynatraceServiceName,
+        RUXIT_PROCESS_GROUP: dynatraceServiceName,
+        // Force OneAgent to use environment for service naming
+        DT_APPLICATIONID: dynatraceServiceName,
+        DT_APPLICATION_ID: dynatraceServiceName,
+        // Node.js web application override (prevents package.json name from being used)
+        DT_WEB_APPLICATION_ID: dynatraceServiceName,
+        DT_APPLICATION_BUILD_VERSION: dynatraceServiceName,
+        // Additional service detection overrides
+        DT_SERVICE_DETECTION_FULL_NAME: dynatraceServiceName,
+        DT_SERVICE_DETECTION_RULE_NAME: dynatraceServiceName,
         ...env 
       },
       stdio: ['ignore', 'pipe', 'pipe']
     });
     
-    child.stdout.on('data', d => console.log(`[${serviceName}] ${d.toString().trim()}`));
-    child.stderr.on('data', d => console.error(`[${serviceName}][ERR] ${d.toString().trim()}`));
+    child.stdout.on('data', d => console.log(`[${dynatraceServiceName}] ${d.toString().trim()}`));
+    child.stderr.on('data', d => console.error(`[${dynatraceServiceName}][ERR] ${d.toString().trim()}`));
     child.on('exit', code => {
-      console.log(`[${serviceName}] exited with code ${code}`);
-      delete childServices[serviceName];
-      delete childServiceMeta[serviceName];
+      console.log(`[${dynatraceServiceName}] exited with code ${code}`);
+      delete childServices[internalServiceName];
+      delete childServiceMeta[internalServiceName];
       // Free up the port using port manager
-      portManager.releasePort(port, serviceName);
+      portManager.releasePort(port, internalServiceName);
     });
     
     // Track startup time and metadata
     child.startTime = new Date().toISOString();
-    childServices[serviceName] = child;
+    childServices[internalServiceName] = child;
     // Record metadata for future context checks
-    childServiceMeta[serviceName] = { 
+    childServiceMeta[internalServiceName] = { 
       companyName, 
       domain, 
       industryType, 
@@ -257,32 +270,38 @@ export async function ensureServiceRunning(stepName, companyContext = {}) {
     endpoint: companyContext.endpoint
   };
   
-  const serviceName = companyContext.serviceName || getServiceNameFromStep(stepName, stepContext);
-  console.log(`[service-manager] Dynamic service name: ${serviceName}`);
+  const baseServiceName = companyContext.serviceName || getServiceNameFromStep(stepName, stepContext);
   
   // Extract company context with defaults
   const companyName = companyContext.companyName || 'DefaultCompany';
   const domain = companyContext.domain || 'default.com';
   const industryType = companyContext.industryType || 'general';
   const stepEnvName = companyContext.stepName || stepName;
+  const category = stepContext.category || 'general';
+  
+  // Create a unique service key per company to allow service reuse within same company
+  const internalServiceName = `${baseServiceName}-${companyName.replace(/[^a-zA-Z0-9]/g, '')}`;
+  // Use clean service name for Dynatrace service identification (per user request)
+  const dynatraceServiceName = baseServiceName;
+  console.log(`[service-manager] Company-specific service name: ${internalServiceName} (base: ${baseServiceName}, company: ${companyName})`);
   
   const desiredMeta = {
     companyName,
     domain,
-    industryType
+    industryType,
+    baseServiceName
   };
 
-  const existing = childServices[serviceName];
-  const existingMeta = childServiceMeta[serviceName];
+  const existing = childServices[internalServiceName];
+  const existingMeta = childServiceMeta[internalServiceName];
 
-  // Check for company context mismatch FIRST
+  // Check for company context mismatch FIRST - now we only care about domain/industry since company is in service name
   const metaMismatch = existingMeta && (
-    existingMeta.companyName !== desiredMeta.companyName ||
     existingMeta.domain !== desiredMeta.domain ||
     existingMeta.industryType !== desiredMeta.industryType
   );
 
-  console.log(`[service-manager] DEBUG: Service ${serviceName}, existing: ${!!existing}, meta: ${!!existingMeta}`);
+  console.log(`[service-manager] DEBUG: Service ${internalServiceName}, existing: ${!!existing}, meta: ${!!existingMeta}`);
   if (existingMeta) {
     console.log(`[service-manager] DEBUG: Existing meta:`, JSON.stringify(existingMeta));
     console.log(`[service-manager] DEBUG: Desired meta:`, JSON.stringify(desiredMeta));
@@ -291,64 +310,69 @@ export async function ensureServiceRunning(stepName, companyContext = {}) {
 
   // If service exists and is still running AND context matches, return it immediately
   if (existing && !existing.killed && existing.exitCode === null && !metaMismatch) {
-    console.log(`[service-manager] Service ${serviceName} already running (PID: ${existing.pid}), reusing existing instance for ${companyName}`);
-    // Return the service info with its actual port
-    return {
-      service: existing,
-      port: existingMeta?.port,
-      serviceName: serviceName
-    };
+    console.log(`[service-manager] Service ${internalServiceName} already running (PID: ${existing.pid}), reusing existing instance for ${companyName}`);
+    // Return the port number
+    return existingMeta?.port;
   }
 
   if (!existing || metaMismatch) {
     if (existing && metaMismatch) {
-      console.log(`[service-manager] Context change detected for ${serviceName}. Restarting service to apply new tags:`, JSON.stringify({ from: existingMeta, to: desiredMeta }));
+      console.log(`[service-manager] Context change detected for ${internalServiceName}. Restarting service to apply new tags:`, JSON.stringify({ from: existingMeta, to: desiredMeta }));
       try { existing.kill('SIGTERM'); } catch {}
-      delete childServices[serviceName];
-      delete childServiceMeta[serviceName];
+      delete childServices[internalServiceName];
+      delete childServiceMeta[internalServiceName];
       // Free up the port using port manager
-      const meta = childServiceMeta[serviceName];
+      const meta = childServiceMeta[internalServiceName];
       if (meta && meta.port) {
-        portManager.releasePort(meta.port, serviceName);
+        portManager.releasePort(meta.port, internalServiceName);
       }
     }
-    console.log(`[service-manager] Service ${serviceName} not running, starting it for company: ${companyName}...`);
+    console.log(`[service-manager] Service ${internalServiceName} not running, starting it for company: ${companyName}...`);
     // Try to start with existing service file, fallback to dynamic service
-    const specificServicePath = path.join(__dirname, `${serviceName}.cjs`);
+    const specificServicePath = path.join(__dirname, `${internalServiceName}.cjs`);
     const dynamicServicePath = path.join(__dirname, 'dynamic-step-service.cjs');
     // Create a per-service wrapper so the Node entrypoint filename matches the service name
     const runnersDir = path.join(__dirname, '.dynamic-runners');
-    const wrapperPath = path.join(runnersDir, `${serviceName}.cjs`);
+    const wrapperPath = path.join(runnersDir, `${internalServiceName}.cjs`);
     try {
       // Check if specific service exists
       if (fs.existsSync(specificServicePath)) {
         console.log(`[service-manager] Starting specific service: ${specificServicePath}`);
-        const child = await startChildService(serviceName, specificServicePath, { 
+        const child = await startChildService(internalServiceName, specificServicePath, { 
           STEP_NAME: stepEnvName,
           COMPANY_NAME: companyName,
           DOMAIN: domain,
-          INDUSTRY_TYPE: industryType
+          INDUSTRY_TYPE: industryType,
+          CATEGORY: category,
+          BASE_SERVICE_NAME: baseServiceName,
+          DYNATRACE_SERVICE_NAME: dynatraceServiceName
         });
-        const meta = childServiceMeta[serviceName];
-        return {
-          service: child,
-          port: meta?.port,
-          serviceName: serviceName
-        };
+        const meta = childServiceMeta[internalServiceName];
+        const allocatedPort = meta?.port;
+        // Wait for service health endpoint to be ready before returning port
+        if (allocatedPort) {
+          const ready = await isServiceReady(allocatedPort, 5000);
+          if (!ready) {
+            console.error(`[service-manager] Service ${dynatraceServiceName} started but did not become ready on port ${allocatedPort}`);
+            throw new Error(`Service ${dynatraceServiceName} not responding on port ${allocatedPort}`);
+          }
+        }
+        return allocatedPort;
       } else {
         // Ensure runners directory exists
         if (!fs.existsSync(runnersDir)) {
           fs.mkdirSync(runnersDir, { recursive: true });
         }
         // Create/overwrite wrapper with service-specific entrypoint
-        const wrapperSource = `// Auto-generated wrapper for ${serviceName}\n` +
-`process.env.SERVICE_NAME = ${JSON.stringify(serviceName)};\n` +
+        const wrapperSource = `// Auto-generated wrapper for ${dynatraceServiceName}\n` +
+`process.env.SERVICE_NAME = ${JSON.stringify(dynatraceServiceName)};\n` +
+`process.env.FULL_SERVICE_NAME = ${JSON.stringify(dynatraceServiceName)};\n` +
 `process.env.STEP_NAME = ${JSON.stringify(stepEnvName)};\n` +
+`process.env.COMPANY_NAME = ${JSON.stringify(companyName)};\n` +
+`process.env.DOMAIN = ${JSON.stringify(domain)};\n` +
+`process.env.INDUSTRY_TYPE = ${JSON.stringify(industryType)};\n` +
+`process.env.CATEGORY = ${JSON.stringify(category)};\n` +
 `process.title = process.env.SERVICE_NAME;\n` +
-`// Company context for tagging\n` +
-`process.env.COMPANY_NAME = process.env.COMPANY_NAME || 'DefaultCompany';\n` +
-`process.env.DOMAIN = process.env.DOMAIN || 'default.com';\n` +
-`process.env.INDUSTRY_TYPE = process.env.INDUSTRY_TYPE || 'general';\n` +
 `// Plain env tags often picked as [Environment] in Dynatrace\n` +
 `process.env.company = process.env.COMPANY_NAME;\n` +
 `process.env.app = 'BizObs-CustomerJourney';\n` +
@@ -363,26 +387,37 @@ export async function ensureServiceRunning(stepName, companyContext = {}) {
 `process.env.DT_CLUSTER_ID = process.env.SERVICE_NAME;\n` +
 `process.env.DT_NODE_ID = process.env.SERVICE_NAME + '-node';\n` +
 `// Dynatrace simplified tags - space separated for proper parsing\n` +
-`process.env.DT_TAGS = 'company=' + process.env.COMPANY_NAME + ' app=BizObs-CustomerJourney service=' + process.env.SERVICE_NAME;\n` +
-`// Optional aggregate custom prop\n` +
-`process.env.DT_CUSTOM_PROP = 'company=' + process.env.COMPANY_NAME + ';app=BizObs-CustomerJourney;service=' + process.env.SERVICE_NAME + ';domain=' + process.env.DOMAIN + ';industryType=' + process.env.INDUSTRY_TYPE + ';service_type=customer_journey_step';\n` +
+`process.env.DT_TAGS = 'company=' + process.env.COMPANY_NAME.replace(/ /g, '_') + ' app=BizObs-CustomerJourney service=' + process.env.SERVICE_NAME;\n` +
+`// Node.js web application override (prevents package.json name from being used)\n` +
+`process.env.DT_WEB_APPLICATION_ID = process.env.SERVICE_NAME;\n` +
+`process.env.DT_APPLICATION_BUILD_VERSION = process.env.SERVICE_NAME;\n` +
+`process.env.DT_SERVICE_DETECTION_FULL_NAME = process.env.SERVICE_NAME;\n` +
+`process.env.DT_SERVICE_DETECTION_RULE_NAME = process.env.SERVICE_NAME;\n` +
 `// Override argv[0] for Dynatrace process detection\n` +
 `if (process.argv && process.argv.length > 0) process.argv[0] = process.env.SERVICE_NAME;\n` +
 `require(${JSON.stringify(dynamicServicePath)}).createStepService(process.env.SERVICE_NAME, process.env.STEP_NAME);\n`;
         fs.writeFileSync(wrapperPath, wrapperSource, 'utf-8');
         console.log(`[service-manager] Starting dynamic service via wrapper: ${wrapperPath}`);
-        const child = await startChildService(serviceName, wrapperPath, { 
+        const child = await startChildService(internalServiceName, wrapperPath, { 
           STEP_NAME: stepEnvName,
           COMPANY_NAME: companyName,
           DOMAIN: domain,
-          INDUSTRY_TYPE: industryType
+          INDUSTRY_TYPE: industryType,
+          CATEGORY: category,
+          BASE_SERVICE_NAME: baseServiceName,
+          DYNATRACE_SERVICE_NAME: dynatraceServiceName
         });
-        const meta = childServiceMeta[serviceName];
-        return {
-          service: child,
-          port: meta?.port,
-          serviceName: serviceName
-        };
+        const meta = childServiceMeta[internalServiceName];
+        const allocatedPort = meta?.port;
+        // Wait for service health endpoint to be ready before returning port
+        if (allocatedPort) {
+          const ready = await isServiceReady(allocatedPort, 5000);
+          if (!ready) {
+            console.error(`[service-manager] Service ${dynatraceServiceName} started but did not become ready on port ${allocatedPort}`);
+            throw new Error(`Service ${dynatraceServiceName} not responding on port ${allocatedPort}`);
+          }
+        }
+        return allocatedPort;
       }
     } catch (e) {
       console.error(`[service-manager] Failed to start service for step ${stepName}:`, e.message);
@@ -411,14 +446,9 @@ export async function ensureServiceRunning(stepName, companyContext = {}) {
     }
   }
   
-  // Return service info with port
-  const serviceInfo = childServices[serviceName];
+  // Return port number
   const meta = childServiceMeta[serviceName];
-  return {
-    service: serviceInfo,
-    port: meta?.port,
-    serviceName: serviceName
-  };
+  return meta?.port;
 }
 
 // Get all running services
@@ -439,10 +469,49 @@ export function stopAllServices() {
   
   // Clear all port allocations using port manager
   Object.keys(childServices).forEach(serviceName => {
+    const meta = childServiceMeta[serviceName];
+    if (meta && meta.port) {
+      portManager.releasePort(meta.port, serviceName);
+    }
     delete childServices[serviceName];
     delete childServiceMeta[serviceName];
   });
-  console.log(`[service-manager] All services stopped and cleaned up`);
+  console.log(`[service-manager] All services stopped and ports freed from port manager`);
+}
+
+// Stop only customer journey services, preserve essential infrastructure services
+export function stopCustomerJourneyServices() {
+  const essentialServices = [
+    'DiscoveryService-Dynatrace',
+    'PurchaseService-Dynatrace', 
+    'DataPersistenceService-Dynatrace'
+  ];
+  
+  let stoppedCount = 0;
+  Object.keys(childServices).forEach(serviceName => {
+    // Preserve essential infrastructure services
+    if (essentialServices.includes(serviceName)) {
+      console.log(`[service-manager] Preserving essential service: ${serviceName}`);
+      return;
+    }
+    
+    // Stop customer journey services
+    const child = childServices[serviceName];
+    if (child) {
+      child.kill('SIGTERM');
+      stoppedCount++;
+    }
+    
+    // Clear port allocation for stopped service
+    const meta = childServiceMeta[serviceName];
+    if (meta && meta.port) {
+      portManager.releasePort(meta.port, serviceName);
+    }
+    delete childServices[serviceName];
+    delete childServiceMeta[serviceName];
+  });
+  
+  console.log(`[service-manager] Stopped ${stoppedCount} customer journey services, preserved ${essentialServices.length} essential services`);
 }
 
 // Convenience helper: ensure a service is started and ready (health endpoint responding)
@@ -529,7 +598,7 @@ export function getServiceStatus() {
     activeServices: Object.keys(childServices).length,
     availablePorts: portStatus.availablePorts,
     allocatedPorts: portStatus.allocatedPorts,
-    portRange: `${portManager.minPort || 8081}-${portManager.maxPort || 8094}`,
+  portRange: `${portManager.minPort || 8081}-${portManager.maxPort || 8120}`,
     services: Object.entries(childServices).map(([name, child]) => ({
       name,
       pid: child.pid,

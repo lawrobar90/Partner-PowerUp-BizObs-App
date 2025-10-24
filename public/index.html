@@ -145,19 +145,19 @@
 
   <!-- Main Content -->
   <div id="mainContent" class="transition-all duration-300">
-    <div class="max-w-[1800px] mx-auto px-8 py-6 font-sans">
-      <header class="flex items-center justify-between mb-6">
-    <h1 class="text-4xl font-extrabold text-dtcyan tracking-tight drop-shadow mb-2">Partner PowerUp BizObs</h1>
-    <span id="host-label" class="text-base text-dtaccent font-medium">Smartscape UI · Real-time overlays</span>
+    <div class="max-w-[2000px] mx-auto px-6 py-4 font-sans">
+      <header class="flex items-center justify-between mb-4">
+    <h1 class="text-3xl font-extrabold text-dtcyan tracking-tight drop-shadow">Partner PowerUp BizObs</h1>
+    <span id="host-label" class="text-sm text-dtaccent font-medium">Smartscape UI · Real-time overlays</span>
       </header>
 
 
     <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
   <div class="col-span-3">
-  <div class="flex flex-col lg:flex-row gap-12 w-full items-stretch">
+  <div class="flex flex-col 2xl:flex-row gap-4 w-full items-stretch">
       <!-- Journey Generator (Left) -->
-  <div class="basis-1/3 min-w-0 p-6 rounded-2xl bg-dtcard border border-dtborder shadow-card flex flex-col h-full">
-        <h2 class="text-3xl mb-6 text-dtcyan font-bold tracking-tight">Journey Generator</h2>
+  <div class="flex-1 min-w-0 p-4 rounded-2xl bg-dtcard border border-dtborder shadow-card flex flex-col h-full">
+        <h2 class="text-2xl mb-4 text-dtcyan font-bold tracking-tight">Journey Generator</h2>
         <!-- Generation Method Selection -->
         <div class="mb-4">
           <label class="block text-sm font-medium text-dtcyan mb-2">Generation Method</label>
@@ -167,8 +167,8 @@
           </select>
         </div>
         <!-- Basic Form -->
-  <form id="journey-form" class="space-y-6 mb-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <form id="journey-form" class="space-y-4 mb-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label for="companyName" class="block text-sm font-medium text-dtcyan mb-2">Company Name</label>
               <input id="companyName" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="customer" placeholder="e.g., ShopMart, TechCorp, HealthPlus" />
@@ -232,109 +232,125 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
             </div>
           </div>
           <!-- Generate Journey Button -->
-          <div class="mt-6">
-            <div class="flex gap-3 mb-3">
-              <button id="quickSavePrompt" type="button" class="bg-dtpurple hover:bg-dtcyan text-white font-semibold rounded-lg px-4 py-2 shadow-card transition-all text-sm prompt-cache-indicator">
-                💾 Quick Save
+          <div class="mt-4">
+            <div class="flex gap-2 mb-2">
+              <button id="quickSavePrompt" type="button" class="bg-dtpurple hover:bg-dtcyan text-white font-semibold rounded-lg px-3 py-1.5 shadow-card transition-all text-sm prompt-cache-indicator">
+                💾 Save
               </button>
-              <span id="savedPromptsCount" class="text-xs text-gray-400 flex items-center">📋 0 saved prompts</span>
+              <span id="savedPromptsCount" class="text-xs text-gray-400 flex items-center">📋 0 saved</span>
             </div>
-            <button id="generateJourney" type="button" class="w-full bg-dtblue hover:bg-dtcyan text-black font-semibold rounded-lg p-4 shadow-card transition-all text-lg">
+            <button id="generateJourney" type="button" class="w-full bg-dtblue hover:bg-dtcyan text-black font-semibold rounded-lg p-3 shadow-card transition-all text-base">
               🚀 Generate Journey
             </button>
           </div>
         </form>
       </div>
       <!-- Copilot Copy-Paste Workflow (Center) -->
-  <div class="basis-1/3 min-w-0 p-6 rounded-2xl bg-dtcard border border-dtborder shadow-card flex flex-col h-full">
-        <h2 class="text-3xl mb-6 text-dtcyan font-bold tracking-tight">Copilot Copy-Paste Workflow</h2>
-        <div class="bg-dtgray rounded-lg p-4 mb-4 flex-1 flex flex-col">
-          <h3 class="text-2xl font-bold text-dtcyan mb-4">🤖 Copilot Copy-Paste Workflow</h3>
+  <div class="flex-1 min-w-0 p-4 rounded-2xl bg-dtcard border border-dtborder shadow-card flex flex-col h-full">
+        <h2 class="text-2xl mb-4 text-dtcyan font-bold tracking-tight">Copilot Copy-Paste Workflow</h2>
+        <div class="bg-dtgray rounded-lg p-3 mb-3 flex-1 flex flex-col">
           <!-- Step 1: Copy Prompt -->
-          <div class="mb-4">
+          <div class="mb-3">
             <div class="flex items-center justify-between mb-2">
-              <h4 class="text-base font-semibold text-white">Step 1: Copy this prompt to your Copilot</h4>
-              <button id="copyPrompt" type="button" class="bg-dtgreen text-black px-4 py-2 rounded-lg text-base font-semibold shadow-card hover:bg-dtcyan transition-all">📋 Copy Prompt</button>
+              <h4 class="text-sm font-semibold text-white">Step 1: Copy prompt to Copilot</h4>
+              <button id="copyPrompt" type="button" class="bg-dtgreen text-black px-3 py-1.5 rounded-lg text-sm font-semibold shadow-card hover:bg-dtcyan transition-all">📋 Copy</button>
             </div>
-            <textarea id="promptText" readonly class="w-full h-48 p-4 border border-dtcyan rounded-lg bg-black text-white text-xs font-mono resize-y overflow-y-auto"></textarea>
+            <textarea id="promptText" readonly class="w-full h-40 p-3 border border-dtcyan rounded-lg bg-black text-white text-xs font-mono resize-y overflow-y-auto"></textarea>
           </div>
           <!-- Step 2: Paste Response -->
-          <div class="mb-4">
-            <h4 class="text-sm font-medium text-white mb-2">Step 2: Paste your Copilot's response here</h4>
-            <textarea id="copilotResponse" placeholder="Paste the JSON response from your Copilot here..." class="w-full h-32 p-4 border border-dtcyan rounded-lg bg-black text-white text-xs font-mono resize-none focus:ring-2 focus:ring-dtcyan transition-all"></textarea>
+          <div class="mb-3">
+            <h4 class="text-sm font-medium text-white mb-2">Step 2: Paste Copilot's response</h4>
+            <textarea id="copilotResponse" placeholder="Paste JSON response here..." class="w-full h-28 p-3 border border-dtcyan rounded-lg bg-black text-white text-xs font-mono resize-none focus:ring-2 focus:ring-dtcyan transition-all"></textarea>
           </div>
           <!-- Step 3: Process Response -->
           <div class="flex items-center gap-2 mb-2">
-            <button id="processResponse" type="button" class="bg-dtgreen text-black px-4 py-2 rounded font-semibold hover:bg-green-700">🚀 Process Response</button>
-            <button id="resetWorkflow" type="button" class="bg-dtgray text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-600">Reset</button>
+            <button id="processResponse" type="button" class="bg-dtgreen text-black px-3 py-1.5 rounded text-sm font-semibold hover:bg-green-700">🚀 Process</button>
+            <button id="resetWorkflow" type="button" class="bg-dtgray text-white px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-gray-600">Reset</button>
+            <button id="useRetailExample" class="bg-dtpurple text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-card hover:bg-dtcyan transition-all">📱 Example</button>
           </div>
-          <button id="useRetailExample" class="mt-2 bg-dtpurple text-white px-4 py-2 rounded-lg font-semibold shadow-card hover:bg-dtcyan transition-all">📱 Use Retail Example</button>
         </div>
       </div>
-      <!-- Generate & Simulation (Right) -->
-  <div class="basis-1/3 min-w-0 p-6 rounded-2xl bg-dtcard border border-dtborder shadow-card flex flex-col h-full">
-        <h2 class="text-3xl mb-6 text-dtcyan font-bold tracking-tight">Generate & Simulate</h2>
+      <!-- Generate & Simulation (Center-Right) -->
+  <div class="flex-1 min-w-0 p-4 rounded-2xl bg-dtcard border border-dtborder shadow-card flex flex-col h-full">
+        <h2 class="text-2xl mb-4 text-dtcyan font-bold tracking-tight">Generate & Simulate</h2>
         <div class="mt-4">
           <div class="flex items-center justify-between">
             <div id="journey-sources" class="text-xs text-dtblue space-y-1"></div>
             <div id="journey-provider" class="text-xs text-dtyellow"></div>
           </div>
           <pre id="journey-output" class="mt-2 text-xs bg-black p-4 rounded-lg overflow-auto max-h-60 border border-dtcyan"></pre>
-          <div class="mt-4 flex flex-wrap gap-3">
-            <button id="reset-ports" onclick="resetServices()" class="bg-dtgray text-white font-semibold rounded-lg p-3 border border-dtcyan shadow-card hover:bg-dtpurple transition-all">🔄 Reset Services</button>
-          </div>
           <div id="chain-status" class="mt-2 text-sm text-dtyellow"></div>
           <pre id="chained-trace-output" class="mt-2 text-xs bg-black p-3 rounded overflow-auto max-h-60"></pre>
         </div>
-        <div class="p-4 rounded-lg bg-[#1b1b1b] border border-dtgray mt-6">
-          <h2 class="text-2xl mb-4 text-dtcyan font-bold tracking-tight">Journey Simulation Controls</h2>
-          <div class="grid grid-cols-1 gap-4">
-            <div class="bg-dtgray bg-opacity-40 rounded-lg p-4">
-              <label class="block text-sm font-medium text-dtcyan mb-2">Number of Customers</label>
-              <input id="customerCount" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" type="number" min="1" max="50" value="10" placeholder="Number of customers" />
-              <p class="text-xs text-gray-400 mt-1">Run 1-50 customers through the generated journey</p>
+        <div class="p-3 rounded-lg bg-[#1b1b1b] border border-dtgray mt-4">
+          <h2 class="text-lg mb-3 text-dtcyan font-bold tracking-tight">Journey Simulation</h2>
+          <div class="grid grid-cols-1 gap-3">
+            <div class="bg-dtgray bg-opacity-40 rounded-lg p-3">
+              <label class="block text-sm font-medium text-dtcyan mb-2">Customers</label>
+              <input id="customerCount" class="w-full p-2 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" type="number" min="1" max="5" value="3" placeholder="Number of customers" />
+              <p class="text-xs text-gray-400 mt-1">Run 1-5 customers through journey</p>
             </div>
-            <div class="flex gap-3">
-              <button id="run-journey-simulation" onclick="runJourneySimulation()" class="flex-1 bg-dtgreen hover:bg-dtcyan text-black font-semibold rounded-lg p-3 shadow-card transition-all" title="Run customers through the journey with OneAgent tracing">🚀 Run Journey Simulation</button>
+            <div class="flex gap-2">
+              <button id="run-journey-simulation" onclick="runJourneySimulation()" class="flex-1 bg-dtgreen hover:bg-dtcyan text-black font-semibold rounded-lg p-2 shadow-card transition-all text-sm" title="Run customers through the journey with OneAgent tracing">🚀 Run Simulation</button>
             </div>
           </div>
-          <div id="sim-status" class="mt-4 text-base text-dtyellow font-medium"></div>
+          <div id="sim-status" class="mt-3 text-sm text-dtyellow font-medium"></div>
+        </div>
+      </div>
+
+      <!-- Journey Management (Right) -->
+      <div class="w-80 flex-shrink-0 p-4 rounded-2xl bg-dtcard border border-dtborder shadow-card flex flex-col h-full">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-xl text-dtcyan font-bold tracking-tight">Journey Management</h2>
+          <button id="new-journey-btn" onclick="startNewCustomerJourney()" class="bg-dtpurple hover:bg-dtcyan text-white hover:text-black font-semibold rounded-lg px-3 py-2 text-sm shadow-card transition-all border border-dtcyan">
+            🚀 New Journey
+          </button>
+        </div>
+        
+        <div class="space-y-4 flex-1">
+          <div>
+            <div class="flex justify-between items-center mb-2">
+              <div>
+                <h3 class="text-sm text-dtgreen font-semibold flex items-center gap-1">
+                  Services Status
+                  <span id="refresh-indicator" class="w-2 h-2 bg-dtgreen rounded-full opacity-75"></span>
+                </h3>
+                <div id="last-update-time" class="text-xs text-gray-500"></div>
+              </div>
+              <button id="refresh-status-btn" onclick="updateServiceStatus()" class="bg-dtgray hover:bg-dtcyan text-white hover:text-black rounded px-2 py-1 text-xs transition-all border border-dtgray" title="Refresh service status">
+                🔄
+              </button>
+            </div>
+            <div id="journey-status-message" class="text-xs text-dtyellow mb-2"></div>
+            <div id="service-status-container" class="bg-black rounded-lg p-3 border border-dtgray">
+              <div id="service-status-loading" class="text-center text-gray-400 text-xs">Loading...</div>
+              <div id="service-status-list" class="hidden space-y-1"></div>
+            </div>
+          </div>
+          
+          <div>
+            <h3 class="text-sm text-dtgreen font-semibold mb-2">Port Status</h3>
+            <div id="port-status-container" class="bg-black rounded-lg p-3 border border-dtgray">
+              <div id="port-status-info" class="text-xs space-y-1">
+                <div>Total: <span id="total-ports" class="text-dtcyan">-</span></div>
+                <div>Available: <span id="available-ports" class="text-dtgreen">-</span></div>
+                <div>Allocated: <span id="allocated-ports" class="text-dtyellow">-</span></div>
+                <div>Range: <span id="port-range" class="text-dtblue">-</span></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
     </section>
 
-    <section class="mt-6 p-4 rounded-lg bg-[#1b1b1b] border border-dtgray relative">
-      <h2 class="text-3xl mb-6 text-dtcyan font-bold tracking-tight">Smartscape</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-        <div class="node p-6 rounded-2xl bg-dtcard shadow-card border border-dtborder">Frontend UI<div class="text-base text-dtblue mt-2">Tailwind, Forms</div></div>
-        <div class="node p-6 rounded-2xl bg-dtcard shadow-card border border-dtborder">Journey Service<div class="text-base text-dtblue mt-2">/generateJourney</div></div>
-        <div class="node p-6 rounded-2xl bg-dtcard shadow-card border border-dtborder">Event Simulator<div class="text-base text-dtblue mt-2">/simulateEvents</div></div>
-        <div class="node p-6 rounded-2xl bg-dtcard shadow-card border border-dtborder">Metrics Service<div class="text-base text-dtblue mt-2">/metrics</div></div>
-        <div class="node p-6 rounded-2xl bg-dtcard shadow-card border border-dtborder">Dynatrace OneAgent<div class="text-base text-dtblue mt-2">Trace/Logs</div></div>
-        <div class="node p-6 rounded-2xl bg-dtcard shadow-card border border-dtborder">Grail<div class="text-base text-dtblue mt-2">Biz Events</div></div>
-      </div>
-      <div class="absolute left-1/4 top-1/2 h-24 connector"></div>
-    </section>
 
-    <section class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="p-6 rounded-2xl bg-dtcard border border-dtborder shadow-card">
-        <h2 class="text-3xl text-dtcyan font-bold mb-4 tracking-tight">Live Biz Events</h2>
-        <ul id="live-feed" class="text-sm space-y-2 max-h-64 overflow-auto"></ul>
-      </div>
-      <div class="p-6 rounded-2xl bg-dtcard border border-dtborder shadow-card">
-        <h2 class="text-3xl text-dtcyan font-bold mb-4 tracking-tight">Metrics</h2>
-        <pre id="metrics" class="text-sm bg-black p-4 rounded-lg max-h-64 overflow-auto border border-dtcyan"></pre>
-      </div>
-    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const ioClient = io();
-    const feed = document.getElementById('live-feed');
-    const metricsEl = document.getElementById('metrics');
     const journeyForm = document.getElementById('journey-form');
     const journeyOutput = document.getElementById('journey-output');
     const journeySources = document.getElementById('journey-sources');
@@ -968,13 +984,46 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           journeyId: lastJourney.id || journeyId,
           companyName: lastJourney.companyName || 'DefaultCompany',
           domain: lastJourney.domain || 'default.com',
-          industryType: lastJourney.industryType || 'general'
+          industryType: lastJourney.industryType || 'general',
+          // Include all the additional context data with test values if not present
+          additionalFields: lastJourney.additionalFields || {
+            sessionId: `session_${Date.now()}`,
+            deviceType: 'desktop',
+            userAgent: 'Chrome/118.0.0.0',
+            geoLocation: 'London, UK',
+            campaignSource: 'organic_search',
+            customerSegment: 'premium',
+            behaviorScore: 8.5,
+            abandonmentRisk: 'low'
+          },
+          customerProfile: lastJourney.customerProfile || {
+            age: 32,
+            gender: 'F',
+            loyaltyTier: 'gold',
+            previousPurchases: 15,
+            avgOrderValue: 125.50,
+            preferredChannel: 'mobile'
+          },
+          traceMetadata: lastJourney.traceMetadata || {
+            experimentId: 'exp_2025_q4',
+            testVariant: 'control',
+            featureFlags: ['checkout_v2', 'ai_recommendations'],
+            abTestGroup: 'A'
+          }
         };
         
         simStatus.textContent = '🚀 Running customer journey simulation...';
         
-        // Get customer count from UI
+        // Get customer count from UI with validation
         const customerCount = parseInt(document.getElementById('customerCount').value) || 1;
+        
+        // Validate customer limit
+        if (customerCount > 5) {
+          simStatus.textContent = '❌ Customer limit exceeded. Maximum allowed: 5 customers';
+          alert('Customer limit exceeded!\n\nMaximum allowed: 5 customers\nYou entered: ' + customerCount + ' customers\n\nPlease reduce the number and try again.');
+          return;
+        }
+        
         console.log(`Running simulation for ${customerCount} customers`);
         
         // Use appropriate endpoint based on customer count
@@ -987,6 +1036,10 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           companyName: journeyData.companyName,
           domain: journeyData.domain,
           industryType: journeyData.industryType,
+          // Include additional context data in request body
+          additionalFields: journeyData.additionalFields || {},
+          customerProfile: journeyData.customerProfile || {},
+          traceMetadata: journeyData.traceMetadata || {},
           chained: false
         };
         
@@ -1007,7 +1060,34 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           // Handle multiple customers response
           if (json.loadTestSummary && customerCount > 1) {
             const summary = json.loadTestSummary;
-            simStatus.textContent = `✅ ${customerCount} Customer Journey Simulation Complete! ${summary.successfulCustomers}/${summary.customersProcessed} customers successful (${summary.successRate})`;
+            
+            // Analyze errors to provide better status message
+            const errors = json.errors || [];
+            const incompleteCount = errors.filter(err => err.includes('incomplete')).length;
+            const failureCount = errors.filter(err => !err.includes('incomplete')).length;
+            
+            let statusIcon = '✅';
+            let statusText = '';
+            
+            if (summary.successfulCustomers === summary.customersProcessed) {
+              statusText = `All ${summary.customersProcessed} customers completed successfully!`;
+            } else if (summary.successfulCustomers > 0) {
+              statusIcon = '⚠️';
+              if (incompleteCount > 0) {
+                statusText = `${summary.successfulCustomers} completed, ${incompleteCount} partially completed, ${failureCount} failed`;
+              } else {
+                statusText = `${summary.successfulCustomers} completed successfully, ${summary.failedCustomers} encountered issues`;
+              }
+            } else {
+              statusIcon = '❌';
+              if (incompleteCount === summary.customersProcessed) {
+                statusText = `All ${summary.customersProcessed} customers partially completed journeys`;
+              } else {
+                statusText = `${summary.customersProcessed} customers encountered issues (${incompleteCount} partial, ${failureCount} failed)`;
+              }
+            }
+            
+            simStatus.textContent = `${statusIcon} ${customerCount} Customer Journey Simulation Complete! ${statusText}`;
             
             const summaryText = [
               `Load Test Results:`,
@@ -1029,17 +1109,46 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
             flowResultsEl.textContent = summaryText.join('\n');
             
           } else {
-            // Handle single customer response
+            // Handle single customer response - enhanced status reporting
             const journey = json.journey;
-            simStatus.textContent = `✅ Customer Journey complete! ${journey.completedSteps}/${journey.totalSteps} steps successful. Correlation: ${journey.correlationId}`;
+            const completedSteps = journey.steps.filter(step => step.status === 'completed').length;
+            const errorSteps = journey.steps.filter(step => step.status === 'failed' || step.status === 'error').length;
+            const totalSteps = journey.totalSteps || journey.steps.length;
+            
+            let statusMessage = '';
+            if (errorSteps === 0) {
+              statusMessage = `✅ Journey Complete! All ${completedSteps} steps successful`;
+            } else if (completedSteps > 0) {
+              statusMessage = `⚠️ Journey Partial: ${completedSteps} successful steps, ${errorSteps} steps with errors`;
+            } else {
+              statusMessage = `❌ Journey Failed: ${errorSteps} steps encountered errors`;
+            }
+            statusMessage += ` | Correlation: ${journey.correlationId}`;
+            
+            simStatus.textContent = statusMessage;
             
             const stepSummary = journey.steps.map((step, idx) => {
-              const status = step.status === 'completed' ? '✅' : '❌';
+              let status = '❓';
+              if (step.status === 'completed') status = '✅';
+              else if (step.status === 'failed' || step.status === 'error') status = '❌';
+              else if (step.fallback) status = '🔄';
+              
               const serviceName = step.serviceName || (step.stepName + 'Service');
-              return `${status} Step ${idx + 1}: ${serviceName} (${step.processingTime || 0}ms)`;
+              const timing = step.processingTime ? `${step.processingTime}ms` : 'N/A';
+              const errorInfo = step.error ? ` (${step.error})` : '';
+              return `${status} Step ${idx + 1}: ${serviceName} (${timing})${errorInfo}`;
             }).join('\n');
             
-            flowResultsEl.textContent = `Customer Journey Execution:\n${stepSummary}\n\nServices Used: ${journey.stepNames ? journey.stepNames.join(' → ') : 'N/A'}\n\nCorrelation ID: ${journey.correlationId}`;
+            const resultSummary = [
+              `Customer Journey Execution:`,
+              stepSummary,
+              ``,
+              `Summary: ${completedSteps} successful, ${errorSteps} errors, ${totalSteps} total steps`,
+              `Services Used: ${journey.stepNames ? journey.stepNames.join(' → ') : 'N/A'}`,
+              `Correlation ID: ${journey.correlationId}`
+            ];
+            
+            flowResultsEl.textContent = resultSummary.join('\n');
           }
           
         } else {
@@ -1061,16 +1170,127 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
       console.log('Reset button clicked');
       const chainStatus = document.getElementById('chain-status');
       try {
-        chainStatus.textContent = 'Resetting dynamic services...';
+        chainStatus.textContent = 'Resetting services and restarting essentials...';
+        const res = await fetch('/api/admin/reset-and-restart', { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: '{}' 
+        });
+        const json = await res.json();
+        chainStatus.textContent = json.ok ? `✅ ${json.message}` : `❌ Reset failed: ${json.error || 'Unknown error'}`;
+      } catch (e) {
+        chainStatus.textContent = `❌ Reset error: ${e.message}`;
+      }
+    };
+
+    // New Customer Journey function - clears all services and provides clean slate
+    window.startNewCustomerJourney = async function() {
+      console.log('New Customer Journey initiated');
+      const statusMessage = document.getElementById('journey-status-message');
+      const newJourneyBtn = document.getElementById('new-journey-btn');
+      
+      try {
+        // Disable button and show loading
+        newJourneyBtn.disabled = true;
+        newJourneyBtn.innerHTML = '⏳ Clearing Services...';
+        statusMessage.textContent = 'Clearing all services and freeing ports for new customer journey...';
+        
+        // Call the reset-ports endpoint to clear all dynamic services
         const res = await fetch('/api/admin/reset-ports', { 
           method: 'POST', 
           headers: { 'Content-Type': 'application/json' }, 
           body: '{}' 
         });
         const json = await res.json();
-        chainStatus.textContent = json.ok ? '✅ Dynamic services reset.' : `❌ Reset failed: ${json.error || 'Unknown error'}`;
+        
+        if (json.ok) {
+          statusMessage.textContent = '✅ All services cleared! Ready for new customer journey.';
+          // Refresh the service status display
+          await updateServiceStatus();
+        } else {
+          statusMessage.textContent = `❌ Failed to clear services: ${json.error || 'Unknown error'}`;
+        }
+        
       } catch (e) {
-        chainStatus.textContent = `❌ Reset error: ${e.message}`;
+        console.error('New Customer Journey error:', e);
+        statusMessage.textContent = `❌ Error clearing services: ${e.message}`;
+      } finally {
+        // Re-enable button
+        newJourneyBtn.disabled = false;
+        newJourneyBtn.innerHTML = '🚀 New Customer Journey';
+      }
+    };
+
+    // Function to update service status display
+    window.updateServiceStatus = async function() {
+      const refreshBtn = document.getElementById('refresh-status-btn');
+      const refreshIndicator = document.getElementById('refresh-indicator');
+      const originalContent = refreshBtn ? refreshBtn.innerHTML : '';
+      
+      try {
+        // Show loading state on refresh button and indicator
+        if (refreshBtn) {
+          refreshBtn.innerHTML = '⏳';
+          refreshBtn.disabled = true;
+        }
+        if (refreshIndicator) {
+          refreshIndicator.className = 'w-2 h-2 bg-dtyellow rounded-full opacity-100 animate-pulse';
+        }
+        
+        const [servicesRes, portsRes] = await Promise.all([
+          fetch('/api/admin/services/status'),
+          fetch('/api/admin/ports')
+        ]);
+        
+        const servicesData = await servicesRes.json();
+        const portsData = await portsRes.json();
+        
+        // Update service list
+        const servicesList = document.getElementById('service-status-list');
+        const servicesLoading = document.getElementById('service-status-loading');
+        
+        if (servicesData.ok && servicesData.services && servicesData.services.length > 0) {
+          servicesLoading.classList.add('hidden');
+          servicesList.classList.remove('hidden');
+          servicesList.innerHTML = servicesData.services.map(service => 
+            `<div class="flex justify-between items-center text-xs">
+              <span class="text-dtcyan truncate">${service.service}</span>
+              <span class="text-dtgreen">:${service.port}</span>
+            </div>`
+          ).join('');
+        } else {
+          servicesLoading.textContent = 'No services currently running';
+          servicesList.classList.add('hidden');
+        }
+        
+        // Update port status
+        if (portsData.ok && portsData.portStatus) {
+          document.getElementById('total-ports').textContent = portsData.portStatus.total;
+          document.getElementById('available-ports').textContent = portsData.portStatus.available;
+          document.getElementById('allocated-ports').textContent = portsData.portStatus.allocated;
+          document.getElementById('port-range').textContent = portsData.portStatus.range;
+        }
+        
+        // Update last refresh time
+        const now = new Date();
+        const timeString = now.toLocaleTimeString();
+        const lastUpdateEl = document.getElementById('last-update-time');
+        if (lastUpdateEl) {
+          lastUpdateEl.textContent = `Updated: ${timeString}`;
+        }
+        
+      } catch (e) {
+        console.error('Error updating service status:', e);
+        document.getElementById('service-status-loading').textContent = 'Error loading service status';
+      } finally {
+        // Restore refresh button and indicator state
+        if (refreshBtn) {
+          refreshBtn.innerHTML = originalContent;
+          refreshBtn.disabled = false;
+        }
+        if (refreshIndicator) {
+          refreshIndicator.className = 'w-2 h-2 bg-dtgreen rounded-full opacity-75';
+        }
       }
     };
 
@@ -2259,7 +2479,32 @@ ERROR SIMULATION (Important):
             journeyId: lastJourney.id || journeyId,
             companyName: lastJourney.companyName || 'DefaultCompany',
             domain: lastJourney.domain || 'default.com',
-            industryType: lastJourney.industryType || 'general'
+            industryType: lastJourney.industryType || 'general',
+            // Include all the additional context data with test values if not present
+            additionalFields: lastJourney.additionalFields || {
+              sessionId: `session_${Date.now()}`,
+              deviceType: 'desktop',
+              userAgent: 'Chrome/118.0.0.0',
+              geoLocation: 'London, UK',
+              campaignSource: 'organic_search',
+              customerSegment: 'premium',
+              behaviorScore: 8.5,
+              abandonmentRisk: 'low'
+            },
+            customerProfile: lastJourney.customerProfile || {
+              age: 32,
+              gender: 'F',
+              loyaltyTier: 'gold',
+              previousPurchases: 15,
+              avgOrderValue: 125.50,
+              preferredChannel: 'mobile'
+            },
+            traceMetadata: lastJourney.traceMetadata || {
+              experimentId: 'exp_2025_q4',
+              testVariant: 'control',
+              featureFlags: ['checkout_v2', 'ai_recommendations'],
+              abTestGroup: 'A'
+            }
           };
           
           simStatus.textContent = '🚀 Running customer journey simulation...';
@@ -2278,6 +2523,10 @@ ERROR SIMULATION (Important):
             companyName: journeyData.companyName,
             domain: journeyData.domain,
             industryType: journeyData.industryType,
+            // Include additional context data in request body
+            additionalFields: journeyData.additionalFields || {},
+            customerProfile: journeyData.customerProfile || {},
+            traceMetadata: journeyData.traceMetadata || {},
             chained: false // Use step-by-step execution for consistency
           };
           
@@ -2298,7 +2547,34 @@ ERROR SIMULATION (Important):
             // Handle multiple customers response
             if (json.loadTestSummary && customerCount > 1) {
               const summary = json.loadTestSummary;
-              simStatus.textContent = `✅ ${customerCount} Customer Journey Simulation Complete! ${summary.successfulCustomers}/${summary.customersProcessed} customers successful (${summary.successRate})`;
+              
+              // Analyze errors to provide better status message
+              const errors = json.errors || [];
+              const incompleteCount = errors.filter(err => err.includes('incomplete')).length;
+              const failureCount = errors.filter(err => !err.includes('incomplete')).length;
+              
+              let statusIcon = '✅';
+              let statusText = '';
+              
+              if (summary.successfulCustomers === summary.customersProcessed) {
+                statusText = `All ${summary.customersProcessed} customers completed successfully!`;
+              } else if (summary.successfulCustomers > 0) {
+                statusIcon = '⚠️';
+                if (incompleteCount > 0) {
+                  statusText = `${summary.successfulCustomers} completed, ${incompleteCount} partially completed, ${failureCount} failed`;
+                } else {
+                  statusText = `${summary.successfulCustomers} completed successfully, ${summary.failedCustomers} encountered issues`;
+                }
+              } else {
+                statusIcon = '❌';
+                if (incompleteCount === summary.customersProcessed) {
+                  statusText = `All ${summary.customersProcessed} customers partially completed journeys`;
+                } else {
+                  statusText = `${summary.customersProcessed} customers encountered issues (${incompleteCount} partial, ${failureCount} failed)`;
+                }
+              }
+              
+              simStatus.textContent = `${statusIcon} ${customerCount} Customer Journey Simulation Complete! ${statusText}`;
               
               const summaryText = [
                 `Load Test Results:`,
@@ -2359,12 +2635,47 @@ ERROR SIMULATION (Important):
       } catch {}
     })();
 
-    ioClient.on('bizEvent', (evt) => {
-      const li = document.createElement('li');
-      li.textContent = `${evt.timestamp} - [${evt.domain}] ${evt.journeyStep} - ${evt.email} - $${evt.cost} - NPS:${evt.npsScore ?? ''} - corr:${evt.metadata?.correlationId ?? ''}`;
-      feed.prepend(li);
-      while (feed.children.length > 200) feed.removeChild(feed.lastChild);
+    // Initialize service status display and set up periodic updates
+    (async () => {
+      // Initial load
+      await updateServiceStatus();
+      
+      // Update every 5 seconds
+      setInterval(updateServiceStatus, 5000);
+    })();
+
+    // Add customer count validation
+    document.getElementById('customerCount').addEventListener('input', (e) => {
+      const value = parseInt(e.target.value);
+      const simStatus = document.getElementById('sim-status');
+      
+      if (value > 5) {
+        e.target.style.borderColor = '#ef4444'; // Red border
+        if (simStatus) {
+          simStatus.textContent = '⚠️ Warning: Maximum 5 customers allowed';
+          simStatus.style.color = '#ef4444';
+        }
+      } else {
+        e.target.style.borderColor = '#00D4FF'; // Reset to cyan
+        if (simStatus) {
+          simStatus.textContent = '';
+          simStatus.style.color = '#FFD23F';
+        }
+      }
     });
+
+    // Prevent values above 5 on change
+    document.getElementById('customerCount').addEventListener('change', (e) => {
+      const value = parseInt(e.target.value);
+      if (value > 5) {
+        e.target.value = 5;
+        alert('Customer limit is 5. Value has been adjusted to maximum allowed.');
+      } else if (value < 1) {
+        e.target.value = 1;
+      }
+    });
+
+
   </script>
 </body>
 </html>

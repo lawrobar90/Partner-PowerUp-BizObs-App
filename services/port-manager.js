@@ -10,12 +10,13 @@ class PortManager extends EventEmitter {
     super();
     // Use EasyTravel-style ports with environment variable support
     const portOffset = parseInt(process.env.PORT_OFFSET || '0');
-    this.minPort = minPort || parseInt(process.env.SERVICE_PORT_MIN || '8081') + portOffset;
-    this.maxPort = maxPort || parseInt(process.env.SERVICE_PORT_MAX || '8094') + portOffset;
+  this.minPort = minPort || (parseInt(process.env.SERVICE_PORT_MIN || '8081') + portOffset);
+  // Extend default max port to cover 40 ports (8081-8120) unless overridden by env
+  this.maxPort = maxPort || (parseInt(process.env.SERVICE_PORT_MAX || '8120') + portOffset);
     this.allocatedPorts = new Map(); // port -> { service, company, timestamp }
     this.pendingAllocations = new Set(); // ports currently being allocated
     this.allocationLock = new Map(); // service key -> allocation promise
-    console.log(`🔧 [PortManager] Initialized with range ${minPort}-${maxPort} (${maxPort - minPort + 1} ports available)`);
+  console.log(`🔧 [PortManager] Initialized with range ${this.minPort}-${this.maxPort} (${this.maxPort - this.minPort + 1} ports available)`);
   }
 
   /**
@@ -57,6 +58,21 @@ class PortManager extends EventEmitter {
       }
     }
     
+    // Attempt to clean up stale allocations (in case ports were freed externally)
+    try {
+      const cleaned = await this.cleanupStaleAllocations();
+      if (cleaned > 0) {
+        console.log(`🧹 [PortManager] Cleaned ${cleaned} stale allocations, retrying port scan`);
+        for (let port = this.minPort; port <= this.maxPort; port++) {
+          if (this.allocatedPorts.has(port) || this.pendingAllocations.has(port)) continue;
+          if (await this.isPortAvailable(port)) return port;
+          this.allocatedPorts.set(port, { service: 'unknown', company: 'unknown', timestamp: Date.now() });
+        }
+      }
+    } catch (e) {
+      console.warn(`⚠️ [PortManager] Cleanup attempt failed: ${e.message}`);
+    }
+
     throw new Error(`No available ports in range ${this.minPort}-${this.maxPort}`);
   }
 

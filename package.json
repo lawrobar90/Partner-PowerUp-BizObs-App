@@ -1,5 +1,5 @@
 {
-  "name": "partner-powerup-bizobs",
+  "name": "business-observability-engine",
   "version": "0.1.0",
   "private": true,
   "description": "Dynatrace Business Observability App with Smartscape-inspired UI and Node.js server",

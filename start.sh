@@ -185,6 +185,11 @@ if [ "$HEALTH_CHECK_PASSED" = true ]; then
         echo -e "${PURPLE}   • Load Generation: node scripts/load-simulation.js${NC}"
         echo -e "${PURPLE}   • NGINX Setup: sudo scripts/setup-nginx.sh${NC}"
     fi
+    
+    echo -e "${BLUE}🎯 Journey Management Features:${NC}"
+    echo -e "${BLUE}   • New Customer Journey: Clear all services for fresh start${NC}"
+    echo -e "${BLUE}   • Service Status Monitor: Real-time port and service tracking${NC}"
+    echo -e "${BLUE}   • Expanded Port Range: ${SERVICE_PORT_MIN:-8081}-${SERVICE_PORT_MAX:-8120} (40 total ports)${NC}"
 else
     echo -e "${RED}⚠️  STARTUP INCOMPLETE - CHECK LOGS FOR ISSUES${NC}"
 fi

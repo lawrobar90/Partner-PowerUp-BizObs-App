@@ -32,12 +32,18 @@ const stepNameEnv = process.env.STEP_NAME || 'UnknownStep';
 
 // Set Dynatrace environment variables for OneAgent
 const serviceName = process.argv[2] || 'UnknownService';
-process.env.DT_CUSTOM_PROP = `company=${companyName};domain=${domain};industry=${industryType}`;
-process.env.DT_TAGS = `Environment=ACE-Box,Project=Partner-PowerUp-BizObs,Company=${companyName},Industry=${industryType}`;
+
+// Set process title for OneAgent detection
+process.title = serviceName;
+
+// Minimal OneAgent service detection
 process.env.DT_SERVICE_NAME = serviceName;
-process.env.DT_APPLICATION_NAME = `BizObs-${industryType}`;
-process.env.DT_CLUSTER_ID = 'ace-box-bizobs';
+process.env.DT_APPLICATION_NAME = 'BizObs-CustomerJourney';
+process.env.DT_CLUSTER_ID = serviceName;
 process.env.DT_NODE_ID = `${serviceName}-node`;
+
+// Override process group name for Dynatrace
+process.env.DT_PROCESS_GROUP_NAME = serviceName;
 
 function createService(serviceName, mountFn) {
   // CRITICAL: Set process identity for Dynatrace detection immediately
@@ -50,6 +56,9 @@ function createService(serviceName, mountFn) {
     process.env.DT_SERVICE_NAME = serviceName;
     process.env.DYNATRACE_SERVICE_NAME = serviceName;
     process.env.DT_LOGICAL_SERVICE_NAME = serviceName;
+    // OneAgent RUXIT variables for service naming
+    process.env.RUXIT_APPLICATION_ID = serviceName;
+    process.env.RUXIT_APPLICATIONID = serviceName;
     
     // CRITICAL: Set process argv[0] to help with service detection
     // This changes what 'ps' shows as the command name

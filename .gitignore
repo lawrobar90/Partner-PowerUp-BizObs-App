@@ -67,3 +67,4 @@ vegas-casino/
 .tmp-*/
 temp/
 tmp/
+Dynatrace-OneAgent-Linux-*.sh

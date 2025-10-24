@@ -16,7 +16,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import { randomBytes } from 'crypto';
-import { ensureServiceRunning, getServiceNameFromStep, getServicePort, stopAllServices, getChildServices, getChildServiceMeta, performHealthCheck, getServiceStatus } from './services/service-manager.js';
+import { ensureServiceRunning, getServiceNameFromStep, getServicePort, stopAllServices, stopCustomerJourneyServices, getChildServices, getChildServiceMeta, performHealthCheck, getServiceStatus } from './services/service-manager.js';
 
 import journeyRouter from './routes/journey.js';
 import simulateRouter from './routes/simulate.js';
@@ -33,13 +33,13 @@ import { performComprehensiveHealthCheck } from './middleware/observability-hygi
 dotenv.config();
 
 // Set Dynatrace environment variables for main server process
-process.env.DT_SERVICE_NAME = 'BizObs-MainServer';
-process.env.DYNATRACE_SERVICE_NAME = 'BizObs-MainServer';
-process.env.DT_LOGICAL_SERVICE_NAME = 'BizObs-MainServer';
-process.env.DT_APPLICATION_NAME = 'BizObs-CustomerJourney';
-process.env.DT_PROCESS_GROUP_NAME = 'BizObs-MainServer';
-process.env.DT_TAGS = 'app=BizObs-CustomerJourney service=MainServer component=orchestrator';
-process.env.DT_CUSTOM_PROP = 'app=BizObs-CustomerJourney;service=MainServer;component=orchestrator;service_type=main_server';
+process.env.DT_SERVICE_NAME = 'bizobs-main-server';
+process.env.DYNATRACE_SERVICE_NAME = 'bizobs-main-server';
+process.env.DT_LOGICAL_SERVICE_NAME = 'bizobs-main-server';
+process.env.DT_APPLICATION_NAME = 'bizobs-main-server';
+process.env.DT_PROCESS_GROUP_NAME = 'bizobs-main-server';
+process.env.DT_TAGS = 'service=bizobs-main-server';
+process.env.DT_CUSTOM_PROP = 'service.splitting=enabled';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,8 +62,8 @@ process.env.DT_NODE_ID = process.env.DT_NODE_ID || 'ec2-bizobs-host';
 
 // Main Server Dynatrace Configuration
 process.env.DT_SERVICE_NAME = 'BizObs-MainServer';
-process.env.DT_APPLICATION_NAME = 'Partner-PowerUp-BizObs';
-process.env.DT_TAGS = 'Environment=ACE-Box,Project=Partner-PowerUp-BizObs,Service=MainServer';
+process.env.DT_APPLICATION_NAME = 'BizObs-MainServer';
+process.env.DT_TAGS = 'service=BizObs-MainServer';
 process.env.DT_CUSTOM_PROP = 'role=main-server;type=api-gateway';
 
 // Child service management now handled by service-manager.js
@@ -715,13 +715,33 @@ app.get('/api/admin/ports', (req, res) => {
       portStatus: {
         available: serviceStatus.availablePorts,
         allocated: serviceStatus.allocatedPorts,
-        total: (parseInt(process.env.SERVICE_PORT_MAX || '8094') - parseInt(process.env.SERVICE_PORT_MIN || '8081') + 1), // Dynamic range
+        total: (parseInt(process.env.SERVICE_PORT_MAX || '8120') - parseInt(process.env.SERVICE_PORT_MIN || '8081') + 1), // Dynamic range
         range: serviceStatus.portRange
       },
       services: serviceStatus.services
     });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+// New Customer Journey endpoint - clears all services to start fresh
+app.post('/api/admin/new-customer-journey', (req, res) => {
+  try {
+    console.log('[server] New Customer Journey requested - stopping customer journey services while preserving essential infrastructure');
+    stopCustomerJourneyServices();
+    res.json({
+      ok: true,
+      message: 'Customer journey services stopped, essential infrastructure services preserved',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[server] Error during new customer journey cleanup:', error);
+    res.status(500).json({ 
+      ok: false, 
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
   }
 });
 

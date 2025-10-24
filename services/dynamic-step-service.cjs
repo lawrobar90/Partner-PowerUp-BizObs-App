@@ -175,7 +175,7 @@ function createStepService(serviceName, stepName) {
       
       console.log(`[${properServiceName}] Starting with basic fields:`, Object.keys(flattenedPayload).length);
       
-      // Process additionalFields: flatten to single values, remove original object completely
+      // Process additionalFields: flatten to single values, but PRESERVE original object for OneAgent capture
       if (payload.additionalFields && typeof payload.additionalFields === 'object') {
         Object.keys(payload.additionalFields).forEach(key => {
           const value = payload.additionalFields[key];
@@ -187,10 +187,12 @@ function createStepService(serviceName, stepName) {
             flattenedPayload[`additional_${key}`] = value;
           }
         });
-        console.log(`[${properServiceName}] Flattened additionalFields, original object will be removed`);
+        // PRESERVE original additionalFields for OneAgent capture
+        flattenedPayload.additionalFields = payload.additionalFields;
+        console.log(`[${properServiceName}] Flattened additionalFields, but preserved original object for OneAgent capture`);
       }
       
-      // Process customerProfile: flatten to single values, remove original object completely
+      // Process customerProfile: flatten to single values, but PRESERVE original object for OneAgent capture
       if (payload.customerProfile && typeof payload.customerProfile === 'object') {
         Object.keys(payload.customerProfile).forEach(key => {
           const value = payload.customerProfile[key];
@@ -202,10 +204,12 @@ function createStepService(serviceName, stepName) {
             flattenedPayload[`customer_${key}`] = value;
           }
         });
-        console.log(`[${properServiceName}] Flattened customerProfile, original object will be removed`);
+        // PRESERVE original customerProfile for OneAgent capture
+        flattenedPayload.customerProfile = payload.customerProfile;
+        console.log(`[${properServiceName}] Flattened customerProfile, but preserved original object for OneAgent capture`);
       }
       
-      // Process traceMetadata: flatten to single values, remove original object completely
+      // Process traceMetadata: flatten to single values, but PRESERVE original object for OneAgent capture
       if (payload.traceMetadata && typeof payload.traceMetadata === 'object') {
         Object.keys(payload.traceMetadata).forEach(key => {
           const value = payload.traceMetadata[key];
@@ -222,7 +226,9 @@ function createStepService(serviceName, stepName) {
             flattenedPayload[`trace_${key}`] = value;
           }
         });
-        console.log(`[${properServiceName}] Flattened traceMetadata, original object will be removed`);
+        // PRESERVE original traceMetadata for OneAgent capture
+        flattenedPayload.traceMetadata = payload.traceMetadata;
+        console.log(`[${properServiceName}] Flattened traceMetadata, but preserved original object for OneAgent capture`);
       }
       
       console.log(`[${properServiceName}] Final flattened payload has ${Object.keys(flattenedPayload).length} fields`);
