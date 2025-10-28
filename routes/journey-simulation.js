@@ -130,36 +130,65 @@ function computeCustomerError(customerName, stepName) {
   return { hasError: false };
 }
 
-// Generate realistic additionalFields if missing or empty
+// Generate realistic additionalFields ensuring ALL fields are included (agnostic approach)
 function generateAdditionalFields(existingFields, companyName, customerIndex) {
-  if (existingFields && typeof existingFields === 'object' && Object.keys(existingFields).length > 0) {
-    return existingFields; // Use existing fields if available - they will be simplified later
-  }
+  // Start with existing fields or empty object
+  const fields = (existingFields && typeof existingFields === 'object') ? { ...existingFields } : {};
   
-  // Generate realistic defaults based on company and customer only if no existing fields
+  // Default arrays for fallback values
   const devices = ['mobile', 'desktop', 'tablet'];
   const browsers = ['Chrome', 'Safari', 'Firefox', 'Edge'];
   const locations = ['London, UK', 'Manchester, UK', 'Birmingham, UK', 'Leeds, UK', 'Liverpool, UK'];
   const channels = ['organic', 'paid_search', 'social', 'email', 'direct'];
   const intents = ['purchase', 'research', 'comparison', 'support'];
   const loyaltyTypes = ['new', 'returning', 'vip', 'lapsed'];
+  const productNames = ['Premium Product', 'Standard Product', 'Budget Product', 'Deluxe Product'];
+  const productTypes = ['Electronics', 'Clothing', 'Home & Garden', 'Sports'];
 
-  return {
-    deviceType: devices[customerIndex % devices.length],
-    browser: browsers[customerIndex % browsers.length],
-    location: locations[customerIndex % locations.length],
-    entryChannel: channels[customerIndex % channels.length],
-    customerIntent: intents[customerIndex % intents.length],
-    loyaltyStatus: loyaltyTypes[customerIndex % loyaltyTypes.length],
-    abandonmentRisk: customerIndex % 3 === 0 ? 'high' : customerIndex % 2 === 0 ? 'medium' : 'low',
-    conversionProbability: Math.round((0.6 + (customerIndex % 4) * 0.1) * 100) / 100,
-    sessionDuration: 300 + (customerIndex * 60),
-    pageViews: 3 + (customerIndex % 5),
-    // Only add generic product data if no specific products were provided
-    ProductId: `SKU${1000 + customerIndex}`,
-    ProductName: `Product ${customerIndex + 1}`,
-    ProductCost: 29.99 + (customerIndex * 5)
-  };
+  // Ensure core fields are present (use existing or generate defaults)
+  if (!fields.deviceType) fields.deviceType = devices[customerIndex % devices.length];
+  if (!fields.browser) fields.browser = browsers[customerIndex % browsers.length];
+  if (!fields.location) fields.location = locations[customerIndex % locations.length];
+  if (!fields.entryChannel) fields.entryChannel = channels[customerIndex % channels.length];
+  if (!fields.customerIntent) fields.customerIntent = intents[customerIndex % intents.length];
+  if (!fields.loyaltyStatus) fields.loyaltyStatus = loyaltyTypes[customerIndex % loyaltyTypes.length];
+  if (!fields.abandonmentRisk) fields.abandonmentRisk = customerIndex % 3 === 0 ? 'high' : customerIndex % 2 === 0 ? 'medium' : 'low';
+  if (!fields.conversionProbability) fields.conversionProbability = Math.round((0.6 + (customerIndex % 4) * 0.1) * 100) / 100;
+  if (!fields.sessionDuration) fields.sessionDuration = 300 + (customerIndex * 60);
+  if (!fields.pageViews) fields.pageViews = 3 + (customerIndex % 5);
+
+  // Ensure product fields are present (use existing arrays/values or generate defaults)
+  // If arrays exist, preserve them; if single values exist, preserve them; otherwise generate arrays
+  if (!fields.Productname && !fields.ProductName) {
+    fields.Productname = [
+      productNames[customerIndex % productNames.length],
+      productNames[(customerIndex + 1) % productNames.length],
+      productNames[(customerIndex + 2) % productNames.length]
+    ];
+  }
+  if (!fields.ProductId) {
+    fields.ProductId = [
+      `SKU${1000 + customerIndex}`,
+      `SKU${1001 + customerIndex}`,
+      `SKU${1002 + customerIndex}`
+    ];
+  }
+  if (!fields.ProductType) {
+    fields.ProductType = [
+      productTypes[customerIndex % productTypes.length],
+      productTypes[(customerIndex + 1) % productTypes.length],
+      productTypes[(customerIndex + 2) % productTypes.length]
+    ];
+  }
+  if (!fields.Price && !fields.ProductCost) {
+    fields.Price = [
+      29.99 + (customerIndex * 5),
+      39.99 + (customerIndex * 5),
+      49.99 + (customerIndex * 5)
+    ];
+  }
+
+  return fields;
 }
 
 // Generate realistic customerProfile if missing or empty
@@ -676,20 +705,24 @@ router.post('/simulate-journey', async (req, res) => {
       return simplified;
     }
     
-    // Simplify all field collections to single values for realistic journey simulation
+    // STEP 1: AGNOSTIC ENHANCEMENT - Ensure all required fields are present BEFORE simplification
     // Ensure we have proper objects even if input is null
-    currentPayload.additionalFields = currentPayload.additionalFields ? simplifyFieldArrays(currentPayload.additionalFields) : {};
-    currentPayload.customerProfile = currentPayload.customerProfile ? simplifyFieldArrays(currentPayload.customerProfile) : {};
-    if (currentPayload.traceMetadata) {
-      if (currentPayload.traceMetadata.businessContext) {
-        currentPayload.traceMetadata.businessContext = simplifyFieldArrays(currentPayload.traceMetadata.businessContext);
-      }
-    } else {
-      currentPayload.traceMetadata = {};
+    currentPayload.additionalFields = currentPayload.additionalFields || {};
+    currentPayload.customerProfile = currentPayload.customerProfile || {};
+    currentPayload.traceMetadata = currentPayload.traceMetadata || {};
+    
+    // Enhance additionalFields to include any missing fields (creates arrays)
+    currentPayload.additionalFields = generateAdditionalFields(currentPayload.additionalFields, currentPayload.companyName, 0);
+    
+    // STEP 2: SIMPLIFICATION - Convert all arrays to single values for realistic journey simulation
+    currentPayload.additionalFields = simplifyFieldArrays(currentPayload.additionalFields);
+    currentPayload.customerProfile = simplifyFieldArrays(currentPayload.customerProfile);
+    if (currentPayload.traceMetadata.businessContext) {
+      currentPayload.traceMetadata.businessContext = simplifyFieldArrays(currentPayload.traceMetadata.businessContext);
     }
     
-    // Debug logging after simplification
-    console.log('[journey-sim] AFTER SIMPLIFICATION:', {
+    // Debug logging after enhancement and simplification
+    console.log('[journey-sim] AFTER ENHANCEMENT AND SIMPLIFICATION:', {
       'currentPayload.additionalFields': currentPayload.additionalFields,
       'currentPayload.customerProfile': currentPayload.customerProfile,
       'currentPayload.traceMetadata': currentPayload.traceMetadata
