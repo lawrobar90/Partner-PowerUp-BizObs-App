@@ -160,83 +160,51 @@ function createStepService(serviceName, stepName) {
       const thinkTimeMs = Number(payload.thinkTimeMs || 200);
       const currentStepName = payload.stepName || stepName;
       
-      // Create ultra-simplified payload - ONLY single primitive values, NO nested objects, NO arrays
-      const flattenedPayload = {};
+      // Process payload to ensure single values for arrays (no flattening, just array simplification)
+      const processedPayload = { ...payload };
       
-      // Copy basic/primitive fields first (non-objects, non-arrays)
-      Object.keys(payload).forEach(key => {
-        const value = payload[key];
-        if (value !== null && value !== undefined && 
-            typeof value !== 'object' && 
-            !Array.isArray(value)) {
-          flattenedPayload[key] = value;
-        }
-      });
+      console.log(`[${properServiceName}] Processing payload with ${Object.keys(processedPayload).length} fields`);
       
-      console.log(`[${properServiceName}] Starting with basic fields:`, Object.keys(flattenedPayload).length);
-      
-      // Process additionalFields: flatten to single values, but PRESERVE original object for OneAgent capture
-      if (payload.additionalFields && typeof payload.additionalFields === 'object') {
-        Object.keys(payload.additionalFields).forEach(key => {
-          const value = payload.additionalFields[key];
+      // The payload should already be simplified from journey-simulation.js
+      // We'll just ensure any remaining arrays are converted to single values
+      function simplifyArraysInObject(obj) {
+        if (!obj || typeof obj !== 'object') return obj;
+        
+        const simplified = {};
+        Object.keys(obj).forEach(key => {
+          const value = obj[key];
           if (Array.isArray(value) && value.length > 0) {
-            // Always pick ONE random item from any array
+            // Pick ONE random item from any array
             const randomIndex = Math.floor(Math.random() * value.length);
-            flattenedPayload[`additional_${key}`] = value[randomIndex];
+            simplified[key] = value[randomIndex];
+          } else if (typeof value === 'object' && value !== null) {
+            // Recursively simplify nested objects
+            simplified[key] = simplifyArraysInObject(value);
           } else {
-            flattenedPayload[`additional_${key}`] = value;
+            simplified[key] = value;
           }
         });
-        // PRESERVE original additionalFields for OneAgent capture
-        flattenedPayload.additionalFields = payload.additionalFields;
-        console.log(`[${properServiceName}] Flattened additionalFields, but preserved original object for OneAgent capture`);
+        return simplified;
       }
       
-      // Process customerProfile: flatten to single values, but PRESERVE original object for OneAgent capture
-      if (payload.customerProfile && typeof payload.customerProfile === 'object') {
-        Object.keys(payload.customerProfile).forEach(key => {
-          const value = payload.customerProfile[key];
-          if (Array.isArray(value) && value.length > 0) {
-            // Always pick ONE item from arrays
-            const randomIndex = Math.floor(Math.random() * value.length);
-            flattenedPayload[`customer_${key}`] = value[randomIndex];
-          } else {
-            flattenedPayload[`customer_${key}`] = value;
-          }
-        });
-        // PRESERVE original customerProfile for OneAgent capture
-        flattenedPayload.customerProfile = payload.customerProfile;
-        console.log(`[${properServiceName}] Flattened customerProfile, but preserved original object for OneAgent capture`);
+      // Simplify any remaining arrays in nested objects
+      if (processedPayload.additionalFields) {
+        processedPayload.additionalFields = simplifyArraysInObject(processedPayload.additionalFields);
+        console.log(`[${properServiceName}] Simplified arrays in additionalFields`);
       }
       
-      // Process traceMetadata: flatten to single values, but PRESERVE original object for OneAgent capture
-      if (payload.traceMetadata && typeof payload.traceMetadata === 'object') {
-        Object.keys(payload.traceMetadata).forEach(key => {
-          const value = payload.traceMetadata[key];
-          if (key === 'businessContext' && typeof value === 'object') {
-            // Flatten businessContext
-            Object.keys(value).forEach(bcKey => {
-              flattenedPayload[`business_${bcKey}`] = value[bcKey];
-            });
-          } else if (Array.isArray(value) && value.length > 0) {
-            // Pick ONE value from arrays
-            const randomIndex = Math.floor(Math.random() * value.length);
-            flattenedPayload[`trace_${key}`] = value[randomIndex];
-          } else {
-            flattenedPayload[`trace_${key}`] = value;
-          }
-        });
-        // PRESERVE original traceMetadata for OneAgent capture
-        flattenedPayload.traceMetadata = payload.traceMetadata;
-        console.log(`[${properServiceName}] Flattened traceMetadata, but preserved original object for OneAgent capture`);
+      if (processedPayload.customerProfile) {
+        processedPayload.customerProfile = simplifyArraysInObject(processedPayload.customerProfile);
+        console.log(`[${properServiceName}] Simplified arrays in customerProfile`);
       }
       
-      console.log(`[${properServiceName}] Final flattened payload has ${Object.keys(flattenedPayload).length} fields`);
-      console.log(`[${properServiceName}] Flattened field sample:`, Object.keys(flattenedPayload).filter(k => k.startsWith('additional_')).slice(0, 3));
+      if (processedPayload.traceMetadata) {
+        processedPayload.traceMetadata = simplifyArraysInObject(processedPayload.traceMetadata);
+        console.log(`[${properServiceName}] Simplified arrays in traceMetadata`);
+      }
       
-      // Replace the original payload with flattened version for processing
-      req.body = flattenedPayload;
-      const processedPayload = flattenedPayload;
+      // Update the request body with the processed payload
+      req.body = processedPayload;
       
       try {
         // Check for step errors first (both explicit and simulated)
@@ -370,7 +338,7 @@ function createStepService(serviceName, stepName) {
         console.log(`[${properServiceName}] Step completed - OneAgent will capture flattened request body`);
 
         let response = {
-          // Spread processedPayload which contains the flattened fields
+          // Include the clean processed payload without duplication
           ...processedPayload,
           stepName: currentStepName,
           service: properServiceName,
@@ -390,8 +358,7 @@ function createStepService(serviceName, stepName) {
           journeyTrace
         };
 
-        // Flattened fields are already included in processedPayload spread above
-        // No additional flattening needed - ultra-simple structure is complete
+        // No flattened fields duplication - the processedPayload already contains clean data
 
         // Include incoming trace headers in the response for validation (non-invasive)
         try {
