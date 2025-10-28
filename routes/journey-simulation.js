@@ -133,10 +133,10 @@ function computeCustomerError(customerName, stepName) {
 // Generate realistic additionalFields if missing or empty
 function generateAdditionalFields(existingFields, companyName, customerIndex) {
   if (existingFields && typeof existingFields === 'object' && Object.keys(existingFields).length > 0) {
-    return existingFields; // Use existing fields if available
+    return existingFields; // Use existing fields if available - they will be simplified later
   }
   
-  // Generate realistic defaults based on company and customer
+  // Generate realistic defaults based on company and customer only if no existing fields
   const devices = ['mobile', 'desktop', 'tablet'];
   const browsers = ['Chrome', 'Safari', 'Firefox', 'Edge'];
   const locations = ['London, UK', 'Manchester, UK', 'Birmingham, UK', 'Leeds, UK', 'Liverpool, UK'];
@@ -155,6 +155,7 @@ function generateAdditionalFields(existingFields, companyName, customerIndex) {
     conversionProbability: Math.round((0.6 + (customerIndex % 4) * 0.1) * 100) / 100,
     sessionDuration: 300 + (customerIndex * 60),
     pageViews: 3 + (customerIndex % 5),
+    // Only add generic product data if no specific products were provided
     ProductId: `SKU${1000 + customerIndex}`,
     ProductName: `Product ${customerIndex + 1}`,
     ProductCost: 29.99 + (customerIndex * 5)
