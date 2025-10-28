@@ -664,6 +664,9 @@ router.post('/simulate-journey', async (req, res) => {
           // For realistic customer journeys, pick ONE item instead of arrays
           const randomIndex = Math.floor(Math.random() * value.length);
           simplified[key] = value[randomIndex];
+        } else if (value !== null && value !== undefined && typeof value === 'object') {
+          // Recursively simplify nested objects
+          simplified[key] = simplifyFieldArrays(value);
         } else if (value !== null && value !== undefined) {
           // Keep non-null, non-undefined values as-is
           simplified[key] = value;
@@ -1000,6 +1003,9 @@ router.post('/simulate-multiple-journeys', async (req, res) => {
           // For realistic customer journeys, pick ONE item instead of arrays
           const randomIndex = Math.floor(Math.random() * value.length);
           simplified[key] = value[randomIndex];
+        } else if (value !== null && value !== undefined && typeof value === 'object') {
+          // Recursively simplify nested objects
+          simplified[key] = simplifyFieldArrays(value);
         } else if (value !== null && value !== undefined) {
           // Keep non-null, non-undefined values as-is
           simplified[key] = value;
