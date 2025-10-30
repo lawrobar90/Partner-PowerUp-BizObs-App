@@ -96,9 +96,9 @@
     <div class="p-4">
       <!-- Save Current Prompt Section -->
       <div class="mb-6 p-3 bg-dtgray bg-opacity-40 rounded-lg border border-dtcyan">
-        <h3 class="text-sm font-semibold text-dtcyan mb-2">💾 Save Current Configuration</h3>
-        <input id="savePromptName" placeholder="Give this prompt a name..." class="w-full p-2 mb-2 rounded bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan text-sm" />
-        <button id="saveCurrentPrompt" class="w-full bg-dtgreen text-black px-3 py-2 rounded font-semibold hover:bg-dtcyan transition-all text-sm">💾 Save Current State</button>
+        <h3 class="text-base font-bold text-dtcyan mb-2">💾 Save Current Configuration</h3>
+        <input id="savePromptName" placeholder="Give this prompt a name..." class="w-full p-3 mb-2 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan text-sm" />
+        <button id="saveCurrentPrompt" class="w-full bg-dtgreen text-black px-4 py-3 rounded-lg font-bold hover:bg-dtcyan transition-all text-sm">💾 Save Current State</button>
       </div>
       
       <!-- Saved Prompts List -->
@@ -111,16 +111,16 @@
       
       <!-- Management Buttons -->
       <div class="grid grid-cols-2 gap-2 mb-2">
-        <button id="exportPrompts" class="bg-dtpurple text-white px-3 py-2 rounded font-semibold hover:bg-dtcyan transition-all text-sm">� Export</button>
-        <button id="importPrompts" class="bg-dtgreen text-black px-3 py-2 rounded font-semibold hover:bg-green-600 transition-all text-sm">📥 Import</button>
+        <button id="exportPrompts" class="bg-dtpurple text-white px-4 py-3 rounded-lg font-bold hover:bg-dtcyan transition-all text-sm">📤 Export</button>
+        <button id="importPrompts" class="bg-dtgreen text-black px-4 py-3 rounded-lg font-bold hover:bg-green-600 transition-all text-sm">📥 Import</button>
       </div>
       <div class="mb-4">
-        <button id="clearAllPrompts" class="w-full bg-red-600 text-white px-3 py-2 rounded font-semibold hover:bg-red-700 transition-all text-sm">�️ Clear All</button>
+        <button id="clearAllPrompts" class="w-full bg-red-600 text-white px-4 py-3 rounded-lg font-bold hover:bg-red-700 transition-all text-sm">🗑️ Clear All</button>
       </div>
       
       <!-- Quick Help -->
-      <div class="text-xs text-gray-400 bg-dtgray bg-opacity-30 rounded p-2 border border-gray-600">
-        <p class="font-semibold text-gray-300 mb-1">💡 Quick Tips:</p>
+      <div class="text-sm text-gray-400 bg-dtgray bg-opacity-30 rounded p-3 border border-gray-600">
+        <p class="font-bold text-gray-300 mb-2">💡 Quick Tips:</p>
         <p>• <span class="text-dtcyan">Ctrl+S</span>: Quick Save</p>
         <p>• <span class="text-dtcyan">Ctrl+Shift+S</span>: Named Save</p>
         <p>• Click any saved prompt to load it</p>
@@ -160,8 +160,8 @@
         <h2 class="text-2xl mb-4 text-dtcyan font-bold tracking-tight">Journey Generator</h2>
         <!-- Generation Method Selection -->
         <div class="mb-4">
-          <label class="block text-sm font-medium text-dtcyan mb-2">Generation Method</label>
-          <select id="generationMethod" class="w-full p-2 rounded bg-dtgray text-white border border-dtgray focus:border-dtcyan">
+          <label class="block text-base font-semibold text-dtcyan mb-2">Generation Method</label>
+          <select id="generationMethod" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtgray focus:border-dtcyan text-sm">
             <option value="copilot">🤖 Copilot (AI-Generated Journey)</option>
             <option value="template">Quick Template (Retail Example, No AI)</option>
           </select>
@@ -170,17 +170,17 @@
   <form id="journey-form" class="space-y-4 mb-4">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label for="companyName" class="block text-sm font-medium text-dtcyan mb-2">Company Name</label>
-              <input id="companyName" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="customer" placeholder="e.g., ShopMart, TechCorp, HealthPlus" />
+              <label for="companyName" class="block text-base font-semibold text-dtcyan mb-2">Company Name</label>
+              <input id="companyName" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all text-sm" name="customer" placeholder="e.g., ShopMart, TechCorp, HealthPlus" />
             </div>
             <div>
-              <label for="domain" class="block text-sm font-medium text-dtcyan mb-2">Website Domain</label>
-              <input id="domain" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="website" placeholder="e.g., shopmart.com, techcorp.io" />
+              <label for="domain" class="block text-base font-semibold text-dtcyan mb-2">Website Domain</label>
+              <input id="domain" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all text-sm" name="website" placeholder="e.g., shopmart.com, techcorp.io" />
             </div>
           </div>
           <div>
-            <label for="industryType" class="block text-sm font-medium text-dtcyan mb-2">Industry Type</label>
-            <input id="industryType" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="region" placeholder="e.g., retail, technology, healthcare, finance" />
+            <label for="industryType" class="block text-base font-semibold text-dtcyan mb-2">Industry Type</label>
+            <input id="industryType" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all text-sm" name="region" placeholder="e.g., retail, technology, healthcare, finance" />
           </div>
           <!-- Journey Requirements & Specific Context (Always Visible) -->
           <div id="journeyRequirementsContainer" class="mt-6">
@@ -197,11 +197,11 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           </div>
             <div id="additionalFieldsContainer" class="mt-6 mb-2">
               <div class="bg-dtgray bg-opacity-60 rounded-xl p-4 border border-dtcyan shadow-inner mb-2">
-                <label class="block text-base font-semibold text-dtcyan mb-3">Additional Fields (Business Metadata)</label>
+                <label class="block text-lg font-bold text-dtcyan mb-3">Additional Fields (Business Metadata)</label>
                 <div id="additionalFieldsList" class="mb-3"></div>
                 <div class="flex gap-3 mt-2">
-                  <input id="newFieldName" class="flex-1 p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" placeholder="Field name (e.g., cost, price)" />
-                  <select id="newFieldType" class="flex-1 p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all">
+                  <input id="newFieldName" class="flex-1 p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all text-sm" placeholder="Field name (e.g., cost, price)" />
+                  <select id="newFieldType" class="flex-1 p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all text-sm">
                     <option value="string">String</option>
                     <option value="number">Number</option>
                     <option value="currency">Currency</option>
@@ -209,26 +209,26 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
                     <option value="date">Date</option>
                     <option value="custom">Custom</option>
                   </select>
-                  <button id="addFieldBtn" type="button" class="bg-dtgreen text-black px-5 py-2 rounded-lg font-semibold shadow-card hover:bg-dtcyan transition-all">Step 1 - Add Field</button>
+                  <button id="addFieldBtn" type="button" class="bg-dtgreen text-black px-6 py-3 rounded-lg font-bold shadow-card hover:bg-dtcyan transition-all text-sm">Step 1 - Add Field</button>
                 </div>
-                <p class="text-xs text-gray-300 mt-3">Add any number of fields (name + type). E.g., cost:number, price:currency, supplier:string.</p>
+                <p class="text-sm text-gray-300 mt-3">Add any number of fields (name + type). E.g., cost:number, price:currency, supplier:string.</p>
               </div>
             </div>
           <!-- Custom Steps (Template Mode Only) -->
           <div id="customStepsContainer" style="display: none;">
-            <label for="customSteps" class="block text-sm font-medium text-dtcyan mb-2">Custom Step Names</label>
-            <input id="customSteps" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="customSteps" placeholder="e.g., Product Discovery, Add to Cart, Checkout, Confirmation" />
-            <p class="text-xs text-gray-400 mt-1">Comma-separated list of journey steps</p>
+            <label for="customSteps" class="block text-base font-semibold text-dtcyan mb-2">Custom Step Names</label>
+            <input id="customSteps" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all text-sm" name="customSteps" placeholder="e.g., Product Discovery, Add to Cart, Checkout, Confirmation" />
+            <p class="text-sm text-gray-400 mt-1">Comma-separated list of journey steps</p>
           </div>
           <!-- Optional Fields (Template Mode Only) -->
           <div id="optionalFieldsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4" style="display: none;">
             <div>
-              <label for="journeyType" class="block text-sm font-medium text-dtcyan mb-2">Journey Type</label>
-              <input id="journeyType" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="journeyType" placeholder="e.g., E-commerce Purchase, Service Signup" />
+              <label for="journeyType" class="block text-base font-semibold text-dtcyan mb-2">Journey Type</label>
+              <input id="journeyType" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all text-sm" name="journeyType" placeholder="e.g., E-commerce Purchase, Service Signup" />
             </div>
             <div>
-              <label for="details" class="block text-sm font-medium text-dtcyan mb-2">Additional Context</label>
-              <input id="details" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" name="details" placeholder="Any specific requirements or context" />
+              <label for="details" class="block text-base font-semibold text-dtcyan mb-2">Additional Context</label>
+              <input id="details" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all text-sm" name="details" placeholder="Any specific requirements or context" />
             </div>
           </div>
           <!-- Generate Journey Button -->
@@ -237,9 +237,9 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
              <!-- <button id="quickSavePrompt" type="button" class="bg-dtpurple hover:bg-dtcyan text-white font-semibold rounded-lg px-3 py-1.5 shadow-card transition-all text-sm prompt-cache-indicator">
                 💾 Save
               </button>-->
-              <span id="savedPromptsCount" class="text-xs text-gray-400 flex items-center">📋 0 saved</span>
+              <span id="savedPromptsCount" class="text-sm text-gray-400 flex items-center">📋 0 saved</span>
             </div>
-            <button id="generateJourney" type="button" class="bg-dtgreen text-black px-3 py-1.5 rounded-lg text-sm font-semibold shadow-card hover:bg-dtcyan transition-all">
+            <button id="generateJourney" type="button" class="bg-dtgreen text-black px-6 py-3 rounded-lg text-base font-bold shadow-card hover:bg-dtcyan transition-all">
               🚀 Step 2 - Generate Journey
             </button>
           </div>
@@ -252,22 +252,21 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           <!-- Step 1: Copy Prompt -->
           <div class="mb-3">
             <div class="flex items-center justify-between mb-2">
-              <h4 class="text-sm font-semibold text-white">Step 1: Copy prompt to Copilot</h4>
-              <button id="copyPrompt" type="button" class="bg-dtgreen text-black px-3 py-1.5 rounded-lg text-sm font-semibold shadow-card hover:bg-dtcyan transition-all">📋 Step 3 - Copy</button>
+              <h4 class="text-base font-bold text-white">Copy prompt to Copilot</h4>
+              <button id="copyPrompt" type="button" class="bg-dtgreen text-black px-6 py-3 rounded-lg text-base font-bold shadow-card hover:bg-dtcyan transition-all">📋 Step 3 - Copy</button>
             </div>
-            <textarea id="promptText" readonly class="w-full h-40 p-3 border border-dtcyan rounded-lg bg-black text-white text-xs font-mono resize-y overflow-y-auto"></textarea>
+            <textarea id="promptText" readonly class="w-full h-40 p-3 border border-dtcyan rounded-lg bg-black text-white text-sm font-mono resize-y overflow-y-auto"></textarea>
           </div>
-          <!-- Step 2: Paste Response -->
+          <!-- Paste Response -->
           <div class="mb-3">
-            <h4 class="text-sm font-medium text-white mb-2">Step 2: Paste Copilot's response</h4>
-            <textarea id="copilotResponse" placeholder="Paste JSON response here..." class="w-full h-28 p-3 border border-dtcyan rounded-lg bg-black text-white text-xs font-mono resize-none focus:ring-2 focus:ring-dtcyan transition-all"></textarea>
+            <h4 class="text-base font-bold text-white mb-2">Paste Copilot's response</h4>
+            <textarea id="copilotResponse" placeholder="Paste JSON response here..." class="w-full h-28 p-3 border border-dtcyan rounded-lg bg-black text-white text-sm font-mono resize-none focus:ring-2 focus:ring-dtcyan transition-all"></textarea>
           </div>
 
           <!-- Step 3: Process Response -->
           <div class="flex items-center gap-2 mb-2">
-            <button id="processResponse" type="button" class="bg-dtgreen text-black px-3 py-1.5 rounded text-sm font-semibold hover:bg-green-700">🚀 Step 4 - Process</button>
+            <button id="processResponse" type="button" class="bg-dtgreen text-black px-6 py-3 rounded-lg text-base font-bold shadow-card hover:bg-dtcyan transition-all">🚀 Step 4 - Process</button>
           </div>
-           <textarea id="promptText" readonly class="w-full h-40 p-3 border border-dtcyan rounded-lg bg-black text-white text-xs font-mono resize-y overflow-y-auto"></textarea>
 
         </div>
       </div>
@@ -287,12 +286,12 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           <h2 class="text-lg mb-3 text-dtcyan font-bold tracking-tight">Journey Simulation</h2>
           <div class="grid grid-cols-1 gap-3">
             <div class="bg-dtgray bg-opacity-40 rounded-lg p-3">
-              <label class="block text-sm font-medium text-dtcyan mb-2">Customers</label>
-              <input id="customerCount" class="w-full p-2 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all" type="number" min="1" max="1" value="1" placeholder="Number of customers" />
-              <p class="text-xs text-gray-400 mt-1">Run 1 customer journey</p>
+              <label class="block text-base font-semibold text-dtcyan mb-2">Customers</label>
+              <input id="customerCount" class="w-full p-3 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan transition-all text-sm" type="number" min="1" max="1" value="1" placeholder="Number of customers" />
+              <p class="text-sm text-gray-400 mt-1">Run 1 customer journey</p>
             </div>
             <div class="flex gap-2">
-              <button id="run-journey-simulation" onclick="runJourneySimulation()" class="flex-1 bg-dtgreen hover:bg-dtcyan text-black font-semibold rounded-lg p-2 shadow-card transition-all text-sm" title="Run customers through the journey with OneAgent tracing">🚀 Step 5 - Run Simulation</button>
+              <button id="run-journey-simulation" onclick="runJourneySimulation()" class="flex-1 bg-dtgreen hover:bg-dtcyan text-black font-bold rounded-lg p-3 shadow-card transition-all text-base" title="Run customers through the journey with OneAgent tracing">🚀 Step 5 - Run Simulation</button>
             </div>
           </div>
           <div id="sim-status" class="mt-3 text-sm text-dtyellow font-medium"></div>
@@ -301,38 +300,41 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
 
       <!-- Journey Management (Right) -->
       <div class="w-80 flex-shrink-0 p-4 rounded-2xl bg-dtcard border border-dtborder shadow-card flex flex-col h-full">
-        <div class="flex justify-between items-center mb-3">
-          <h2 class="text-xl text-dtcyan font-bold tracking-tight">Journey Management</h2>
-          <button id="new-journey-btn" onclick="startNewCustomerJourney()" class="bg-dtpurple hover:bg-dtcyan text-white hover:text-black font-semibold rounded-lg px-3 py-2 text-sm shadow-card transition-all border border-dtcyan">
-            🚀 Reset BizObs Application for Totally New Customer
-          </button>
+        <div class="mb-4">
+          <h2 class="text-xl text-dtcyan font-bold tracking-tight mb-3">Journey Management</h2>
+          
+          <!-- Reset Application Button - Better Positioned -->
+          <div class="mb-4 p-3 bg-dtpurple bg-opacity-20 rounded-lg border border-dtpurple">
+            <p class="text-sm text-gray-300 mb-2">Start fresh with a completely new customer journey</p>
+            <button id="new-journey-btn" onclick="startNewCustomerJourney()" class="w-full bg-dtpurple hover:bg-dtcyan text-white hover:text-black font-bold rounded-lg px-4 py-3 text-sm shadow-card transition-all border border-dtpurple">
+              🚀 Reset BizObs Application for New Customer
+            </button>
+          </div>
         </div>
         
         <div class="space-y-4 flex-1">
-          <div>
-            <div class="flex justify-between items-center mb-2">
-              <div>
-                <h3 class="text-sm text-dtgreen font-semibold flex items-center gap-1">
-                  Services Status
-                  <span id="refresh-indicator" class="w-2 h-2 bg-dtgreen rounded-full opacity-75"></span>
-                </h3>
-                <div id="last-update-time" class="text-xs text-gray-500"></div>
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <div>
+                  <h3 class="text-base text-dtgreen font-bold flex items-center gap-1">
+                    Services Status
+                    <span id="refresh-indicator" class="w-2 h-2 bg-dtgreen rounded-full opacity-75"></span>
+                  </h3>
+                  <div id="last-update-time" class="text-sm text-gray-500"></div>
+                </div>
+                <button id="refresh-status-btn" onclick="updateServiceStatus()" class="bg-dtgray hover:bg-dtcyan text-white hover:text-black rounded px-3 py-2 text-sm transition-all border border-dtgray font-semibold" title="Refresh service status">
+                  🔄 Refresh
+                </button>
               </div>
-              <button id="refresh-status-btn" onclick="updateServiceStatus()" class="bg-dtgray hover:bg-dtcyan text-white hover:text-black rounded px-2 py-1 text-xs transition-all border border-dtgray" title="Refresh service status">
-                🔄
-              </button>
-            </div>
-            <div id="journey-status-message" class="text-xs text-dtyellow mb-2"></div>
-            <div id="service-status-container" class="bg-black rounded-lg p-3 border border-dtgray">
-              <div id="service-status-loading" class="text-center text-gray-400 text-xs">Loading...</div>
-              <div id="service-status-list" class="hidden space-y-1"></div>
-            </div>
-          </div>
-          
-          <div>
-            <h3 class="text-sm text-dtgreen font-semibold mb-2">Port Status</h3>
+              <div id="journey-status-message" class="text-sm text-dtyellow mb-2"></div>
+              <div id="service-status-container" class="bg-black rounded-lg p-3 border border-dtgray">
+                <div id="service-status-loading" class="text-center text-gray-400 text-sm">Loading...</div>
+                <div id="service-status-list" class="hidden space-y-1"></div>
+              </div>
+            </div>          <div>
+            <h3 class="text-base text-dtgreen font-bold mb-2">Port Status</h3>
             <div id="port-status-container" class="bg-black rounded-lg p-3 border border-dtgray">
-              <div id="port-status-info" class="text-xs space-y-1">
+              <div id="port-status-info" class="text-sm space-y-1">
                 <div>Total: <span id="total-ports" class="text-dtcyan">-</span></div>
                 <div>Available: <span id="available-ports" class="text-dtgreen">-</span></div>
                 <div>Allocated: <span id="allocated-ports" class="text-dtyellow">-</span></div>
@@ -367,12 +369,17 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
     // Prompt Cache Management
     class PromptCache {
       constructor() {
+        console.log('PromptCache constructor called');
         this.storageKey = 'bizobs-saved-prompts';
+        console.log('Calling initializeSidebar...');
         this.initializeSidebar();
+        console.log('Calling loadSavedPrompts...');
         this.loadSavedPrompts();
+        console.log('PromptCache constructor completed');
       }
 
       initializeSidebar() {
+        console.log('initializeSidebar method called');
         const toggleBtn = document.getElementById('toggleSidebar');
         const closeBtn = document.getElementById('closeSidebar');
         const sidebar = document.getElementById('savedPromptsSidebar');
@@ -383,8 +390,20 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
         const exportBtn = document.getElementById('exportPrompts');
         const importBtn = document.getElementById('importPrompts');
 
+        console.log('Element check:');
+        console.log('- toggleBtn:', !!toggleBtn);
+        console.log('- closeBtn:', !!closeBtn);
+        console.log('- sidebar:', !!sidebar);
+        console.log('- mainContent:', !!mainContent);
+
         if (toggleBtn) {
-          toggleBtn.addEventListener('click', () => this.toggleSidebar());
+          console.log('Toggle button found, adding event listener...');
+          toggleBtn.addEventListener('click', () => {
+            console.log('Toggle button clicked!');
+            this.toggleSidebar();
+          });
+        } else {
+          console.error('Toggle button NOT found!');
         }
         
         if (closeBtn) closeBtn.addEventListener('click', () => this.closeSidebar());
@@ -427,13 +446,25 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
       }
 
       toggleSidebar() {
+        console.log('toggleSidebar method called');
         const sidebar = document.getElementById('savedPromptsSidebar');
         const mainContent = document.getElementById('mainContent');
+        console.log('Sidebar element:', sidebar);
+        console.log('Main content element:', mainContent);
+        
+        if (!sidebar) {
+          console.error('Sidebar element not found!');
+          return;
+        }
+        
         const isOpen = sidebar.classList.contains('translate-x-0');
+        console.log('Sidebar is currently open:', isOpen);
         
         if (isOpen) {
+          console.log('Closing sidebar...');
           this.closeSidebar();
         } else {
+          console.log('Opening sidebar...');
           sidebar.classList.remove('-translate-x-full');
           sidebar.classList.add('translate-x-0');
           if (mainContent) mainContent.classList.add('sidebar-open');
@@ -441,11 +472,19 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
       }
 
       closeSidebar() {
+        console.log('closeSidebar method called');
         const sidebar = document.getElementById('savedPromptsSidebar');
         const mainContent = document.getElementById('mainContent');
+        
+        if (!sidebar) {
+          console.error('Sidebar element not found in closeSidebar!');
+          return;
+        }
+        
+        console.log('Closing sidebar - removing translate-x-0, adding -translate-x-full');
         sidebar.classList.remove('translate-x-0');
         sidebar.classList.add('-translate-x-full');
-        mainContent.classList.remove('sidebar-open');
+        if (mainContent) mainContent.classList.remove('sidebar-open');
       }
 
       getCurrentPromptState() {
@@ -815,7 +854,9 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
     }
 
     // Initialize prompt cache
+    console.log('Initializing PromptCache...');
     const promptCache = new PromptCache();
+    console.log('PromptCache initialized successfully');
 
     window.runJourneySimulation = async function() {
       console.log('🔥 GREEN BUTTON CLICKED! 🔥');
@@ -1019,7 +1060,7 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
         const customerCount = parseInt(document.getElementById('customerCount').value) || 1;
         
         // Validate customer limit
-        if (customerCount > ) {
+        if (customerCount > 1) {
           simStatus.textContent = '❌ Customer limit exceeded. Maximum allowed: 1 customer';
           alert('Customer limit exceeded!\n\nMaximum allowed: 1 customer\nYou entered: ' + customerCount + ' customers\n\nPlease reduce the number and try again.');
           return;
@@ -1224,6 +1265,7 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
 
     // Function to update service status display
     window.updateServiceStatus = async function() {
+      console.log('🔄 updateServiceStatus called');
       const refreshBtn = document.getElementById('refresh-status-btn');
       const refreshIndicator = document.getElementById('refresh-indicator');
       const originalContent = refreshBtn ? refreshBtn.innerHTML : '';
@@ -1238,38 +1280,90 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           refreshIndicator.className = 'w-2 h-2 bg-dtyellow rounded-full opacity-100 animate-pulse';
         }
         
-        const [servicesRes, portsRes] = await Promise.all([
-          fetch('/api/admin/services/status'),
-          fetch('/api/admin/ports')
-        ]);
+        console.log('📡 Fetching services and ports data...');
         
-        const servicesData = await servicesRes.json();
-        const portsData = await portsRes.json();
+        // Fetch services data with timeout and better error handling
+        let servicesData = { ok: false, services: [] };
+        try {
+          console.log('🚀 Starting services API call...');
+          const servicesController = new AbortController();
+          const servicesTimeout = setTimeout(() => servicesController.abort(), 10000);
+          
+          const servicesRes = await fetch('/api/admin/services/status', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            signal: servicesController.signal
+          });
+          clearTimeout(servicesTimeout);
+          servicesData = await servicesRes.json();
+          console.log('📊 Services API response:', servicesRes.status, servicesData);
+        } catch (servicesError) {
+          console.error('❌ Services API error:', servicesError);
+          servicesData = { ok: false, error: servicesError.message };
+        }
         
-        // Update service list
+        // Fetch ports data with timeout and better error handling
+        let portsData = { ok: false };
+        try {
+          console.log('🚀 Starting ports API call...');
+          const portsController = new AbortController();
+          const portsTimeout = setTimeout(() => portsController.abort(), 10000);
+          
+          const portsRes = await fetch('/api/admin/ports', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            signal: portsController.signal
+          });
+          clearTimeout(portsTimeout);
+          portsData = await portsRes.json();
+          console.log('� Ports API response:', portsRes.status, portsData);
+        } catch (portsError) {
+          console.error('❌ Ports API error:', portsError);
+          portsData = { ok: false, error: portsError.message };
+        }
+        
+        // Update service list with better error handling
         const servicesList = document.getElementById('service-status-list');
         const servicesLoading = document.getElementById('service-status-loading');
         
-        if (servicesData.ok && servicesData.services && servicesData.services.length > 0) {
+        if (servicesData.ok && servicesData.services && Array.isArray(servicesData.services) && servicesData.services.length > 0) {
+          console.log(`✅ Found ${servicesData.services.length} running services`);
           servicesLoading.classList.add('hidden');
           servicesList.classList.remove('hidden');
           servicesList.innerHTML = servicesData.services.map(service => 
             `<div class="flex justify-between items-center text-xs">
-              <span class="text-dtcyan truncate">${service.service}</span>
-              <span class="text-dtgreen">:${service.port}</span>
+              <span class="text-dtcyan truncate">${service.service || service.name || 'Unknown Service'}</span>
+              <span class="text-dtgreen">:${service.port || 'N/A'}</span>
             </div>`
           ).join('');
         } else {
-          servicesLoading.textContent = 'No services currently running';
+          console.log('⚠️ No services found or API error:', servicesData);
+          servicesLoading.classList.remove('hidden');
           servicesList.classList.add('hidden');
+          
+          if (servicesData.error) {
+            servicesLoading.textContent = `Error: ${servicesData.error}`;
+          } else if (!servicesData.ok) {
+            servicesLoading.textContent = 'API connection failed - services may not be running';
+          } else {
+            servicesLoading.textContent = 'No services currently running';
+          }
         }
         
-        // Update port status
+        // Update port status with better error handling
         if (portsData.ok && portsData.portStatus) {
-          document.getElementById('total-ports').textContent = portsData.portStatus.total;
-          document.getElementById('available-ports').textContent = portsData.portStatus.available;
-          document.getElementById('allocated-ports').textContent = portsData.portStatus.allocated;
-          document.getElementById('port-range').textContent = portsData.portStatus.range;
+          console.log('🔌 Updating port status display');
+          document.getElementById('total-ports').textContent = portsData.portStatus.total || '0';
+          document.getElementById('available-ports').textContent = portsData.portStatus.available || '0';
+          document.getElementById('allocated-ports').textContent = portsData.portStatus.allocated || '0';
+          document.getElementById('port-range').textContent = portsData.portStatus.range || 'N/A';
+        } else {
+          console.log('❌ Port status data unavailable:', portsData);
+          // Show fallback values when ports API fails
+          document.getElementById('total-ports').textContent = 'Error';
+          document.getElementById('available-ports').textContent = 'Error';
+          document.getElementById('allocated-ports').textContent = 'Error';
+          document.getElementById('port-range').textContent = 'Error';
         }
         
         // Update last refresh time
@@ -1280,9 +1374,21 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           lastUpdateEl.textContent = `Updated: ${timeString}`;
         }
         
+        console.log('✅ Service status update completed successfully');
+        
       } catch (e) {
-        console.error('Error updating service status:', e);
-        document.getElementById('service-status-loading').textContent = 'Error loading service status';
+        console.error('❌ Error updating service status:', e);
+        const servicesLoading = document.getElementById('service-status-loading');
+        if (servicesLoading) {
+          servicesLoading.textContent = `Connection error: ${e.message}`;
+          servicesLoading.classList.remove('hidden');
+        }
+        
+        // Show error in port status too
+        document.getElementById('total-ports').textContent = 'Error';
+        document.getElementById('available-ports').textContent = 'Error';
+        document.getElementById('allocated-ports').textContent = 'Error';
+        document.getElementById('port-range').textContent = 'Error';
       } finally {
         // Restore refresh button and indicator state
         if (refreshBtn) {
@@ -2637,23 +2743,49 @@ ERROR SIMULATION (Important):
     })();
 
     // Initialize service status display and set up periodic updates
-    (async () => {
-      // Initial load
-      await updateServiceStatus();
+    document.addEventListener('DOMContentLoaded', async () => {
+      console.log('🚀 DOM loaded - Initializing auto-refresh for service status...');
       
-      // Update every 5 seconds
-      setInterval(updateServiceStatus, 5000);
-    })();
+      // Wait a moment for everything to be ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check if updateServiceStatus function exists
+      if (typeof window.updateServiceStatus !== 'function') {
+        console.error('❌ updateServiceStatus function not found!');
+        return;
+      }
+      
+      // Initial load
+      console.log('📡 Running initial service status update...');
+      try {
+        await window.updateServiceStatus();
+      } catch (error) {
+        console.error('❌ Initial service status update failed:', error);
+      }
+      
+      // Update every 10 seconds for real-time visibility
+      console.log('⏰ Setting up 10-second auto-refresh interval');
+      setInterval(() => {
+        console.log('🔄 Auto-refresh triggered');
+        try {
+          window.updateServiceStatus();
+        } catch (error) {
+          console.error('❌ Auto-refresh failed:', error);
+        }
+      }, 10000);
+      
+      console.log('✅ Auto-refresh initialization complete');
+    });
 
     // Add customer count validation
     document.getElementById('customerCount').addEventListener('input', (e) => {
       const value = parseInt(e.target.value);
       const simStatus = document.getElementById('sim-status');
       
-      if (value > 5) {
+      if (value > 1) {
         e.target.style.borderColor = '#ef4444'; // Red border
         if (simStatus) {
-          simStatus.textContent = '⚠️ Warning: Maximum 5 customers allowed';
+          simStatus.textContent = '⚠️ Warning: Maximum 1 customer allowed';
           simStatus.style.color = '#ef4444';
         }
       } else {
@@ -2665,12 +2797,12 @@ ERROR SIMULATION (Important):
       }
     });
 
-    // Prevent values above 5 on change
+    // Prevent values above 1 on change
     document.getElementById('customerCount').addEventListener('change', (e) => {
       const value = parseInt(e.target.value);
-      if (value > 5) {
-        e.target.value = 5;
-        alert('Customer limit is 5. Value has been adjusted to maximum allowed.');
+      if (value > 1) {
+        e.target.value = 1;
+        alert('Customer limit is 1. Value has been adjusted to maximum allowed.');
       } else if (value < 1) {
         e.target.value = 1;
       }
