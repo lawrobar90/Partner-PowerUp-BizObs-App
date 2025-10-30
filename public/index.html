@@ -209,7 +209,7 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
                     <option value="date">Date</option>
                     <option value="custom">Custom</option>
                   </select>
-                  <button id="addFieldBtn" type="button" class="bg-dtgreen text-black px-5 py-2 rounded-lg font-semibold shadow-card hover:bg-dtcyan transition-all">Add Field</button>
+                  <button id="addFieldBtn" type="button" class="bg-dtgreen text-black px-5 py-2 rounded-lg font-semibold shadow-card hover:bg-dtcyan transition-all">Step 1 - Add Field</button>
                 </div>
                 <p class="text-xs text-gray-300 mt-3">Add any number of fields (name + type). E.g., cost:number, price:currency, supplier:string.</p>
               </div>
@@ -239,8 +239,8 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
               </button>
               <span id="savedPromptsCount" class="text-xs text-gray-400 flex items-center">📋 0 saved</span>
             </div>
-            <button id="generateJourney" type="button" class="w-full bg-dtblue hover:bg-dtcyan text-black font-semibold rounded-lg p-3 shadow-card transition-all text-base">
-              🚀 Generate Journey
+            <button id="generateJourney" type="button" class="bg-dtgreen text-black px-3 py-1.5 rounded-lg text-sm font-semibold shadow-card hover:bg-dtcyan transition-all">
+              🚀 Step 2 - Generate Journey
             </button>
           </div>
         </form>
@@ -253,7 +253,7 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           <div class="mb-3">
             <div class="flex items-center justify-between mb-2">
               <h4 class="text-sm font-semibold text-white">Step 1: Copy prompt to Copilot</h4>
-              <button id="copyPrompt" type="button" class="bg-dtgreen text-black px-3 py-1.5 rounded-lg text-sm font-semibold shadow-card hover:bg-dtcyan transition-all">📋 Copy</button>
+              <button id="copyPrompt" type="button" class="bg-dtgreen text-black px-3 py-1.5 rounded-lg text-sm font-semibold shadow-card hover:bg-dtcyan transition-all">📋 Step 3 - Copy</button>
             </div>
             <textarea id="promptText" readonly class="w-full h-40 p-3 border border-dtcyan rounded-lg bg-black text-white text-xs font-mono resize-y overflow-y-auto"></textarea>
           </div>
@@ -264,9 +264,9 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
           </div>
           <!-- Step 3: Process Response -->
           <div class="flex items-center gap-2 mb-2">
-            <button id="processResponse" type="button" class="bg-dtgreen text-black px-3 py-1.5 rounded text-sm font-semibold hover:bg-green-700">🚀 Process</button>
+            <button id="processResponse" type="button" class="bg-dtgreen text-black px-3 py-1.5 rounded text-sm font-semibold hover:bg-green-700">🚀 Step 4 - Process</button>
             <button id="resetWorkflow" type="button" class="bg-dtgray text-white px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-gray-600">Reset</button>
-            <button id="useRetailExample" class="bg-dtpurple text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-card hover:bg-dtcyan transition-all">📱 Example</button>
+            <!--<button id="useRetailExample" class="bg-dtpurple text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-card hover:bg-dtcyan transition-all">📱 Example</button>-->
           </div>
         </div>
       </div>
@@ -291,7 +291,7 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
               <p class="text-xs text-gray-400 mt-1">Run 1 customer journey</p>
             </div>
             <div class="flex gap-2">
-              <button id="run-journey-simulation" onclick="runJourneySimulation()" class="flex-1 bg-dtgreen hover:bg-dtcyan text-black font-semibold rounded-lg p-2 shadow-card transition-all text-sm" title="Run customers through the journey with OneAgent tracing">🚀 Run Simulation</button>
+              <button id="run-journey-simulation" onclick="runJourneySimulation()" class="flex-1 bg-dtgreen hover:bg-dtcyan text-black font-semibold rounded-lg p-2 shadow-card transition-all text-sm" title="Run customers through the journey with OneAgent tracing">🚀 Step 5 - Run Simulation</button>
             </div>
           </div>
           <div id="sim-status" class="mt-3 text-sm text-dtyellow font-medium"></div>
@@ -303,7 +303,7 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
         <div class="flex justify-between items-center mb-3">
           <h2 class="text-xl text-dtcyan font-bold tracking-tight">Journey Management</h2>
           <button id="new-journey-btn" onclick="startNewCustomerJourney()" class="bg-dtpurple hover:bg-dtcyan text-white hover:text-black font-semibold rounded-lg px-3 py-2 text-sm shadow-card transition-all border border-dtcyan">
-            🚀 New Journey
+            🚀 Reset BizObs Application for Totally New Customer
           </button>
         </div>
         
@@ -1162,7 +1162,7 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
         flowResultsEl.textContent = `Error Details:\n${error.stack}`;
       } finally {
         runJourneySimBtn.disabled = false;
-        runJourneySimBtn.textContent = '🚀 Run Journey Simulation';
+        runJourneySimBtn.textContent = '🚀 Step 5 - Run Journey Simulation';
       }
     };
 
