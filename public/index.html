@@ -262,12 +262,13 @@ Example: 'Create a B2B software trial signup journey including lead qualificatio
             <h4 class="text-sm font-medium text-white mb-2">Step 2: Paste Copilot's response</h4>
             <textarea id="copilotResponse" placeholder="Paste JSON response here..." class="w-full h-28 p-3 border border-dtcyan rounded-lg bg-black text-white text-xs font-mono resize-none focus:ring-2 focus:ring-dtcyan transition-all"></textarea>
           </div>
+
           <!-- Step 3: Process Response -->
           <div class="flex items-center gap-2 mb-2">
             <button id="processResponse" type="button" class="bg-dtgreen text-black px-3 py-1.5 rounded text-sm font-semibold hover:bg-green-700">🚀 Step 4 - Process</button>
-           <!-- <button id="resetWorkflow" type="button" class="bg-dtgray text-white px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-gray-600">Reset</button> -->
-            <!--<button id="useRetailExample" class="bg-dtpurple text-white px-3 py-1.5 rounded-lg text-sm font-semibold shadow-card hover:bg-dtcyan transition-all">📱 Example</button>-->
           </div>
+           <textarea id="promptText" readonly class="w-full h-40 p-3 border border-dtcyan rounded-lg bg-black text-white text-xs font-mono resize-y overflow-y-auto"></textarea>
+
         </div>
       </div>
       <!-- Generate & Simulation (Center-Right) -->
