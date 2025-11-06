@@ -12,7 +12,6 @@ Run the complete BizObs application with a single command:
 
 ## 🌐 Access URLs
 
-- **External**: http://bizobs.c469ba93-51c8-40eb-979d-1c9075a148a0.dynatrace.training/
 - **Local**: http://localhost:8080/
 
 ## 🎯 Key Features
