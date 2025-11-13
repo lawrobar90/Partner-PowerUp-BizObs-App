@@ -3,15 +3,14 @@
 1.	*Open* "**Preferences**" and "**OneAgent Features**"
 1. *Filter by* "**Business**"
 1. Enable the following:
-   - Node.js Business Evwents [Opt-in]
+   - Node.js Business Events [Opt-in]
    - .Net Business Events [Opt-in]
-
-
+1. Restart the node.js server on the BizObs Application
 
 
 ## Basic configuration and exploration 
 
-This lab will show you how to *create* and *validate* **business rules**. 
+This guide will show you how to *create* and *validate* **business rules**. 
 
 ### 1.1 OneAgent rule Configuration
 
