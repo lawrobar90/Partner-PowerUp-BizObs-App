@@ -10,6 +10,10 @@ Run the complete BizObs application with a single command:
 ./start-server.sh
 ```
 
+## Add configuration to Dynatrace Tenant
+Follow this guide
+https://github.com/lawrobar90/Partner-PowerUp-BizObs-App/blob/main/DynatraceConfig.md
+
 ## 🌐 Access URLs
 
 - **Local**: http://localhost:8080/
