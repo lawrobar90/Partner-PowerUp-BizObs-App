@@ -5,9 +5,9 @@ A comprehensive business observability application optimized for Dynatrace ACE-B
 ## ⚡ Quick Start
 
 ## Install OneAgent 
-Install a Dynatrace OneAgent on your machine where you are installing the BizObs application
-See Documentation here for a guide of deployment methods:
-https://docs.dynatrace.com/docs/ingest-from/dynatrace-oneagent/installation-and-operation
+- Install a Dynatrace OneAgent on your machine where you are installing the BizObs application
+- See Documentation here for a guide of deployment methods:
+- https://docs.dynatrace.com/docs/ingest-from/dynatrace-oneagent/installation-and-operation
 
 In a terminal - Git/Powershell etc
 - Download this BizObs repository, and change directory to where the start-server.sh is located
