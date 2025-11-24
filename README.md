@@ -4,6 +4,22 @@ A comprehensive business observability application optimized for Dynatrace ACE-B
 
 ## ⚡ Quick Start
 
+### 🚀 One-Click Cloud Deployment (No Setup Required)
+
+#### GitHub Codespaces (Recommended)
+1. Click **"Code"** → **"Codespaces"** → **"Create codespace on main"**
+2. Wait for environment to load (auto-installs dependencies)
+3. Run: `npm start`
+4. Open forwarded port 8080 in browser
+
+#### Alternative Cloud Options
+- **Replit**: Import this repo → Run `npm start`  
+- **CodeSandbox**: Import from GitHub → Auto-starts
+- **Gitpod**: `https://gitpod.io/#https://github.com/lawrobar90/Partner-PowerUp-BizObs-App`
+- **StackBlitz**: WebContainer-based instant deployment
+
+### 🖥️ Local Installation
+
 ## Install OneAgent 
 - Install a Dynatrace OneAgent on your machine where you are installing the BizObs application
 - See Documentation here for a guide of deployment methods:
@@ -15,6 +31,12 @@ In a terminal - Git/Powershell etc
 - Run the complete BizObs application with a single command:
 ```bash
 ./start-server.sh
+```
+
+Or for simple Node.js startup:
+```bash
+npm install
+npm start
 ```
 
 ## Add configuration to Dynatrace Tenant
