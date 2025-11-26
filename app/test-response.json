@@ -1,0 +1,58 @@
+{
+  "journey": {
+    "companyName": "TestCorp",
+    "domain": "testcorp.com",
+    "industryType": "Technology",
+    "journeyId": "journey_testcorp_2025",
+    "journeyStartTime": "2025-11-21T00:00:00.000Z",
+    "steps": [
+      {
+        "stepIndex": 1,
+        "stepName": "ProductDiscovery",
+        "serviceName": "ProductDiscoveryService",
+        "description": "Customer browses products",
+        "category": "DigitalExperience",
+        "timestamp": "2025-11-21T00:00:00.000Z",
+        "estimatedDuration": 15,
+        "businessRationale": "Typical browsing takes 15 minutes",
+        "substeps": [
+          {
+            "substepName": "Browse categories",
+            "duration": 5
+          },
+          {
+            "substepName": "Compare products",
+            "duration": 10
+          }
+        ]
+      }
+    ]
+  },
+  "customerProfile": {
+    "userId": "user_testcorp_001",
+    "email": "customer@testcorp.com",
+    "demographic": "B2B buyers",
+    "painPoints": ["Cost optimization", "Process efficiency"],
+    "goals": ["Improve operations", "Reduce costs"]
+  },
+  "traceMetadata": {
+    "correlationId": "trace_testcorp_2025",
+    "sessionId": "session_testcorp_001",
+    "businessContext": {
+      "campaignSource": "organic",
+      "customerSegment": "enterprise",
+      "businessValue": 10000
+    }
+  },
+  "additionalFields": {
+    "deviceType": "Desktop",
+    "browser": "Chrome",
+    "location": "United States",
+    "entryChannel": "Website",
+    "customerIntent": "Purchase",
+    "loyaltyStatus": "New",
+    "abandonmentRisk": "Low",
+    "conversionProbability": 0.8,
+    "personalizationTags": ["Technology", "Enterprise", "B2B"]
+  }
+}

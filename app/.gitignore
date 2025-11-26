@@ -1,0 +1,70 @@
+# BizObs Application .gitignore
+
+# Node.js dependencies and runtime
+node_modules/
+npm-debug.log*
+yarn-error.log*
+yarn-debug.log*
+.npm
+package-lock.json
+
+# Environment and secrets
+.env
+.env.*
+*.env
+
+# Logs, PIDs, and runtime files
+*.log
+logs/
+server.log
+server.pid
+nohup.out
+
+# Dynatrace and sensitive configuration (SECURITY)
+*oneagent*
+*dynatrace*config*
+*.dt-config
+configure-dynatrace.*
+apply-dynatrace-config.*
+*api-token*
+*secret*
+*key*
+*credential*
+
+# Runtime artifacts and temporary files
+services/.dynamic-runners/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE and editor files
+.vscode/
+.idea/
+*.iml
+
+# Coverage and testing
+coverage/
+*.lcov
+.nyc_output/
+
+# Build outputs
+dist/
+build/
+out/
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+
+# External projects (not part of BizObs)
+../vegas-casino/
+../vegas-casino*/
+vegas-casino/
+
+# Backup directories
+*-backup/
+.tmp-*/
+temp/
+tmp/
+Dynatrace-OneAgent-Linux-*.sh

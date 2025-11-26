@@ -6,8 +6,6 @@
 #Load the functions into the shell
 source .devcontainer/util/source_framework.sh
 
-#TODO: BeforeGoLive comment this so the Mkdocs are not exposed in the container.
-# we want to monitor all interactions of the users in the live github pages.
-#exposeMkdocs
+startApp
 
 printInfoSection "Your dev.container finished starting up"

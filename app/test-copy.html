@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Copy Test</title>
+</head>
+<body>
+    <h1>Copy Functionality Test</h1>
+    
+    <textarea id="testText" style="width: 100%; height: 100px;">
+This is test content that should be copied to your clipboard when you click the button below.
+    </textarea>
+    
+    <br><br>
+    
+    <button id="copyBtn" onclick="copyText()">📋 Copy Text</button>
+    
+    <p id="status"></p>
+    
+    <script>
+        async function copyText() {
+            const textarea = document.getElementById('testText');
+            const status = document.getElementById('status');
+            const btn = document.getElementById('copyBtn');
+            
+            console.log('Copying text:', textarea.value);
+            
+            try {
+                // Try modern API first
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(textarea.value);
+                    status.textContent = '✅ Copied with modern API!';
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => btn.textContent = '📋 Copy Text', 2000);  
+                    return;
+                }
+            } catch (err) {
+                console.log('Modern API failed:', err);
+            }
+            
+            // Fallback method
+            try {
+                const tempTextArea = document.createElement('textarea');
+                tempTextArea.value = textarea.value;
+                tempTextArea.style.position = 'absolute';
+                tempTextArea.style.left = '-9999px';
+                document.body.appendChild(tempTextArea);
+                
+                tempTextArea.focus();
+                tempTextArea.select();
+                
+                const result = document.execCommand('copy');
+                document.body.removeChild(tempTextArea);
+                
+                if (result) {
+                    status.textContent = '✅ Copied with fallback method!';
+                    btn.textContent = '✅ Copied!';
+                    setTimeout(() => btn.textContent = '📋 Copy Text', 2000);
+                } else {
+                    status.textContent = '❌ Copy failed';
+                }
+            } catch (err) {
+                status.textContent = '❌ Copy error: ' + err.message;
+            }
+        }
+    </script>
+</body>
+</html>

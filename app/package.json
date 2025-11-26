@@ -1,0 +1,54 @@
+{
+  "name": "business-observability-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-powered business observability platform with comprehensive Dynatrace integration, optimized for GitHub Codespaces deployment following the Dynatrace Enablement Framework",
+  "main": "server.js",
+  "type": "module",
+  "keywords": [
+    "dynatrace",
+    "business-observability",
+    "ai-powered",
+    "customer-journey",
+    "github-codespaces",
+    "enablement-framework",
+    "mcp-server",
+    "bizevents"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lawrobar90/Partner-PowerUp-BizObs-App.git"
+  },
+  "author": "Dynatrace Partner PowerUp Program",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "framework": {
+    "name": "Dynatrace Enablement Framework",
+    "version": "2024.11",
+    "documentation": "https://dynatrace-wwse.github.io/codespaces-framework/"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "setup": "./quick-setup.sh",
+    "env": "./selectEnvironment",
+    "codespaces": "./quick-setup.sh",
+    "validate": "node scripts/validate-startup.cjs",
+    "restart-services": "curl -X POST http://localhost:${PORT:-8080}/api/admin/services/restart-all",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "morgan": "^1.10.0",
+    "socket.io": "^4.7.5",
+    "uuid": "^9.0.1"
+  },
+  "optionalDependencies": {
+    "@dynatrace/oneagent-sdk": "^1.5.0"
+  }
+}

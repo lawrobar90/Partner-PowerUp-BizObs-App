@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Comfort function for selecting Dynatrace environment
+echo "🌐 Select Dynatrace Environment:"
+echo "1) Playground (wkf10640.apps.dynatrace.com)"
+echo "2) Demo Live (demo.live.dynatrace.com)"
+echo "3) TacoCorp (tacocorp.live.dynatrace.com)"
+echo "4) Custom Environment"
+
+read -p "Enter your choice (1-4): " choice
+
+case $choice in
+    1)
+        export DT_ENVIRONMENT="https://wkf10640.apps.dynatrace.com"
+        echo "DT_ENVIRONMENT=https://wkf10640.apps.dynatrace.com" > .devcontainer/runlocal/.env
+        ;;
+    2)
+        export DT_ENVIRONMENT="https://demo.live.dynatrace.com"
+        echo "DT_ENVIRONMENT=https://demo.live.dynatrace.com" > .devcontainer/runlocal/.env
+        ;;
+    3)
+        export DT_ENVIRONMENT="https://tacocorp.live.dynatrace.com"
+        echo "DT_ENVIRONMENT=https://tacocorp.live.dynatrace.com" > .devcontainer/runlocal/.env
+        ;;
+    4)
+        read -p "Enter your Dynatrace environment URL: " custom_env
+        export DT_ENVIRONMENT="$custom_env"
+        echo "DT_ENVIRONMENT=$custom_env" > .devcontainer/runlocal/.env
+        ;;
+    *)
+        echo "Invalid choice. Using playground environment."
+        export DT_ENVIRONMENT="https://wkf10640.apps.dynatrace.com"
+        echo "DT_ENVIRONMENT=https://wkf10640.apps.dynatrace.com" > .devcontainer/runlocal/.env
+        ;;
+esac
+
+echo "✅ Environment set to: $DT_ENVIRONMENT"
+echo "💡 Remember to restart the MCP Server if running"
