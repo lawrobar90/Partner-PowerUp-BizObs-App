@@ -1,0 +1,42 @@
+{
+  "journey": {
+    "journeyName": "Error Architecture Test Journey",
+    "companyName": "ArchitectureTestCorp",
+    "steps": [
+      {
+        "stepId": "step1",
+        "action": "browse_catalog",
+        "description": "User browses product catalog",
+        "hasError": false
+      },
+      {
+        "stepId": "step2", 
+        "action": "add_to_cart",
+        "description": "User adds item to cart",
+        "hasError": true,
+        "errorHint": "Cart service experiencing high latency - Step 3 configured error"
+      },
+      {
+        "stepId": "step3",
+        "action": "checkout",
+        "description": "User proceeds to checkout",
+        "hasError": false
+      },
+      {
+        "stepId": "step4",
+        "action": "payment",
+        "description": "User completes payment",
+        "hasError": true,
+        "errorHint": "Payment gateway timeout - Step 3 configured error"
+      }
+    ]
+  },
+  "customerProfile": {
+    "userId": "test_user_123",
+    "tier": "premium"
+  },
+  "additionalFields": {
+    "testType": "error_architecture_validation",
+    "configuredBy": "step3_processing"
+  }
+}

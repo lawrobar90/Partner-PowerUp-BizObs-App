@@ -807,45 +807,36 @@ router.post('/simulate-journey', async (req, res) => {
     };
     
     // Compute per-step error plans based on customer profile, with optional hints from the journey JSON
-    // BUT RESPECT THE ERROR SIMULATION TOGGLE FROM THE UI
+    // 🔧 ARCHITECTURAL IMPROVEMENT: Use error configuration from journey data (Step 3 processing)
+    // instead of runtime decisions based on UI toggle state
     const errorPlannedSteps = stepData.map(s => {
-      // If error simulation is disabled, force all steps to succeed
-      if (errorSimulationEnabled === false) {
-        console.log(`[journey-sim] Error simulation DISABLED - forcing success for step: ${s.stepName}`);
+      console.log(`[journey-sim] Processing step: ${s.stepName}, hasError from journey data: ${s.originalStep?.hasError}, errorHint: ${s.originalStep?.errorHint || 'none'}`);
+      
+      // Use error configuration embedded in journey data by Step 3 processing
+      const hasErrorFromJourneyData = s.originalStep?.hasError === true;
+      const errorHintFromJourneyData = s.originalStep?.errorHint;
+      
+      if (hasErrorFromJourneyData) {
+        console.log(`[journey-sim] 🔴 Error configured for step: ${s.stepName} (from Step 3 journey processing)`);
+        
+        // Use journey data error configuration with customer-specific error profiles as fallback
+        let plan = computeCustomerError(currentPayload.companyName, s.stepName);
+        
+        // Apply error configuration from journey data
+        plan = {
+          hasError: true,
+          errorType: plan.errorType || 'service_unavailable',
+          httpStatus: plan.httpStatus || 500,
+          errorMessage: errorHintFromJourneyData || generateErrorMessage(plan.errorType || 'service_unavailable', s.stepName),
+          retryable: ![400, 404, 422].includes(Number(plan.httpStatus || 500)),
+          severity: Number(plan.httpStatus || 500) >= 500 ? 'critical' : Number(plan.httpStatus || 500) >= 400 ? 'warning' : 'info'
+        };
+        
+        return { ...s, ...plan };
+      } else {
+        console.log(`[journey-sim] ✅ Success configured for step: ${s.stepName} (from Step 3 journey processing)`);
         return { ...s, hasError: false };
       }
-      
-      // Start with customer-derived plan (only if error simulation is enabled)
-      let plan = computeCustomerError(currentPayload.companyName, s.stepName);
-
-      // Allow AI/journey JSON to provide an optional hint per step
-      const hint = s.originalStep?.errorHint || s.originalStep?.errorPlan;
-      if (hint && typeof hint === 'object') {
-        const typeFromHint = hint.type || hint.errorType;
-        const statusFromHint = hint.httpStatus || hint.status;
-        const likelihood = typeof hint.likelihood === 'number' ? Math.max(0, Math.min(1, hint.likelihood)) : null;
-        // force=true overrides randomness (deterministic demo)
-        const forced = hint.force === true;
-        const shouldFail = forced ? true : (likelihood != null ? Math.random() < likelihood : null);
-
-        if (shouldFail === true) {
-          const chosenType = typeFromHint || plan.errorType || 'service_unavailable';
-          const chosenStatus = statusFromHint || plan.httpStatus || 500;
-          plan = {
-            hasError: true,
-            errorType: chosenType,
-            httpStatus: chosenStatus,
-            errorMessage: generateErrorMessage(chosenType, s.stepName),
-            retryable: ![400, 404, 422].includes(Number(chosenStatus)),
-            severity: Number(chosenStatus) >= 500 ? 'critical' : Number(chosenStatus) >= 400 ? 'warning' : 'info'
-          };
-        } else if (shouldFail === false) {
-          // Explicitly indicate success if hint likelihood says so
-          plan = { hasError: false };
-        }
-      }
-
-      return { ...s, ...plan };
     });
 
     for (const stepInfo of errorPlannedSteps) {
