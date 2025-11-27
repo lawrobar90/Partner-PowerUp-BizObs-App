@@ -7,7 +7,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOADRUNNER_DIR="${SCRIPT_DIR}/loadrunner-tests"
+LOADRUNNER_DIR="${SCRIPT_DIR}"
 SCENARIOS_DIR="${LOADRUNNER_DIR}/scenarios"
 TEMPLATES_DIR="${LOADRUNNER_DIR}/templates"
 
