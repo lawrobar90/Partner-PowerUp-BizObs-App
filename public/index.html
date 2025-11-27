@@ -1239,7 +1239,7 @@
     };
 
     window.closeCopilotEditor = function() {
-      const overlay = document.querySelector('.fixed.inset-0.bg-black.bg-opacity-80');
+      const overlay = document.querySelector('.fixed.inset-0.bg-black.bg-opacity-75');
       if (overlay) overlay.remove();
       window.copilotEditorOriginal = null;
     };
@@ -1494,6 +1494,12 @@
           console.log('✅ Save button found, adding event listener');
           saveBtn.addEventListener('click', () => {
             console.log('💾 Save button clicked!');
+            console.log('Current form data:', {
+              companyName: document.getElementById('companyName')?.value,
+              domain: document.getElementById('domain')?.value,
+              promptText1: document.getElementById('promptText1-step2')?.value?.substring(0, 100) + '...',
+              promptText2: document.getElementById('promptText2-step2')?.value?.substring(0, 100) + '...'
+            });
             this.saveCurrentPrompt();
           });
         } else {
@@ -1599,9 +1605,9 @@
           },
           additionalFields: typeof additionalFields !== 'undefined' ? [...additionalFields] : [],
           generatedPrompt: getElementValue('promptText'),
-          promptText1: getElementValue('promptText1'),
-          promptText2: getElementValue('promptText2'),
-          copilotResponse: getElementValue('copilotResponse'),
+          promptText1: getElementValue('promptText1-step2'),
+          promptText2: getElementValue('promptText2-step2'),
+          copilotResponse: getElementValue('copilotResponse-step2'),
           lastJourney: typeof lastJourney !== 'undefined' && lastJourney ? { ...lastJourney } : null,
           currentJourneyData: typeof currentJourneyData !== 'undefined' && currentJourneyData ? { ...currentJourneyData } : null
         };
@@ -1609,11 +1615,13 @@
 
       saveCurrentPrompt() {
         const nameInput = document.getElementById('savePromptName');
-        const name = nameInput.value.trim();
+        let name = nameInput ? nameInput.value.trim() : '';
         
+        // If no name provided, generate one based on company and timestamp
         if (!name) {
-          alert('Please enter a name for this prompt configuration');
-          return;
+          const companyName = document.getElementById('companyName')?.value.trim() || 'Unknown';
+          const timestamp = new Date().toLocaleString();
+          name = `${companyName} - ${timestamp}`;
         }
 
         const promptState = this.getCurrentPromptState();
@@ -1624,17 +1632,20 @@
         savedPrompts.push(promptState);
         
         localStorage.setItem(this.storageKey, JSON.stringify(savedPrompts));
-        nameInput.value = '';
+        if (nameInput) nameInput.value = '';
         
         this.renderSavedPrompts();
         this.updatePromptsCounter();
         
         // Show success message
-        const originalText = document.getElementById('saveCurrentPrompt').textContent;
-        document.getElementById('saveCurrentPrompt').textContent = '✅ Saved!';
-        setTimeout(() => {
-          document.getElementById('saveCurrentPrompt').textContent = originalText;
-        }, 2000);
+        const saveButton = document.getElementById('saveCurrentPrompt');
+        if (saveButton) {
+          const originalText = saveButton.textContent;
+          saveButton.textContent = '✅ Saved!';
+          setTimeout(() => {
+            saveButton.textContent = originalText;
+          }, 2000);
+        }
 
         this.showNotification(`Saved "${name}" successfully!`);
       }
@@ -3732,345 +3743,109 @@ Gather the top three critical business objectives of the company's leadership te
 Format the response as a structured analysis suitable for understanding the company's business context and customer journey requirements. Use only publicly available information and cite sources where applicable. Focus on insights relevant as of 2024 or 2025. If the company is a public company with an investor relations web page, prioritize results from these pages.`;
 
         // Generate Copilot Prompt 2: Customer Journey with reference to business analysis
-        const journeyPrompt = `Based on the response you just gave me above, please create a comprehensive customer journey simulation with detailed business metadata.
+        const journeyPrompt = `Create a customer journey JSON for ${companyName} (${domain}) based on your previous analysis.
 
-🚨 CRITICAL: This response REQUIRES duration fields or it will be rejected 🚨
+⚠️ CRITICAL: Must include duration fields or response will be rejected ⚠️
 
-Create a realistic customer journey for ${companyName} (${domain}) in the industry identified in your business analysis above with MANDATORY realistic duration estimates.
-
-⚠️ YOUR RESPONSE WILL BE DELETED IF IT LACKS DURATION FIELDS ⚠️
-
-🕐 DURATION REQUIREMENTS:
-- Each step must have "estimatedDuration" in minutes
-- Each substep must have "duration" in minutes  
-- Durations should reflect realistic industry timing based on the industry you identified in the C-suite analysis
-- Dynatrace will calculate actual timestamps based on real execution + these durations
-- Consider typical customer behavior patterns for timing estimates
-
-**JOURNEY REQUIREMENTS:** Use the business objectives, KPIs, and technology dependencies identified in the business analysis above to define authentic customer journey steps and requirements.
-
-**ADDITIONAL FIELDS:** Generate comprehensive business metadata fields with REALISTIC VALUES that would appear in actual business dashboards and analytics tools. 
-
-🔥 ARRAYS FOR VARIETY: For fields with multiple potential values (like deviceType, browser, location, pricingTier, etc.), provide arrays of 3-4 realistic options. Each journey execution will randomly pick one value from each array, creating natural variety across multiple customer simulations. This creates realistic diversity in your business observability data.
-
-Examples of when to use arrays:
-- deviceType: ["Mobile", "Desktop", "Tablet"] 
-- browser: ["Chrome", "Safari", "Firefox", "Edge"]
-
-- pricingTier: ["Basic", "Premium", "Enterprise", "VIP"]
-- transactionValue: ["£45.99", "£75.50", "£125.00", "£189.99"]
-
-ALL bracketed placeholders must be replaced with actual values derived from your business analysis. Include specific product names, SKUs, pricing data, conversion metrics, and operational KPIs that make this feel like a real business demo. Do not leave any "[...]" placeholders in the final response.
-
-You MUST respond with this EXACT structure with REALISTIC DURATION estimates:
-
+Return JSON with this structure:
 {
   "journey": {
     "companyName": "${companyName}",
     "domain": "${domain}",
-    "industryType": "[Use the industry from your C-suite analysis above]",
+    "industryType": "[Use industry from C-suite analysis]",
     "journeyId": "journey_${companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}_2025",
     "journeyStartTime": "2025-11-21T00:00:00.000Z",
     "steps": [
       {
         "stepIndex": 1,
-        "stepName": "RealStepName",
-        "serviceName": "RealStepNameService",
-        "description": "What happens in this step",
-        "category": "StepCategory",
+        "stepName": "[IndustrySpecificStepName]",
+        "serviceName": "[IndustrySpecificStepNameService]",
+        "description": "[What happens in this step]",
+        "category": "[StepCategory]",
         "timestamp": "2025-11-21T00:00:00.000Z",
-        "estimatedDuration": 15,
-        "businessRationale": "Why this typically takes 15 minutes in the industry identified in your business analysis",
+        "estimatedDuration": "[realistic_minutes]",
+        "businessRationale": "[Why this duration for this industry]",
         "substeps": [
-          {
-            "substepName": "Real substep 1",
-            "duration": 5
-          },
-          {
-            "substepName": "Real substep 2", 
-            "duration": 10
-          }
+          {"substepName": "[substep description]", "duration": "[minutes]"},
+          {"substepName": "[substep description]", "duration": "[minutes]"}
         ]
-      },
-      {
-        "stepIndex": 2,
-        "stepName": "SecondRealStepName",
-        "serviceName": "SecondRealStepNameService",
-        "description": "What happens in step 2",
-        "category": "StepCategory",
-        "estimatedDuration": 8,
-        "businessRationale": "Why this typically takes 8 minutes in the industry identified in your business analysis",
-        "substeps": [
-          {
-            "substepName": "Real substep 1",
-            "duration": 3
-          },
-          {
-            "substepName": "Real substep 2",
-            "duration": 5
-          }
-        ]
-      },
-      {
-        "stepIndex": 3,
-        "stepName": "ThirdRealStepName",
-        "serviceName": "ThirdRealStepNameService",
-        "estimatedDuration": 5,
-        "businessRationale": "Why this typically takes 5 minutes",
-        "substeps": [...]
-      },
-      {
-        "stepIndex": 4,
-        "stepName": "FourthRealStepName",
-        "serviceName": "FourthRealStepNameService",
-        "estimatedDuration": 3,
-        "businessRationale": "Why this typically takes 3 minutes",
-        "substeps": [...]
-      },
-      {
-        "stepIndex": 5,
-        "stepName": "FifthRealStepName",
-        "serviceName": "FifthRealStepNameService",
-        "estimatedDuration": 10,
-        "businessRationale": "Why this typically takes 10 minutes",
-        "substeps": [...]
-      },
-      {
-        "stepIndex": 6,
-        "stepName": "SixthRealStepName",
-        "serviceName": "SixthRealStepNameService",
-        "estimatedDuration": 1440,
-        "businessRationale": "Why this typically takes 1440 minutes (24 hours) for next-day processing",
-        "substeps": [...]
       }
     ]
   },
   "customerProfile": {
     "userId": "user_${companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}_001",
     "email": "customer@${domain.replace(/^https?:\/\//, '').replace(/^www\./, '')}",
-    "demographic": "[Based on industry and business analysis demographics]",
-    "painPoints": ["[Derive from challenges identified in business analysis]","[Derive from business objectives above]","[Derive from KPIs and risks above]"],
-    "goals": ["[Derive from business objectives above]","[Derive from organizational initiatives above]","[Derive from success metrics above]"]
+    "demographic": "[Industry-based demographics]",
+    "painPoints": ["[From business analysis]", "[From objectives]"],
+    "goals": ["[From business objectives]", "[From success metrics]"]
   },
   "traceMetadata": {
     "correlationId": "trace_${companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}_2025",
     "sessionId": "session_${companyName.toLowerCase().replace(/[^a-z0-9]/g, '')}_001",
     "businessContext": {
-      "campaignSource": "[Derive appropriate channel for this industry]",
-      "customerSegment": "[Derive from business analysis target market]",
-      "businessValue": "[Calculate realistic value based on industry and company size]",
-      "revenueImpact": "[Estimate revenue impact per customer]",
-      "conversionValue": "[Calculate typical conversion value]",
-      "transactionAmount": "[Realistic transaction amount for this industry]"
+      "campaignSource": "[e.g. Organic Search, Paid Search, Social Media]",
+      "customerSegment": "[e.g. premium, standard, enterprise]",
+      "businessValue": "[e.g. £1,250]",
+      "revenueImpact": "[e.g. £450 per customer]",
+      "transactionAmount": "[e.g. £89.99]"
     }
   },
   "additionalFields": {
-    "deviceType": ["Mobile", "Desktop", "Tablet"],
-    "browser": ["Chrome", "Safari", "Firefox", "Edge"], 
- 
-    "entryChannel": ["Organic Search", "Paid Search", "Social Media", "Email", "Direct"],
-    "customerIntent": ["Purchase", "Research", "Comparison", "Support"], 
-    "loyaltyStatus": ["New Customer", "Returning Customer", "VIP Customer", "Lapsed Customer"], 
-    "abandonmentRisk": ["Low", "Medium", "High"],
-    "conversionProbability": ["0.25", "0.32", "0.45", "0.58"], 
-    "personalizationTags": ["[Derive from business objectives]","[Derive from success metrics above]","[Derive from industry type]"],
-    
-    "businessPriority": "[Map to highest priority business objective from analysis above]",
-    "transactionValue": ["£45.99", "£75.50", "£125.00", "£189.99"],
-    "orderTotal": ["£52.75", "£82.75", "£134.50", "£205.99"],
-    "customerLifetimeValue": ["£450.00", "£650.00", "£850.00", "£1200.00"],
-    "acquisitionCost": ["£18.50", "£28.50", "£35.00", "£42.00"],
-    "retentionProbability": ["65%", "72%", "78%", "85%"],
-    "profitMargin": ["12.5%", "18.5%", "24.2%", "31.0%"],
-    "pricingTier": ["Basic", "Premium", "Enterprise", "VIP Gold"],
-    "productSKUs": ["[List 3-5 specific product SKUs like SKU-TOY-001, SKU-GAME-045]"],
-    "productNames": ["[List 3-5 actual product names relevant to the industry]"],
-    "productCategories": ["[List 2-3 product categories with quantities/revenue]"],
-    "inventoryLevels": "[Specific numbers like 1,250 units in stock]",
-    "seasonalMultiplier": "[Factor like 1.8x for holiday seasons]",
-    "discountPercentage": "[Specific discount like 15% off or £12.50 saved]",
-    "shippingCost": "[Exact shipping cost like £4.99 or Free]",
-    "taxRate": "[Specific tax rate like 20% VAT or 8.25% sales tax]",
-    "digitalMaturityLevel": "[Assess based on industry and modernization initiatives]",
-    "customerLifecycleStage": "[New/Growing/Mature customer based on journey context]",
-    "revenueImpactCategory": "[High/Medium/Low based on business value potential]",
-    "operationalComplexityScore": "[1-10 based on challenges identified in business analysis]",
-    "complianceRequirements": "[List relevant compliance needs based on industry]",
-    "securityPostureLevel": "[Critical/High/Medium based on industry security needs]",
-    "infrastructureType": "[Cloud/Hybrid/OnPrem based on modernization analysis]",
-    "aiReadinessScore": "[1-10 based on AI observability objectives]",
-    "observabilityMaturity": "[Basic/Intermediate/Advanced based on current tools analysis]",
-    
-    "primaryBusinessOutcome": "[Primary outcome from business analysis]",
-    "keySuccessMetric": "[Most important success metric from analysis]",
-    "expectedROI": "[Calculate realistic ROI based on industry and objectives]",
-    "implementationComplexity": "[Low/Medium/High based on current IT initiatives]",
-    "timeToValue": "[Weeks/Months based on organizational readiness]",
-    "revenueGrowthPotential": "[Specific percentage like 12.5% growth]",
-    "costOptimizationOpportunity": "[Specific savings like £45,000 annually]",
-    "monthlyRecurringRevenue": "[If applicable, like £25,000 MRR]",
-    "averageOrderValue": "[Specific AOV like £67.25]",
-    "conversionRate": "[Specific rate like 3.2% or 0.032]",
-    "cartAbandonmentRate": "[Specific rate like 68.5%]",
-    "customerRetentionRate": "[Specific percentage like 78%]",
-    "netPromoterScore": "[Specific NPS like 45 or +32]",
-    "customerSatisfactionScore": "[Specific CSAT like 4.2/5.0]",
-    
-    "marketSegment": "[Enterprise/Mid-market/SMB based on company profile]",
-    "geographicRegion": "[Primary region based on domain/operations]",
-    "competitivePosition": "[Leader/Challenger/Follower in their market]",
-    "growthStage": "[Startup/Growth/Mature/Transformation]",
-    "digitalTransformationPhase": "[Planning/Implementing/Optimizing/Leading]",
-    "customerExperiencePriority": "[Critical/High/Medium based on objectives]",
-    "operationalResilienceNeed": "[Critical/High/Medium/Low]",
-    "cloudNativeAdoption": "[Full/Partial/Planning/Traditional]",
-    
-    "budgetCycle": "[Q1/Q2/Q3/Q4 based on typical industry patterns]",
-    "decisionMakingProcess": "[Centralized/Distributed/Committee-based]",
-    "vendorEvaluationCriteria": "[Top 3 criteria based on C-suite priorities]",
-    "procurementComplexity": "[Simple/Moderate/Complex/Enterprise]",
-    "stakeholderInfluence": "[IT-driven/Business-driven/Mixed]",
-    "changeManagementReadiness": "[High/Medium/Low based on transformation initiatives]",
-    
-    "industrySpecificMetric1": "[Specific metric with value like Inventory Turnover: 8.2x]",
-    "industrySpecificMetric2": "[Second metric with value like Same-Store Sales Growth: +5.8%]",
-    "industrySpecificMetric3": "[Third metric like Foot Traffic Conversion: 12.3%]",
+    "deviceType": "[Mobile|Desktop|Tablet]",
+    "entryChannel": "[Organic Search|Paid Search|Social|Email|Direct]",
+    "customerIntent": "[Purchase|Research|Comparison|Support]",
+    "loyaltyStatus": "[New|Returning|VIP|Lapsed]",
+    "businessPriority": "[Map to top C-suite objective]",
+    "transactionValue": "[e.g. £75.50]",
+    "currency": "[GBP|USD|EUR]",
+    "customerSegment": "[premium|standard|basic|enterprise]",
+    "customerLifetimeValue": "[e.g. £650.00]",
+    "acquisitionCost": "[e.g. £28.50]",
+    "retentionProbability": "[e.g. 72%]",
+    "profitMargin": "[e.g. 18.5%]",
+    "productSKUs": ["[e.g. SKU-001]", "[e.g. SKU-002]"],
+    "productCategories": ["[e.g. Electronics: £2.3M]"],
+    "inventoryLevels": "[e.g. 1,250 units]",
+    "discountPercentage": "[e.g. 15%]",
+    "shippingCost": "[e.g. £4.99 or Free]",
+    "taxRate": "[e.g. 20% VAT]",
+    "primaryBusinessOutcome": "[From business analysis]",
+    "expectedROI": "[e.g. 125%]",
+    "revenueGrowthPotential": "[e.g. 12.5%]",
+    "averageOrderValue": "[e.g. £67.25]",
+    "conversionRate": "[e.g. 3.2%]",
+    "customerRetentionRate": "[e.g. 78%]",
+    "marketSegment": "[Enterprise|Mid-market|SMB]",
+    "competitivePosition": "[Leader|Challenger|Follower]",
+    "digitalTransformationPhase": "[Planning|Implementing|Optimizing]",
     "operationalMetrics": {
-      "dailyTransactionVolume": "[Specific number like 2,847 transactions]",
-      "peakHourVolume": "[Peak traffic like 340 transactions/hour]",
-      "systemUptime": "[Uptime percentage like 99.87%]",
-      "responseTime": "[Response time like 1.2 seconds avg]",
-      "errorRate": "[Error rate like 0.08%]"
+      "responseTime": "[e.g. 1.2s]",
+      "errorRate": "[e.g. 0.08%]",
+      "systemUptime": "[e.g. 99.87%]",
+      "dailyTransactionVolume": "[e.g. 2,847]"
     },
-    "regulatoryEnvironment": "[Describe key regulations affecting this industry]",
-    "technologyStack": "[Infer likely technology stack based on industry/size]",
-    "integrationRequirements": "[List likely integration needs]",
-    "scalabilityDemands": "[Describe growth/scale requirements]",
-    
-    "riskFactors": ["[List 3-4 key risk factors from business analysis]"],
-    "successFactors": ["[List 3-4 key success factors for customer journey optimization]"],
-    "competitiveDifferentiators": ["[List 2-3 competitive advantages for this company]"],
-    "businessDrivers": ["[List 3-4 primary business drivers from analysis]"],
-    "revenueStreams": ["[List with values like Online Sales: £2.3M, Store Sales: £4.1M]"],
-    "customerSegmentMetrics": ["[Specific metrics like VIP Customers: 15% of base, 40% of revenue]"],
-    "geographicBreakdown": {
-      "primaryMarket": "[Region with percentage like UK: 65% of sales]",
-      "secondaryMarkets": ["[Other regions like EU: 25%, ROW: 10%]"],
-      "fastestGrowingRegion": "[Region with growth like Ireland: +18% YoY]"
-    },
-    "competitorAnalysis": {
-      "marketPosition": "[Position like #2 in UK toy retail]",
-      "marketSharePercentage": "[Specific share like 23.5%]",
-      "competitiveAdvantages": ["[Specific advantages like 350+ store network, exclusive licenses]"]
-    },
-    
-    "customField_BusinessObjective1": "[Value derived from first business objective]",
-    "customField_BusinessObjective2": "[Value derived from second business objective]", 
-    "customField_BusinessObjective3": "[Value derived from third business objective]",
-    "customField_OrganizationalInitiative": "[Key initiative from business analysis]",
-    "customField_IndustryChallenge": "[Primary industry challenge identified]",
-    "customField_ExpectedOutcome": "[Expected business outcome from optimization]",
-    "customField_RevenueMetric": "[Primary revenue-related metric to track]",
-    "customField_OperationalMetric": "[Key operational performance metric]",
-    
-    "supplychainMetrics": {
-      "stockLevels": "[Current inventory like 2,450 units across 15 SKUs]",
-      "reorderPoint": "[Reorder threshold like 300 units]",
-      "supplierPerformance": "[Delivery reliability like 96.2% on-time]",
-      "inventoryTurnover": "[Turnover rate like 8.4x annually]"
-    },
-    "marketingMetrics": {
-      "cpaChannel": "[Cost per acquisition by channel like Google: £22, Facebook: £18]",
-      "roasChannel": "[Return on ad spend like Google: 4.2x, Facebook: 3.8x]",
-      "emailConversion": "[Email marketing conversion like 2.8%]",
-      "organicTrafficShare": "[Organic traffic percentage like 45%]"
-    },
-    "financialMetrics": {
-      "grossMargin": "[Specific gross margin like 42.5%]",
-      "netMargin": "[Net profit margin like 8.3%]",
-      "cashFlow": "[Monthly cash flow like +£125,000]",
-      "workingCapital": "[Working capital like £890,000]"
-    },
-    "serviceMetrics": {
-      "firstResponseTime": "[Support response time like 2.3 hours avg]",
-      "resolutionRate": "[Issue resolution like 87% first contact]",
-      "customerEffortScore": "[CES score like 3.2/5.0]",
-      "supportTicketVolume": "[Monthly tickets like 1,250]"
-    }
+    "customField_BusinessObjective1": "[Value from first C-suite objective]",
+    "customField_BusinessObjective2": "[Value from second C-suite objective]",
+    "customField_BusinessObjective3": "[Value from third C-suite objective]"
   }
 }
 
-🔥 VALIDATION REQUIREMENTS (Check before submitting): 🔥
-- ✅ EVERY step has "estimatedDuration" field (in minutes)
-- ✅ EVERY step has "businessRationale" explaining the duration
-- ✅ EVERY substep has "duration" field (in minutes)
-- ✅ Only Step 1 needs "timestamp" field (journey start time)
-- ✅ All durations are realistic for the industry identified in your C-suite analysis
-- ✅ Substep durations should add up to step estimatedDuration
-- ✅ Consider real-world timing patterns (quick online steps vs long processing steps)
-- ✅ ALL bracketed placeholders "[...]" must be replaced with actual values
-- ✅ ALL additionalFields must contain specific, relevant data derived from business analysis
-- ✅ Include realistic revenue, financial, and performance metrics for business intelligence
-- ✅ Custom fields must map directly to the three business objectives identified
-- ✅ Industry-specific metrics must be authentic to the identified industry
+Requirements:
+- Create exactly 6 industry-specific steps based on C-suite analysis
+- Every step needs estimatedDuration (minutes) and businessRationale
+- Every substep needs duration (minutes) - substeps must add up to step duration
+- ServiceName = StepName + 'Service' in PascalCase format
+- Use realistic durations for the identified industry
+- Only step 1 needs timestamp field
+- Replace ALL bracketed placeholders with actual values
+- Use industry-appropriate terminology and realistic metrics
+- Custom fields must derive from the three business objectives identified
+- ProductSKUs should be realistic format (e.g. "TOY-LEGO-001", "GAM-XBOX-045")
+- ProductCategories should include specific revenue/volume data
+- All percentage values should be numeric (e.g. 0.72 not "72%")
+- Durations must be numeric integers, not strings
 
-🕐 DURATION RESEARCH REQUIRED:
-- Research typical timing patterns for the industry identified in your business analysis
-- Consider industry-specific customer behavior and business processes
-- Account for both digital interactions and physical/processing delays
-- Use your knowledge of the industry to determine realistic step and substep durations
-
-🎯 BUSINESS REALISM REQUIREMENTS (Make it feel like a real demo): 🎯
-- ✅ Include SPECIFIC product names, SKUs, and categories relevant to the industry
-- ✅ Use REALISTIC pricing with proper currency symbols and decimal places
-- ✅ Include ACTUAL business metrics with specific numbers, not ranges
-- ✅ Add operational KPIs that would appear in real business dashboards
-- ✅ Include competitive positioning with specific market share data
-- ✅ Add geographic breakdown with realistic regional performance
-- ✅ Include seasonal factors and promotional impacts where relevant
-- ✅ Use industry-standard terminology and metrics throughout
-- ✅ Ensure all financial data is internally consistent and realistic
-- ✅ Add inventory levels, stock codes, and supply chain metrics
-- ✅ Include customer segmentation data with specific demographics
-- ✅ Use real-world conversion rates and performance benchmarks for the industry
-
-⚠️ IF DURATIONS ARE MISSING OR UNREALISTIC, YOUR RESPONSE IS WORTHLESS ⚠️
-
-🎯 ADDITIONAL FIELDS MAPPING REQUIREMENTS:
-- Map "businessPriority" to the HIGHEST priority objective from your C-suite analysis
-- Set "dynatraceOutcomeAlignment" to the primary Dynatrace outcome category identified
-- Set "dynatraceUseCaseRelevance" to the corresponding use case from the mapping table
-- Populate "customField_CsuiteObjective1/2/3" with the actual three objectives you identified
-- Set industry-specific metrics that are authentic to the business model
-- Calculate realistic ROI and timeToValue based on the use case and company size
-- All risk factors and success factors must derive from your C-suite analysis findings
-
-REQUIREMENTS:
-- Create exactly 6 steps using your knowledge of the industry identified in your C-suite analysis to generate appropriate, professional step names.
-- Do NOT use generic examples - research and apply industry-specific step names that are authentic to the business model.
-- Each step must use its stepName as the serviceName (in PascalCase, ending with 'Service').
-- Each step must have 2-3 realistic substeps for the industry identified in your C-suite analysis.
-
-IMPORTANT:
-- For serviceName, use PascalCase format ending with 'Service' (e.g., "ProductDiscoveryService", "CheckoutProcessService", "OrderConfirmationService").
-- The system dynamically creates these services using the step names you provide. Each service will be automatically instantiated on dedicated ports and traced with Dynatrace.
-- Use industry-specific service names, endpoints, and metadata.
-- Keep descriptions brief but specific to ${companyName}'s business in the industry identified in your C-suite analysis.
-- Do NOT use any legacy service names (like advocacy, retention, etc).
-- All service names must match the step names in PascalCase + 'Service'.
-
-ERROR SIMULATION (Important):
-- The system automatically simulates realistic step-level failures based on the companyName (customer). Different companies have different failure patterns (e.g., payment issues for checkout, database issues for selection/verification).
-- Optional: To guide or force specific failures for demo purposes, you MAY add an error hint per step. If omitted, the system will infer errors from the company profile.
-- If you provide hints, add one of the following to each step object:
-  // Example 1 (probabilistic)
-  "errorHint": { "type": "payment_gateway_timeout", "httpStatus": 503, "likelihood": 0.4 }
-  // Example 2 (deterministic)
-  "errorPlan": { "errorType": "database_connection_lost", "status": 500, "force": true }
-- Supported error types include: payment_gateway_timeout, inventory_service_down, authentication_failure, database_connection_lost, third_party_api_failure, rate_limit_exceeded, session_timeout, validation_error.
-- Supported statuses include HTTP 500, 503, 502, 429, 422, 408. Likelihood is 0..1, force overrides randomness.
-
-🚨 REMEMBER: NO TIMESTAMPS = REJECTED RESPONSE 🚨`;
+⚠️ NO TIMESTAMPS = REJECTED RESPONSE ⚠️`;
 
         console.log('Setting prompt text 1:', csuitePrompt.substring(0, 100) + '...');
         console.log('Setting prompt text 2:', journeyPrompt.substring(0, 100) + '...');
