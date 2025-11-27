@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: bizobs-external
+  namespace: default
+  labels:
+    app: bizobs
+    component: external-service
+subsets:
+- addresses:
+  - ip: 10.0.103.168  # EC2 instance internal IP
+  ports:
+  - port: 8080
+    name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bizobs-external
+  namespace: default
+  labels:
+    app: bizobs
+    component: external-service
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  # No selector - service will use the endpoints defined above
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bizobs-ingress
+  namespace: default
+  labels:
+    app: bizobs
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: bizobs.c469ba93-51c8-40eb-979d-1c9075a148a0.dynatrace.training
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bizobs-external
+            port:
+              number: 8080

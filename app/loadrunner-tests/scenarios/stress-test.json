@@ -1,0 +1,27 @@
+{
+  "scenario": "stress_test",
+  "description": "Stress testing - Beyond normal capacity limits",
+  "loadrunner_config": {
+    "vusers": 360,
+    "ramp_up_time": 1200,
+    "duration": 1800,
+    "ramp_down_time": 300,
+    "journey_interval": 5,
+    "think_time": 1000
+  },
+  "dynatrace_tags": {
+    "LSN": "BizObs_Stress_Test",
+    "LTN": "Capacity_Limit_Test",
+    "test_type": "stress",
+    "load_level": "extreme"
+  },
+  "error_simulation": {
+    "enabled": true,
+    "error_rate": 10
+  },
+  "monitoring": {
+    "response_time_threshold": 10000,
+    "error_rate_threshold": 15,
+    "throughput_target": 72.0
+  }
+}

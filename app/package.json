@@ -2,42 +2,14 @@
   "name": "business-observability-engine",
   "version": "0.1.0",
   "private": true,
-  "description": "AI-powered business observability platform with comprehensive Dynatrace integration, optimized for GitHub Codespaces deployment following the Dynatrace Enablement Framework",
+  "description": "Dynatrace Business Observability App with Smartscape-inspired UI and Node.js server",
   "main": "server.js",
   "type": "module",
-  "keywords": [
-    "dynatrace",
-    "business-observability",
-    "ai-powered",
-    "customer-journey",
-    "github-codespaces",
-    "enablement-framework",
-    "mcp-server",
-    "bizevents"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/lawrobar90/Partner-PowerUp-BizObs-App.git"
-  },
-  "author": "Dynatrace Partner PowerUp Program",
-  "license": "MIT",
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "framework": {
-    "name": "Dynatrace Enablement Framework",
-    "version": "2024.11",
-    "documentation": "https://dynatrace-wwse.github.io/codespaces-framework/"
-  },
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "setup": "./quick-setup.sh",
-    "env": "./selectEnvironment",
-    "codespaces": "./quick-setup.sh",
+    "dev": "NODE_ENV=development node server.js",
     "validate": "node scripts/validate-startup.cjs",
-    "restart-services": "curl -X POST http://localhost:${PORT:-8080}/api/admin/services/restart-all",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "restart-services": "curl -X POST http://localhost:${PORT:-8080}/api/admin/services/restart-all"
   },
   "dependencies": {
     "compression": "^1.7.4",

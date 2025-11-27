@@ -423,22 +423,22 @@ export async function ensureServiceRunning(stepName, companyContext = {}) {
       console.error(`[service-manager] Failed to start service for step ${stepName}:`, e.message);
     }
   } else {
-    console.log(`[service-manager] Service ${serviceName} already running`);
+    console.log(`[service-manager] Service ${internalServiceName} already running`);
     // Verify the service is actually responsive
-    const meta = childServiceMeta[serviceName];
+    const meta = childServiceMeta[internalServiceName];
     if (meta && meta.port) {
       const isReady = await isServiceReady(meta.port, 1000);
       if (!isReady) {
-        console.log(`[service-manager] Service ${serviceName} not responding, restarting...`);
+        console.log(`[service-manager] Service ${internalServiceName} not responding, restarting...`);
         try { existing.kill('SIGTERM'); } catch {}
-        delete childServices[serviceName];
-        delete childServiceMeta[serviceName];
+        delete childServices[internalServiceName];
+        delete childServiceMeta[internalServiceName];
         // Free the port allocation and return to pool
-        if (portAllocations.has(serviceName)) {
-          const port = portAllocations.get(serviceName);
-          portAllocations.delete(serviceName);
+        if (portAllocations.has(internalServiceName)) {
+          const port = portAllocations.get(internalServiceName);
+          portAllocations.delete(internalServiceName);
           portPool.add(port);
-          console.log(`[service-manager] Freed port ${port} for unresponsive service ${serviceName}`);
+          console.log(`[service-manager] Freed port ${port} for unresponsive service ${internalServiceName}`);
         }
         // Restart the service
         return ensureServiceRunning(stepName, companyContext);
@@ -447,7 +447,7 @@ export async function ensureServiceRunning(stepName, companyContext = {}) {
   }
   
   // Return port number
-  const meta = childServiceMeta[serviceName];
+  const meta = childServiceMeta[internalServiceName];
   return meta?.port;
 }
 

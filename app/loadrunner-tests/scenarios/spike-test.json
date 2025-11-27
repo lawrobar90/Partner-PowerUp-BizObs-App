@@ -1,0 +1,27 @@
+{
+  "scenario": "spike_test",
+  "description": "Spike testing - Sudden traffic surge simulation",
+  "loadrunner_config": {
+    "vusers": 600,
+    "ramp_up_time": 60,
+    "duration": 300,
+    "ramp_down_time": 60,
+    "journey_interval": 2,
+    "think_time": 500
+  },
+  "dynatrace_tags": {
+    "LSN": "BizObs_Spike_Test",
+    "LTN": "Traffic_Surge_Test",
+    "test_type": "spike",
+    "load_level": "peak"
+  },
+  "error_simulation": {
+    "enabled": true,
+    "error_rate": 15
+  },
+  "monitoring": {
+    "response_time_threshold": 15000,
+    "error_rate_threshold": 25,
+    "throughput_target": 300.0
+  }
+}

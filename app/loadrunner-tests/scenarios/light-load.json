@@ -1,0 +1,27 @@
+{
+  "scenario": "light_load",
+  "description": "Light load testing - Baseline performance validation",
+  "loadrunner_config": {
+    "vusers": 20,
+    "ramp_up_time": 300,
+    "duration": 600,
+    "ramp_down_time": 60,
+    "journey_interval": 30,
+    "think_time": 5000
+  },
+  "dynatrace_tags": {
+    "LSN": "BizObs_Light_Load",
+    "LTN": "Performance_Baseline_Test",
+    "test_type": "baseline",
+    "load_level": "light"
+  },
+  "error_simulation": {
+    "enabled": false,
+    "error_rate": 0
+  },
+  "monitoring": {
+    "response_time_threshold": 2000,
+    "error_rate_threshold": 1,
+    "throughput_target": 0.5
+  }
+}

@@ -1,5 +1,14 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  dynatrace.sendBizEvent('page_load', {"page": "1. About"});
+  try {
+    dynatrace.sendBizEvent('page_view', {
+      "page": "BizObs Journey Simulator - About",
+      "section": "Documentation",
+      "application": "Dynatrace BizObs Journey Simulator",
+      "url": window.location.href
+    });
+  } catch (error) {
+    console.log("BizEvent tracking not available:", error);
+  }
 });
 </script>
