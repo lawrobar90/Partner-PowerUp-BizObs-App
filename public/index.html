@@ -476,6 +476,15 @@
                   <input id="domain" class="form-input-enhanced w-full" name="website" placeholder="e.g., shopmart.com, techcorp.io" />
                   <p class="text-sm text-gray-400 mt-2 ml-11">Website domain for the customer journey simulation</p>
                 </div>
+
+                <div class="space-y-2">
+                  <label for="journeyRequirements" class="block text-lg font-bold text-dtcyan mb-3 flex items-center">
+                    <span class="flex items-center justify-center w-8 h-8 bg-dtgreen text-black rounded-full mr-3 text-sm font-bold">🎯</span>
+                    Journey Requirements
+                  </label>
+                  <textarea id="journeyRequirements" class="form-input-enhanced w-full h-24 resize-y" name="requirements" placeholder="e.g., Order journey from website to delivery, Banking loan application process, Healthcare appointment booking flow"></textarea>
+                  <p class="text-sm text-gray-400 mt-2 ml-11">Describe the specific customer journey scenario you want to simulate</p>
+                </div>
             
                 
                 <div class="pt-6">
@@ -1433,6 +1442,7 @@
     window.validateAndProceed = function() {
       const companyName = safeGetElementValue('companyName').trim();
       const domain = safeGetElementValue('domain').trim();
+      const journeyRequirements = safeGetElementValue('journeyRequirements').trim();
       
       if (!companyName) {
         alert('Please enter a company name');
@@ -1440,6 +1450,10 @@
       }
       if (!domain) {
         alert('Please enter a website domain');  
+        return;
+      }
+      if (!journeyRequirements) {
+        alert('Please describe your journey requirements');  
         return;
       }
       
@@ -4155,8 +4169,10 @@
       try {
         const companyName = document.getElementById('companyName')?.value || '[Company Name]';
         const domain = document.getElementById('domain')?.value || '[company-domain.com]';
+        const journeyRequirements = document.getElementById('journeyRequirements')?.value || '[Journey Requirements]';
         
         console.log('Debug - Company:', companyName, 'Domain:', domain);
+        console.log('Debug - Journey Requirements:', journeyRequirements);
         console.log('Generating prompts...');
 
 
@@ -4186,6 +4202,10 @@ Format the response as a structured analysis suitable for understanding the comp
 
         // Generate Copilot Prompt 2: Customer Journey with reference to business analysis
         const journeyPrompt = `Create a customer journey JSON for ${companyName} (${domain}) based on your previous analysis.
+
+🎯 SPECIFIC JOURNEY REQUIREMENTS: "${journeyRequirements}"
+
+The customer journey MUST specifically model and simulate the scenario described in the journey requirements above. Design the journey steps, durations, and business logic to directly address this specific use case while maintaining industry best practices and realistic durations.
 
 ⚠️ CRITICAL: Must include duration fields or response will be rejected ⚠️
 
