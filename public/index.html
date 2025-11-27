@@ -242,7 +242,7 @@
       <div class="mb-6 p-3 bg-dtgray bg-opacity-40 rounded-lg border border-dtcyan">
         <h3 class="text-base font-bold text-dtcyan mb-2">💾 Save Current Configuration</h3>
         <input id="savePromptName" placeholder="Give this prompt a name..." class="w-full p-3 mb-2 rounded-lg bg-dtgray text-white border border-dtcyan focus:ring-2 focus:ring-dtcyan text-sm" />
-        <button id="saveCurrentPrompt" class="w-full bg-dtgreen text-black px-4 py-3 rounded-lg font-bold hover:bg-dtcyan transition-all text-sm">💾 Save Current State</button>
+        <button id="saveCurrentPrompt" onclick="window.saveCurrentConfiguration()" class="w-full bg-dtgreen text-black px-4 py-3 rounded-lg font-bold hover:bg-dtcyan transition-all text-sm">💾 Save Current State</button>
         <div id="saveStatus" class="mt-2 text-xs text-center hidden">
           <span class="text-dtcyan">☁️ Saving to server...</span>
         </div>
@@ -2008,12 +2008,14 @@
       console.log('💾 Global save function called');
       
       const nameInput = document.getElementById('savePromptName');
-      const name = nameInput ? nameInput.value.trim() : '';
+      let name = nameInput ? nameInput.value.trim() : '';
       
+      // If no name provided, generate one based on company and timestamp
       if (!name) {
-        alert('Please enter a name for this prompt configuration');
-        if (nameInput) nameInput.focus();
-        return;
+        const companyName = document.getElementById('companyName')?.value.trim() || 'Unknown';
+        const timestamp = new Date().toLocaleString();
+        name = `${companyName} - ${timestamp}`;
+        console.log('Auto-generated name:', name);
       }
 
       try {
@@ -2031,6 +2033,8 @@
             journeyRequirements: getElementValue('journeyRequirements') || getElementValue('customSteps'),
             copilotResponse: getElementValue('copilotResponse'),
             copilotResponseStep2: getElementValue('copilotResponse-step2'),
+            promptText1: getElementValue('promptText1-step2'),
+            promptText2: getElementValue('promptText2-step2'),
             journeyType: getElementValue('journeyType'),
             details: getElementValue('details'),
             customSteps: getElementValue('customSteps'),
