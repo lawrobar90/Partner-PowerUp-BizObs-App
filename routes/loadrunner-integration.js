@@ -25,11 +25,16 @@ const activeTests = new Map();
 
 /**
  * Generate LoadRunner script from JSON journey configuration - Sequential Load Simulation
+ * Uses the same journey format as single simulation but generates multiple customers
  */
 function generateLoadRunnerScript(journeyConfig, testConfig, errorSimulationEnabled = true) {
-  const { companyName, domain, steps = [] } = journeyConfig;
+  const { companyName, domain, steps = [], additionalFields = {} } = journeyConfig;
   const testId = crypto.randomUUID();
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  
+  // Generate LSN, TSN, LTN based on company and test config
+  const LSN = `BizObs_${companyName.replace(/\s+/g, '')}_${domain}_Journey`;
+  const LTN = `${companyName.replace(/\s+/g, '')}_LoadTest_${timestamp.split('T')[0].replace(/-/g, '')}`;
   
   const scriptHeader = `/*
  * LoadRunner Script Generated from BizObs Journey Configuration
@@ -39,16 +44,20 @@ function generateLoadRunnerScript(journeyConfig, testConfig, errorSimulationEnab
  * Test ID: ${testId}
  * 
  * Dynatrace LoadRunner Integration with Request Tagging
- * LSN: Load Script Name (identifies the script)
- * TSN: Test Step Name (identifies individual steps)
- * LTN: Load Test Name (identifies the test execution)
+ * LSN: ${LSN} (Load Script Name)
+ * TSN: Dynamic per step (Test Step Names)
+ * LTN: ${LTN} (Load Test Name)
  */
 
 #include "web_api.h"
 #include "lrun.h"
 
-// Dynatrace integration variables
+// Global Dynatrace integration variables
 char dt_test_header[1024];
+char correlation_id[64];
+char customer_id[64];
+char session_id[64];
+char trace_id[64];
 char correlation_id[64];
 char customer_id[64];
 char session_id[64];
@@ -114,54 +123,64 @@ int Action() {
     int vuser_id = lr_get_vuser_id();
     
     // Generate unique correlation ID for each iteration
-    sprintf(correlation_id, "LR_%s_%d_%d_%d", "{LTN}", vuser_id, iteration, (int)time(NULL));
+    sprintf(correlation_id, "LR_${LTN}_%d_%d_%d", vuser_id, iteration, (int)time(NULL));
     lr_save_string(correlation_id, "correlation_id");
     
-    // Generate customer and session IDs
-    sprintf(customer_id, "customer_%d_%d", vuser_id, iteration);
-    sprintf(session_id, "session_%s_%d_%d", "{LSN}", vuser_id, iteration);
+    // Generate customer and session IDs with unique values per test run
+    sprintf(customer_id, "customer_%d_%d_%d", vuser_id, iteration, (int)time(NULL) % 10000);
+    sprintf(session_id, "session_${LSN}_%d_%d", vuser_id, iteration);
     sprintf(trace_id, "trace_%s_%d", correlation_id, (int)time(NULL));
     
     lr_save_string(customer_id, "customer_id");
     lr_save_string(session_id, "session_id");
     lr_save_string(trace_id, "trace_id");
     
+    // Set up LoadRunner parameters for LSN/TSN/LTN
+    lr_save_string("${LSN}", "LSN");  // Load Script Name
+    lr_save_string("${LTN}", "LTN");  // Load Test Name
+    
     lr_start_transaction("Full_Customer_Journey");
-    lr_output_message("Starting journey for customer: {customer_name} ({customer_segment})");
+    lr_output_message("Starting journey for customer: {customer_name} ({customer_segment}) - Journey: %s", correlation_id);
 `;
 
-  // Generate step-specific transactions with full demo data
+  // Generate step-specific transactions using same format as single simulation
   const stepTransactions = steps.map((step, index) => {
     const stepName = step.stepName || step.name || `Step_${index + 1}`;
     const stepDescription = step.description || step.stepDescription || '';
-    const delay = step.thinkTime || step.delay || 2000;
+    const serviceName = step.serviceName || `${stepName}Service`;
+    const estimatedDuration = step.estimatedDuration || step.duration || 5000;
+    const substeps = step.substeps || [];
+    
+    // Convert duration to seconds for think time
+    const thinkTimeSeconds = Math.floor(estimatedDuration / 1000) || 5;
     
     return `
-    // ${stepName}: ${stepDescription}
-    lr_save_string("${stepName}", "TSN");  // Test Step Name
+    // Step ${index + 1}: ${stepName} - ${stepDescription}
+    lr_save_string("${stepName}", "TSN");  // Test Step Name for this step
     
-    // Build comprehensive Dynatrace test header with LSN, TSN, LTN
+    // Build X-dynaTrace header with LSN, TSN, LTN (same format as single simulation)
     sprintf(dt_test_header, "TSN=%s;LSN=%s;LTN=%s;VU=%d;SI=LoadRunner;PC=BizObs-Demo;AN=${companyName};CID=%s", 
-            "{TSN}", "{LSN}", "{LTN}", lr_get_vuser_id(), "{correlation_id}");
+            "${stepName}", "${LSN}", "${LTN}", lr_get_vuser_id(), "{correlation_id}");
     
-    lr_start_transaction("{TSN}");
-    lr_output_message("Executing step: {TSN} for {customer_name}");
+    lr_start_transaction("${stepName}");
+    lr_output_message("Executing step: ${stepName} (Service: ${serviceName}) for {customer_name}");
     
-    // Add comprehensive headers for Dynatrace correlation and demo data
-    web_add_header("x-dynatrace-test", dt_test_header);
+    // Add all headers exactly as single simulation does
+    web_add_header("X-dynaTrace", dt_test_header);
     web_add_header("x-correlation-id", "{correlation_id}");
     web_add_header("x-customer-id", "{customer_id}");
     web_add_header("x-session-id", "{session_id}");
     web_add_header("x-trace-id", "{trace_id}");
-    web_add_header("x-step-name", "{TSN}");
+    web_add_header("x-step-name", "${stepName}");
+    web_add_header("x-service-name", "${serviceName}");
     web_add_header("x-customer-segment", "{customer_segment}");
     web_add_header("x-traffic-source", "{traffic_source}");
     web_add_header("x-test-iteration", lr_eval_string("{pIteration}"));
     web_add_header("Content-Type", "application/json");
     web_add_header("User-Agent", "LoadRunner-BizObs-Agent/1.0");
     
-    // Comprehensive journey step payload with full demo data
-    web_custom_request("{TSN}_Journey_Step",
+    // Use exact journey format as single simulation - with journey.steps structure
+    web_custom_request("${stepName}_Journey_Step",
         "URL=http://localhost:8080/api/journey-simulation/simulate-journey",
         "Method=POST",
         "Resource=0",
@@ -172,42 +191,43 @@ int Action() {
         "\\"customerId\\": \\"{customer_id}\\","
         "\\"sessionId\\": \\"{session_id}\\","
         "\\"traceId\\": \\"{trace_id}\\","
-        "\\"companyName\\": \\"${companyName}\\","
-        "\\"domain\\": \\"${domain}\\","
-        "\\"currentStep\\": \\"{TSN}\\","
-        "\\"stepIndex\\": ${index},"
-        "\\"thinkTimeMs\\": ${delay},"
-        "\\"loadTest\\": true,"
-        "\\"customerProfile\\": {"
-        "  \\"name\\": \\"{customer_name}\\","
-        "  \\"email\\": \\"{customer_email}\\","
-        "  \\"segment\\": \\"{customer_segment}\\","
-        "  \\"userId\\": \\"{customer_id}\\","
-        "  \\"deviceType\\": \\"desktop\\","
-        "  \\"location\\": \\"US-East\\""
-        "},"
-        "\\"traceMetadata\\": {"
-        "  \\"correlationId\\": \\"{correlation_id}\\","
-        "  \\"sessionId\\": \\"{session_id}\\","
-        "  \\"traceId\\": \\"{trace_id}\\","
-        "  \\"testIteration\\": \\"{pIteration}\\","
-        "  \\"virtualUser\\": \\"" + lr_get_vuser_id() + "\\","
-        "  \\"loadTestName\\": \\"{LTN}\\","
-        "  \\"loadScriptName\\": \\"{LSN}\\","
-        "  \\"testStepName\\": \\"{TSN}\\","
-        "  \\"trafficSource\\": \\"{traffic_source}\\","
-        "  \\"timestamp\\": \\"" + lr_eval_string("{TimeNow}") + "\\""
-        "},"
-        "\\"additionalFields\\": {"
-        "  \\"businessUnit\\": \\"LoadTest\\","
-        "  \\"environment\\": \\"Performance\\","
-        "  \\"testType\\": \\"LoadRunner\\","
-        "  \\"priority\\": \\"High\\","
-        "  \\"campaign\\": \\"{traffic_source}\\""
-        "},"
-        "\\"errorSimulationEnabled\\": ${errorSimulationEnabled ? 'true' : 'false'}"
+        "\\"chained\\": true,"
+        "\\"thinkTimeMs\\": 250,"
+        "\\"errorSimulationEnabled\\": ${errorSimulationEnabled ? 'true' : 'false'},"
+        "\\"journey\\": {"
+        "  \\"journeyId\\": \\"{correlation_id}\\","
+        "  \\"companyName\\": \\"${companyName}\\","
+        "  \\"domain\\": \\"${domain}\\","
+        "  \\"steps\\": ["
+        "    {"
+        "      \\"stepNumber\\": ${index + 1},"
+        "      \\"stepName\\": \\"${stepName}\\","
+        "      \\"serviceName\\": \\"${serviceName}\\","
+        "      \\"description\\": \\"${stepDescription}\\","
+        "      \\"estimatedDuration\\": ${estimatedDuration},"
+        "      \\"substeps\\": ${JSON.stringify(substeps)}"
+        "    }"
+        "  ],"
+        "  \\"additionalFields\\": ${JSON.stringify(additionalFields || {})},"
+        "  \\"customerProfile\\": {"
+        "    \\"name\\": \\"{customer_name}\\","
+        "    \\"email\\": \\"{customer_email}\\","
+        "    \\"segment\\": \\"{customer_segment}\\","
+        "    \\"userId\\": \\"{customer_id}\\","
+        "    \\"deviceType\\": \\"desktop\\","
+        "    \\"location\\": \\"US-East\\""
+        "  }"
+        "}"
         "}",
         LAST);
+    
+    // Check response for errors and handle accordingly
+    if (atoi(lr_eval_string("{status}")) >= 400) {
+        lr_error_message("Step ${stepName} failed with status: %s", lr_eval_string("{status}"));
+        lr_end_transaction("${stepName}", LR_FAIL);
+    } else {
+        lr_end_transaction("${stepName}", LR_PASS);
+    }
     
     // Clear headers for next request
     web_cleanup_cookies();
@@ -314,19 +334,29 @@ function generateCurlSimulation(journeyConfig, testConfig, testDir) {
   const testId = crypto.randomUUID();
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   
-  // Demo customer data for realistic simulation
+  // Demo customer data for realistic simulation - different customers for each test
   const customerProfiles = [
-    { name: "Sarah Johnson", email: "sarah.johnson@email.com", segment: "Premium" },
-    { name: "Michael Chen", email: "michael.chen@email.com", segment: "Standard" },
-    { name: "Emma Rodriguez", email: "emma.rodriguez@email.com", segment: "Budget" },
-    { name: "David Kim", email: "david.kim@email.com", segment: "Enterprise" },
-    { name: "Ashley Thompson", email: "ashley.thompson@email.com", segment: "SMB" },
-    { name: "Robert Martinez", email: "robert.martinez@email.com", segment: "Startup" },
-    { name: "Jennifer Lee", email: "jennifer.lee@email.com", segment: "Premium" },
-    { name: "Christopher Brown", email: "christopher.brown@email.com", segment: "Standard" },
-    { name: "Amanda Wilson", email: "amanda.wilson@email.com", segment: "Budget" },
-    { name: "Joshua Garcia", email: "joshua.garcia@email.com", segment: "Enterprise" }
+    { name: "Sarah Johnson", email: "sarah.johnson@email.com", segment: "Premium", source: "Google_Ads" },
+    { name: "Michael Chen", email: "michael.chen@email.com", segment: "Standard", source: "Facebook_Campaign" },
+    { name: "Emma Rodriguez", email: "emma.rodriguez@email.com", segment: "Budget", source: "Email_Newsletter" },
+    { name: "David Kim", email: "david.kim@email.com", segment: "Enterprise", source: "Direct_Traffic" },
+    { name: "Ashley Thompson", email: "ashley.thompson@email.com", segment: "SMB", source: "Referral_Partner" },
+    { name: "Robert Martinez", email: "robert.martinez@email.com", segment: "Startup", source: "Organic_Search" },
+    { name: "Jennifer Lee", email: "jennifer.lee@email.com", segment: "Premium", source: "Social_Media" },
+    { name: "Christopher Brown", email: "christopher.brown@email.com", segment: "Standard", source: "Content_Marketing" },
+    { name: "Amanda Wilson", email: "amanda.wilson@email.com", segment: "Budget", source: "Google_Ads" },
+    { name: "Joshua Garcia", email: "joshua.garcia@email.com", segment: "Enterprise", source: "Facebook_Campaign" },
+    { name: "Melissa Davis", email: "melissa.davis@email.com", segment: "Premium", source: "Email_Newsletter" },
+    { name: "Andrew Miller", email: "andrew.miller@email.com", segment: "Standard", source: "Direct_Traffic" },
+    { name: "Jessica Anderson", email: "jessica.anderson@email.com", segment: "SMB", source: "Referral_Partner" },
+    { name: "Kevin Taylor", email: "kevin.taylor@email.com", segment: "Startup", source: "Organic_Search" },
+    { name: "Lauren Thomas", email: "lauren.thomas@email.com", segment: "Premium", source: "Social_Media" },
+    { name: "Brian Jackson", email: "brian.jackson@email.com", segment: "Standard", source: "Content_Marketing" }
   ];
+
+  // Generate LSN/LTN for consistent Dynatrace tagging
+  const LSN = `BizObs_${companyName.replace(/\s+/g, '')}_${domain}_Journey`;
+  const LTN = `${companyName.replace(/\s+/g, '')}_LoadTest_${timestamp.split('T')[0].replace(/-/g, '')}`;
 
   const trafficSources = [
     "Google_Ads", "Facebook_Campaign", "Email_Newsletter", "Direct_Traffic",
@@ -396,95 +426,72 @@ execute_customer_journey() {
     
     echo "$(date): Journey \$journey_number - Customer: \$customer_name - Correlation: \$correlation_id" >> "$log_file"
         
-        # Simulate each journey step with full Dynatrace tagging
-${steps.map((step, index) => {
-  const stepName = step.stepName || step.name || `Step_${index + 1}`;
-  const delay = Math.floor((step.thinkTime || step.delay || 2000) / 1000);
-  
-  return `        
-        # ${stepName} - Step ${index + 1}
-        TSN="${stepName}"
+        # Execute complete journey using same format as single simulation
+        JOURNEY_PAYLOAD=$(cat <<EOF
+{
+  "journeyId": "\$correlation_id",
+  "customerId": "\$customer_id", 
+  "sessionId": "\$session_id",
+  "traceId": "\$trace_id",
+  "chained": true,
+  "thinkTimeMs": 250,
+  "errorSimulationEnabled": ${errorSimulationEnabled || false},
+  "journey": {
+    "journeyId": "\$correlation_id",
+    "companyName": "${companyName}",
+    "domain": "${domain}",
+    "steps": ${JSON.stringify(steps)},
+    "additionalFields": ${JSON.stringify(journeyConfig.additionalFields || {})},
+    "customerProfile": {
+      "name": "\$customer_name",
+      "email": "\$customer_email", 
+      "segment": "\$customer_segment",
+      "userId": "\$customer_id",
+      "deviceType": "desktop",
+      "location": "US-East"
+    }
+  }
+}
+EOF
+)
         
-        # Build comprehensive Dynatrace test header following LoadRunner best practices
-        DYNATRACE_HEADER="TSN=\$TSN;LSN=\$LSN;LTN=\$LTN;VU=\$journey_number;SI=CurlSimulation;PC=BizObs-Demo;AN=${companyName};CID=\$correlation_id"
+        # Build X-dynaTrace header with LSN/TSN/LTN (same format as single simulation)
+        DYNATRACE_HEADER="TSN=Full_Journey;LSN=${LSN};LTN=${LTN};VU=\$journey_number;SI=CurlSimulation;PC=BizObs-Demo;AN=${companyName};CID=\$correlation_id"
         
-        echo "$(date): Journey \$journey_number executing \$TSN for \$customer_name" >> "$log_file"
+        echo "$(date): Journey \$journey_number starting full journey for \$customer_name" >> "$log_file"
         
         RESPONSE_TIME_START=$(date +%s%3N)
         HTTP_CODE=$(curl -s -w "%{http_code}" -o /dev/null \\
             -X POST \\
             -H "Content-Type: application/json" \\
-            -H "x-dynatrace-test: \$DYNATRACE_HEADER" \\
+            -H "X-dynaTrace: \$DYNATRACE_HEADER" \\
             -H "x-correlation-id: \$correlation_id" \\
             -H "x-customer-id: \$customer_id" \\
             -H "x-session-id: \$session_id" \\
             -H "x-trace-id: \$trace_id" \\
-            -H "x-step-name: \$TSN" \\
             -H "x-customer-segment: \$customer_segment" \\
             -H "x-traffic-source: \$traffic_source" \\
             -H "x-test-iteration: \$journey_number" \\
             -H "User-Agent: LoadRunner-BizObs-Agent/1.0" \\
-            -d '{
-                "journeyId": "'\$correlation_id'",
-                "customerId": "'\$customer_id'",
-                "sessionId": "'\$session_id'",
-                "traceId": "'\$trace_id'",
-                "companyName": "'$COMPANY_NAME'",
-                "domain": "'$DOMAIN'",
-                "currentStep": "'\$TSN'",
-                "stepIndex": ${index},
-                "thinkTimeMs": ${step.thinkTime || step.delay || 2000},
-                "loadTest": true,
-                "customerProfile": {
-                    "name": "'\$customer_name'",
-                    "email": "'\$customer_email'",
-                    "segment": "'\$customer_segment'",
-                    "userId": "'\$customer_id'",
-                    "deviceType": "desktop",
-                    "location": "US-East"
-                },
-                "traceMetadata": {
-                    "correlationId": "'\$correlation_id'",
-                    "sessionId": "'\$session_id'",
-                    "traceId": "'\$trace_id'",
-                    "testIteration": "'\$journey_number'",
-                    "virtualUser": "'\$journey_number'",
-                    "loadTestName": "'\$LTN'",
-                    "loadScriptName": "'\$LSN'",
-                    "testStepName": "'\$TSN'",
-                    "trafficSource": "'\$traffic_source'",
-                    "timestamp": "'$(date -Iseconds)'"
-                },
-                "additionalFields": {
-                    "businessUnit": "LoadTest",
-                    "environment": "Performance",
-                    "testType": "LoadRunner",
-                    "priority": "High",
-                    "campaign": "'\$traffic_source'"
-                }
-            }' \\
+            -d "\$JOURNEY_PAYLOAD" \\
             "\$BASE_URL/api/journey-simulation/simulate-journey")
         
         RESPONSE_TIME_END=$(date +%s%3N)
         RESPONSE_TIME=$((RESPONSE_TIME_END - RESPONSE_TIME_START))
         
-        echo "$(date): Journey \$journey_number - \$TSN - HTTP: \$HTTP_CODE - Response Time: \${RESPONSE_TIME}ms - Correlation: \$correlation_id" >> "$log_file"
-        
-        # Think time between steps
-        sleep ${delay}`;
-}).join('\n')}
+        echo "$(date): Journey \$journey_number - Full_Journey - HTTP: \$HTTP_CODE - Response Time: \${RESPONSE_TIME}ms - Correlation: \$correlation_id" >> "$log_file"
         
     # Send journey completion event
     curl -s -o /dev/null \\
         -X POST \\
         -H "Content-Type: application/json" \\
-        -H "x-dynatrace-test: TSN=Journey_Completion;LSN=\$LSN;LTN=\$LTN;VU=\$journey_number;SI=CurlSimulation" \\
+        -H "X-dynaTrace: TSN=Journey_Completion;LSN=${LSN};LTN=${LTN};VU=\$journey_number;SI=CurlSimulation;PC=BizObs-Demo;AN=${companyName};CID=\$correlation_id" \\
         -H "x-correlation-id: \$correlation_id" \\
         -d '{
             "eventType": "journey_completed",
             "correlationId": "'\$correlation_id'",
             "customerId": "'\$customer_id'",
-            "companyName": "'$COMPANY_NAME'",
+            "companyName": "${companyName}",
             "customerName": "'\$customer_name'",
             "customerSegment": "'\$customer_segment'",
             "totalSteps": ${steps.length},
