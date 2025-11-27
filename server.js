@@ -16,6 +16,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import { randomBytes } from 'crypto';
+import fs from 'fs/promises';
+import { existsSync } from 'fs';
 import { ensureServiceRunning, getServiceNameFromStep, getServicePort, stopAllServices, stopCustomerJourneyServices, getChildServices, getChildServiceMeta, performHealthCheck, getServiceStatus } from './services/service-manager.js';
 
 import journeyRouter from './routes/journey.js';
@@ -26,6 +28,7 @@ import flowRouter from './routes/flow.js';
 import serviceProxyRouter from './routes/serviceProxy.js';
 import journeySimulationRouter from './routes/journey-simulation.js';
 import configRouter from './routes/config.js';
+import loadrunnerRouter from './routes/loadrunner-integration.js';
 import { injectDynatraceMetadata, injectErrorMetadata, propagateMetadata, validateMetadata } from './middleware/dynatrace-metadata.js';
 import { performComprehensiveHealthCheck } from './middleware/observability-hygiene.js';
 // MongoDB integration removed
@@ -320,6 +323,7 @@ app.use('/api/flow', flowRouter);
 app.use('/api/service-proxy', serviceProxyRouter);
 app.use('/api/journey-simulation', journeySimulationRouter);
 app.use('/api/config', configRouter);
+app.use('/api/loadrunner', loadrunnerRouter);
 
 // Internal business event endpoint for OneAgent capture
 app.post('/api/internal/bizevent', (req, res) => {
@@ -745,6 +749,202 @@ app.post('/api/admin/new-customer-journey', (req, res) => {
   }
 });
 
+// Configuration Persistence Endpoints
+const configDir = path.join(__dirname, 'saved-configs');
+
+// Ensure config directory exists
+async function ensureConfigDir() {
+  try {
+    if (!existsSync(configDir)) {
+      await fs.mkdir(configDir, { recursive: true });
+      console.log(`📁 Created config directory: ${configDir}`);
+    }
+  } catch (error) {
+    console.error('❌ Error creating config directory:', error);
+  }
+}
+
+// Initialize config directory on startup
+ensureConfigDir();
+
+// Get all saved configurations
+app.get('/api/admin/configs', async (req, res) => {
+  try {
+    await ensureConfigDir();
+    const files = await fs.readdir(configDir);
+    const configs = [];
+    
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        try {
+          const filePath = path.join(configDir, file);
+          const data = await fs.readFile(filePath, 'utf8');
+          const config = JSON.parse(data);
+          configs.push({
+            id: config.id,
+            name: config.name,
+            companyName: config.companyName,
+            timestamp: config.timestamp,
+            filename: file
+          });
+        } catch (error) {
+          console.warn(`⚠️ Error reading config file ${file}:`, error.message);
+        }
+      }
+    }
+    
+    // Sort by timestamp (newest first)
+    configs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    res.json({
+      ok: true,
+      configs: configs,
+      count: configs.length,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting configs:', error);
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Save a configuration
+app.post('/api/admin/configs', async (req, res) => {
+  try {
+    await ensureConfigDir();
+    const config = req.body;
+    
+    // Validate required fields
+    if (!config.name || !config.id) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Missing required fields: name and id',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Add server timestamp
+    config.serverTimestamp = new Date().toISOString();
+    config.version = '1.0';
+    
+    // Create filename from ID
+    const filename = `config-${config.id}.json`;
+    const filePath = path.join(configDir, filename);
+    
+    // Save to file
+    await fs.writeFile(filePath, JSON.stringify(config, null, 2));
+    
+    console.log(`💾 Saved configuration "${config.name}" to ${filename}`);
+    
+    res.json({
+      ok: true,
+      message: `Configuration "${config.name}" saved successfully`,
+      id: config.id,
+      filename: filename,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Error saving config:', error);
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Get a specific configuration
+app.get('/api/admin/configs/:id', async (req, res) => {
+  try {
+    const configId = req.params.id;
+    const filename = `config-${configId}.json`;
+    const filePath = path.join(configDir, filename);
+    
+    // Check if file exists
+    if (!existsSync(filePath)) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Configuration not found',
+        id: configId,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Read and parse config
+    const data = await fs.readFile(filePath, 'utf8');
+    const config = JSON.parse(data);
+    
+    res.json({
+      ok: true,
+      config: config,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting config:', error);
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Delete a configuration
+app.delete('/api/admin/configs/:id', async (req, res) => {
+  try {
+    const configId = req.params.id;
+    const filename = `config-${configId}.json`;
+    const filePath = path.join(configDir, filename);
+    
+    // Check if file exists
+    if (!existsSync(filePath)) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Configuration not found',
+        id: configId,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Read config name for logging
+    let configName = 'Unknown';
+    try {
+      const data = await fs.readFile(filePath, 'utf8');
+      const config = JSON.parse(data);
+      configName = config.name;
+    } catch (e) {
+      // Ignore error, just use Unknown
+    }
+    
+    // Delete file
+    await fs.unlink(filePath);
+    
+    console.log(`🗑️ Deleted configuration "${configName}" (${filename})`);
+    
+    res.json({
+      ok: true,
+      message: `Configuration "${configName}" deleted successfully`,
+      id: configId,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Error deleting config:', error);
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Simple metrics endpoint to silence polling 404s
 app.get('/api/metrics', (req, res) => {
   res.setHeader('Content-Type', 'text/plain');
@@ -889,7 +1089,7 @@ server.listen(PORT, () => {
     console.error('❌ Critical error during service startup:', error.message);
   });
   
-  // Start periodic health monitoring every 30 seconds
+  // Start periodic health monitoring every 15 minutes
   const healthMonitor = setInterval(async () => {
     try {
       const healthCheck = await performHealthCheck();
@@ -902,7 +1102,7 @@ server.listen(PORT, () => {
     } catch (error) {
       console.error('❌ Health monitor error:', error.message);
     }
-  }, 30000);
+  }, 900000); // 15 minutes = 900,000 milliseconds
   
   // Store health monitor for cleanup
   server.healthMonitor = healthMonitor;

@@ -9,8 +9,13 @@ A comprehensive business observability application optimized for Dynatrace ACE-B
 #### GitHub Codespaces (Recommended)
 1. Click **"Code"** → **"Codespaces"** → **"Create codespace on main"**
 2. Wait for environment to load (auto-installs dependencies)
-3. Run: `npm start`
-4. Open forwarded port 8080 in browser
+3. **Optional**: Set Dynatrace credentials in Codespace secrets:
+   - `DYNATRACE_URL`: Your tenant URL (e.g., `https://abc12345.live.dynatrace.com`)
+   - `DYNATRACE_TOKEN`: API token with trace ingestion permissions
+4. Run: `npm start` (or `npm run start:cloud` for explicit cloud mode)
+5. Open forwarded port 8080 in browser
+
+> **Note**: Without OneAgent, the app runs in **demo mode** with console logging. For full Dynatrace integration, provide the environment variables above.
 
 #### Alternative Cloud Options
 - **Replit**: Import this repo → Run `npm start`  

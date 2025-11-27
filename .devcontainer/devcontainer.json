@@ -1,5 +1,5 @@
 {
-  "name": "BizObs Generator",
+  "name": "BizObs Generator - Cloud Ready",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:18",
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
@@ -7,13 +7,32 @@
     }
   },
   "forwardPorts": [8080, 8081, 8082, 8083, 8084, 8085],
+  "portsAttributes": {
+    "8080": {"label": "BizObs Generator", "onAutoForward": "openBrowser"}
+  },
   "postCreateCommand": "npm install",
+  "remoteEnv": {
+    "CLOUD_MODE": "true",
+    "NODE_ENV": "development"
+  },
+  "secrets": {
+    "DYNATRACE_URL": {
+      "description": "Your Dynatrace tenant URL (e.g., https://abc12345.live.dynatrace.com)"
+    },
+    "DYNATRACE_TOKEN": {
+      "description": "Dynatrace API token with trace ingestion permissions"
+    }
+  },
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-vscode.vscode-json",
-        "bradlc.vscode-tailwindcss"
-      ]
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-typescript-next"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
     }
   }
 }
