@@ -1,0 +1,27 @@
+{
+  "scenario": "heavy_load",
+  "description": "Heavy load testing - Peak business hour simulation",
+  "loadrunner_config": {
+    "vusers": 120,
+    "ramp_up_time": 900,
+    "duration": 1200,
+    "ramp_down_time": 180,
+    "journey_interval": 10,
+    "think_time": 2000
+  },
+  "dynatrace_tags": {
+    "LSN": "BizObs_Heavy_Load",
+    "LTN": "Peak_Hour_Test",
+    "test_type": "load",
+    "load_level": "heavy"
+  },
+  "error_simulation": {
+    "enabled": true,
+    "error_rate": 5
+  },
+  "monitoring": {
+    "response_time_threshold": 5000,
+    "error_rate_threshold": 7,
+    "throughput_target": 12.0
+  }
+}

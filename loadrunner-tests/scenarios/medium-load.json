@@ -1,0 +1,27 @@
+{
+  "scenario": "medium_load",
+  "description": "Medium load testing - Standard business volume simulation",
+  "loadrunner_config": {
+    "vusers": 60,
+    "ramp_up_time": 600,
+    "duration": 900,
+    "ramp_down_time": 120,
+    "journey_interval": 15,
+    "think_time": 3000
+  },
+  "dynatrace_tags": {
+    "LSN": "BizObs_Medium_Load",
+    "LTN": "Standard_Volume_Test",
+    "test_type": "volume",
+    "load_level": "medium"
+  },
+  "error_simulation": {
+    "enabled": true,
+    "error_rate": 2
+  },
+  "monitoring": {
+    "response_time_threshold": 3000,
+    "error_rate_threshold": 3,
+    "throughput_target": 4.0
+  }
+}
