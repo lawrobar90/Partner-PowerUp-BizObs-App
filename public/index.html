@@ -2585,6 +2585,7 @@
         });
         
         console.log(`🎯 Error simulation mode: ${errorSimulationEnabled ? 'ENABLED' : 'DISABLED'}`);
+        console.log(`🎯 DEBUGGING: errorSimulationEnabled value being sent:`, errorSimulationEnabled, typeof errorSimulationEnabled);
         if (errorSimulationEnabled) {
           const errorSteps = processedSteps.filter(s => s.errorSimulationConfig?.shouldSimulateError);
           console.log(`  - ${errorSteps.length}/${processedSteps.length} steps will simulate errors:`, 
@@ -2844,7 +2845,7 @@
             }).join('\n');
             
             const resultSummary = [
-              `Customer Journey Execution:`,
+              `Customer Journey Execution (${errorSimulationEnabled ? '🔴 Error Simulation: ENABLED' : '✅ Error Simulation: DISABLED'}):`,
               stepSummary,
               ``,
               `Summary: ${completedSteps} successful, ${errorSteps} errors, ${totalSteps} total steps`,
@@ -3362,7 +3363,7 @@
 
         if (result.success) {
           currentTestId = result.testId;
-          const errorModeStatus = errorSimulationEnabled ? '🔴 With Errors' : '✅ Error-Free';
+          const errorModeStatus = errorSimulationEnabled ? '🔴 With Errors' : '✅ Error-Free Mode';
           statusEl.innerHTML = `
             ✅ Test started successfully!<br>
             📊 Method: ${result.method}<br>
