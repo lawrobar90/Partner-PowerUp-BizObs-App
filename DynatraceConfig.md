@@ -4,7 +4,6 @@
 1. *Filter by* "**Business**"
 1. Enable the following:
    - Node.js Business Events [Opt-in]
-   - .Net Business Events [Opt-in]
 1. Restart the node.js server on the BizObs Application
 
 
