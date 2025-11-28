@@ -51,7 +51,7 @@ This guide will show you how to *create* and *validate* **business rules**.
 
 ##### Configure metadata (category)
 
-1.	For "**Event type data source**", make sure that "**Fixed Value**" is *selected*
+1.	For "**Event Category data source**", make sure that "**Fixed Value**" is *selected*
 1.	*Copy* and *paste*:
       ```
       BizObs App
